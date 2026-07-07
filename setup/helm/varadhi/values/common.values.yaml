@@ -103,6 +103,10 @@ varadhi:
       roles: [ "Server", "Controller" ]
       cpuCount: 1
       networkMBps: 100
+    vertxZookeeperStore:
+      connectUrl: "http://host.docker.internal:2181"
+      sessionTimeoutMs: 60000
+      connectTimeoutMs: 2000
     ports:
       jmx: 9990
       jvmDebug: 5005

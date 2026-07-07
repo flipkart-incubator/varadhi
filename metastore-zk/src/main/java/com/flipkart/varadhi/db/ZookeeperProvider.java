@@ -4,6 +4,7 @@ import com.flipkart.varadhi.common.ZookeeperConnectConfig;
 import com.flipkart.varadhi.common.utils.YamlLoader;
 import com.flipkart.varadhi.spi.db.AssignmentStore;
 import com.flipkart.varadhi.spi.db.MetaStore;
+import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.OpStore;
@@ -164,11 +165,12 @@ public class ZookeeperProvider implements MetaStoreProvider {
 
         try {
             if (!zkCurator.getZookeeperClient().blockUntilConnectedOrTimedOut()) {
-                throw new RuntimeException("Failed to connect to zookeeper within connectTimeout");
+                zkCurator.close();
+                throw new MetaStoreException("Failed to connect to zookeeper within connectTimeout");
             }
         } catch (InterruptedException e) {
             zkCurator.close();
-            throw new RuntimeException("Interrupted while waiting for connection to zookeeper", e);
+            throw new MetaStoreException("Interrupted while waiting for connection to zookeeper", e);
         }
         return zkCurator;
     }

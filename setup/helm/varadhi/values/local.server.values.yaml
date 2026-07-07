@@ -26,6 +26,10 @@ varadhi:
       roles: [ "Server" ]
       cpuCount: 1
       networkMBps: 100
+    vertxZookeeperStore:
+      connectUrl: "172.17.0.1:2181"
+      sessionTimeoutMs: 60000
+      connectTimeoutMs: 2000
 
 #############################################
 # Varadhi Server logging config

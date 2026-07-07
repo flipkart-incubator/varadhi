@@ -27,6 +27,10 @@ varadhi:
       roles: [ "Controller" ]
       cpuCount: 1
       networkMBps: 100
+    vertxZookeeperStore:
+      connectUrl: "http://host.docker.internal:2181"
+      sessionTimeoutMs: 60000
+      connectTimeoutMs: 2000
 
 #############################################
 # Varadhi Server logging config

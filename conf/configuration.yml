@@ -32,8 +32,9 @@ metaStoreOptions:
   providerClassName: "com.flipkart.varadhi.db.ZookeeperProvider"
   configFile: "metastore.yml"
 
-zookeeperOptions:
-  connectUrl: "${ZOOKEEPER_URL}"
+# Vert.x cluster manager
+vertxZookeeperOptions:
+  connectUrl: "${VERTX_ZOOKEEPER_URL}"
   sessionTimeoutMs: 60000
   connectTimeoutMs: 2000
 
