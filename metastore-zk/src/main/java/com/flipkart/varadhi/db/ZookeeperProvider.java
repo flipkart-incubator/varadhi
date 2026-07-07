@@ -170,6 +170,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
             }
         } catch (InterruptedException e) {
             zkCurator.close();
+            Thread.currentThread().interrupt();
             throw new MetaStoreException("Interrupted while waiting for connection to zookeeper", e);
         }
         return zkCurator;
