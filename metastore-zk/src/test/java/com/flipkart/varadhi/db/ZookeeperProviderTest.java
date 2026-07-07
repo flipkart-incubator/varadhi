@@ -64,8 +64,8 @@ class ZookeeperProviderTest {
         provider.getAssignmentStore();
 
         try (
-                CuratorFramework globalClient = newClient(globalStoreServer.getConnectString());
-                CuratorFramework localClient = newClient(localStoreServer.getConnectString())
+            CuratorFramework globalClient = newClient(globalStoreServer.getConnectString());
+            CuratorFramework localClient = newClient(localStoreServer.getConnectString())
         ) {
             String orgPath = ZNode.ofEntityType(ZNode.ORG).getPath();
             assertNotNull(globalClient.checkExists().forPath(orgPath));
@@ -78,27 +78,27 @@ class ZookeeperProviderTest {
     }
 
     @Test
-    @Timeout(5)
+    @Timeout (5)
     void createFailsWhenZookeeperIsUnreachable() {
         MetaStoreException ex = assertThrows(
-                MetaStoreException.class,
-                () -> ZookeeperProvider.create(connectConfig("127.0.0.1:1", 500))
+            MetaStoreException.class,
+            () -> ZookeeperProvider.create(connectConfig("127.0.0.1:1", 500))
         );
         assertTrue(ex.getMessage().contains("connectTimeout"));
     }
 
     @Test
-    @Timeout(5)
+    @Timeout (5)
     void initFailsWhenLocalZookeeperIsUnreachable() throws Exception {
         Path configFile = metastoreConfigFile(
-                connectConfig(globalStoreServer.getConnectString()),
-                connectConfig("127.0.0.1:1", 500)
+            connectConfig(globalStoreServer.getConnectString()),
+            connectConfig("127.0.0.1:1", 500)
         );
 
         try (ZookeeperProvider failedProvider = new ZookeeperProvider()) {
             IllegalStateException ex = assertThrows(
-                    IllegalStateException.class,
-                    () -> failedProvider.init(metaStoreOptions(configFile))
+                IllegalStateException.class,
+                () -> failedProvider.init(metaStoreOptions(configFile))
             );
             assertInstanceOf(MetaStoreException.class, ex.getCause());
             assertThrows(IllegalStateException.class, failedProvider::getMetaStore);
@@ -151,8 +151,8 @@ class ZookeeperProviderTest {
 
     private CuratorFramework newClient(String connectString) {
         CuratorFramework client = CuratorFrameworkFactory.newClient(
-                connectString,
-                new ExponentialBackoffRetry(1000, 1)
+            connectString,
+            new ExponentialBackoffRetry(1000, 1)
         );
         client.start();
         return client;
