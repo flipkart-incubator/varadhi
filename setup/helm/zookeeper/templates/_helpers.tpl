@@ -1,6 +1,5 @@
 {{/*
 In-cluster ZooKeeper ensemble connect string for ZOOKEEPER_SERVERS.
-Only used when zkDeployment.enabled (see zookeeper-statefullset.yaml).
 */}}
 {{- define "varadhi.zookeeper.connectUrl" -}}
 {{- $name := default .Chart.Name .Values.nameOverride -}}
