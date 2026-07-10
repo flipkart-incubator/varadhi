@@ -159,7 +159,7 @@ public class VaradhiApplication {
      * @return initialized cluster manager
      */
     private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
-        CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getZookeeperOptions());
+        CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getVertxZookeeperOptions());
         DeliveryOptions deliveryOptions = new DeliveryOptions().setTracingPolicy(
             config.getDeliveryOptions().getTracingPolicy()
         ).setSendTimeout(config.getDeliveryOptions().getTimeoutMs());

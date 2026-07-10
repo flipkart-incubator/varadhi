@@ -12,4 +12,5 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.curator.test)
+    testImplementation(libs.jackson.yaml)
 }
