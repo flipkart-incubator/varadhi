@@ -1,29 +1,16 @@
 package com.flipkart.varadhi.web;
 
-import com.flipkart.varadhi.common.utils.HostUtils;
 import com.flipkart.varadhi.core.*;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
-import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.config.MetricsOptions;
-import com.flipkart.varadhi.core.config.ProducerOptions;
-import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.produce.failover.ControllerTransitionAckClient;
-import com.flipkart.varadhi.produce.failover.ProduceTransitionMsgHandler;
-import com.flipkart.varadhi.produce.failover.PodTransitionConfig;
-import com.flipkart.varadhi.produce.failover.TransitionMetricsImpl;
-import com.flipkart.varadhi.produce.failover.TransitionPrepareResult;
+import com.flipkart.varadhi.web.transition.ProduceTransitionHandlerInstaller;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -81,10 +68,7 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -308,72 +292,14 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
-        setupTransitionStageHandler();
-    }
-
-    /**
-     * Registers the pod-side topic-transition stage handler on the broadcast bus. The handler is
-     * inert until the controller starts publishing {@code TransitionEvent}s, and the produce path
-     * itself is unchanged (it already gates on {@code VaradhiTopic#getTopicState()}).
-     */
-    private void setupTransitionStageHandler() {
-        // clusterManager is null in produce-only benchmarks (see ProduceBenchmarkTest).
-        if (clusterManager == null) {
-            log.info("Skipping topic-transition stage handler: no cluster manager configured (produce-only mode)");
-            return;
-        }
-        MessageRouter messageRouter = clusterManager.getRouter(vertx);
-        MessageExchange messageExchange = clusterManager.getExchange(vertx);
-        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(
-            ResourceType.TOPIC
+        this.transitionScheduler = ProduceTransitionHandlerInstaller.install(
+            clusterManager,
+            vertx,
+            cacheRegistry,
+            serviceRegistry.get(ProducerService.class),
+            configuration.getProducerOptions(),
+            meterRegistry
         );
-        this.transitionScheduler = Executors.newSingleThreadScheduledExecutor(
-            r -> new Thread(r, "topic-transition-version-wait")
-        );
-        ProducerService producerService = serviceRegistry.get(ProducerService.class);
-        ProducerOptions producerOptions = configuration.getProducerOptions();
-        ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
-            HostUtils.getHostName(),
-            topicCache,
-            new ControllerTransitionAckClient(messageExchange),
-            buildPrepareActions(producerService),
-            new PodTransitionConfig(
-                producerOptions.getTransitionVersionWaitMs(),
-                producerOptions.getTransitionPollIntervalMs()
-            ),
-            transitionScheduler,
-            new TransitionMetricsImpl(meterRegistry)
-        );
-        messageRouter.publishHandler(
-            TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
-            TransitionBusAddress.STAGE_BROADCAST_API,
-            handler
-        );
-        log.info("Registered topic-transition stage handler for region {}", verticleConfig.deployedRegion());
-    }
-
-    /**
-     * PREPARE pre-warm action per transition type. Only {@link TransitionType#TOPIC_FAILOVER} is
-     * wired today; other transitions (e.g. STORAGE_MIGRATION) can reuse the same handler by
-     * registering their own action here. The failover action interprets the event's opaque target
-     * as the region to pre-warm and returns a future so producer creation never blocks the
-     * scheduler thread. A pod only pre-warms if it is already producing the topic; otherwise it
-     * stays {@link TransitionPrepareResult#NOT_INVOLVED} and creates no producer it would never use.
-     */
-    private Map<TransitionType, BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>>> buildPrepareActions(
-        ProducerService producerService
-    ) {
-        BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> failoverWarm = (
-            topicName,
-            targetRegion
-        ) -> {
-            if (!producerService.isProducingTopic(topicName)) {
-                return CompletableFuture.completedFuture(TransitionPrepareResult.NOT_INVOLVED);
-            }
-            return producerService.getProducer(topicName, RegionName.of(targetRegion))
-                                  .thenApply(producer -> TransitionPrepareResult.INVOLVED);
-        };
-        return Map.of(TransitionType.TOPIC_FAILOVER, failoverWarm);
     }
 
     /**

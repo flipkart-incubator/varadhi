@@ -36,11 +36,6 @@ public enum TransitionStage {
         return this == PREPARE || this == SWITCH;
     }
 
-    /** Stages acked immediately on receipt with no version wait. */
-    public boolean isImmediateAck() {
-        return !isVersionGated();
-    }
-
     /** Only {@link #PREPARE} carries a {@code target} for producer pre-warm. */
     public boolean requiresTarget() {
         return this == PREPARE;

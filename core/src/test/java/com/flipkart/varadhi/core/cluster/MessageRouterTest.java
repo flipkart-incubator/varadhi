@@ -109,8 +109,8 @@ public class MessageRouterTest {
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
-        mr.publishHandler("route", "api", message -> checkpoint.flag());
-        mr.publishHandler("route", "api", message -> checkpoint.flag());
+        mr.registerPublishHandler("route", "api", message -> checkpoint.flag());
+        mr.registerPublishHandler("route", "api", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
         me.publish("route", "api", cm);
     }
@@ -123,10 +123,10 @@ public class MessageRouterTest {
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
-        mr.publishHandler("route", "api", message -> {
+        mr.registerPublishHandler("route", "api", message -> {
             throw new RuntimeException("boom");
         });
-        mr.publishHandler("route", "api", message -> healthy.flag());
+        mr.registerPublishHandler("route", "api", message -> healthy.flag());
         me.publish("route", "api", getClusterMessage("foo"));
     }
 

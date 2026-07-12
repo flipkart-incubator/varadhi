@@ -14,6 +14,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import com.flipkart.varadhi.produce.ProducerService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Vertx;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +34,9 @@ import java.util.function.BiFunction;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link ProduceTransitionMsgHandler} driven against a <b>real</b>
@@ -51,6 +55,7 @@ class ProduceTransitionMsgHandlerTest {
 
     private Vertx vertx;
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
+    private ProducerService producerService;
     private CapturingAckClient acker;
     private RecordingWarmer warmer;
     private RecordingWarmer storageWarmer;
@@ -65,6 +70,8 @@ class ProduceTransitionMsgHandlerTest {
             List::of,
             vertx
         ).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        producerService = mock(ProducerService.class);
+        when(producerService.isProducingTopic(any())).thenReturn(true);
         warmer = new RecordingWarmer();
         storageWarmer = new RecordingWarmer();
         scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -83,6 +90,7 @@ class ProduceTransitionMsgHandlerTest {
             "host-1",
             topicCache,
             acker,
+            producerService,
             Map.of(TransitionType.TOPIC_FAILOVER, warmer, TransitionType.STORAGE_MIGRATION, storageWarmer),
             config,
             scheduler,
@@ -132,7 +140,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
         assertTrue(
             warmer.warmed.contains(FQN + "@" + TARGET_REGION),
             "PREPARE should pre-warm the target region producer"
@@ -160,7 +168,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
         assertTrue(
             storageWarmer.warmed.contains(FQN + "@" + TARGET_STORAGE_TOPIC_ID),
             "STORAGE_MIGRATION PREPARE should pre-warm the target storage-topic producer"
@@ -190,15 +198,14 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
-        assertFalse(ack.success());
+        assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("prepare warm failed"));
     }
 
     @Test
     void prepareAcksOkWithoutWarmingWhenPodNotInvolved() throws Exception {
-        // Pod is not producing the topic: it must ack OK without creating any producer.
         seed(10);
-        warmer.notInvolved = true;
+        when(producerService.isProducingTopic(TOPIC_NAME)).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
@@ -217,13 +224,12 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
         assertTrue(warmer.warmed.isEmpty(), "an uninvolved pod must not pre-warm any producer");
     }
 
     @Test
     void prepareAcksFailureWhenStaleOrUnreachable() throws Exception {
-        // Topic never appears in the cache -> times out.
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
         h.handle(
@@ -242,7 +248,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
-        assertFalse(ack.success());
+        assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("timeout"));
     }
 
@@ -260,14 +266,13 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.SWITCH, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
         assertTrue(warmer.warmed.isEmpty(), "SWITCH must not warm the producer");
     }
 
     @Test
     void switchAcksOkWhenVersionArrivesLater() throws Exception {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
-        // The version is not present at first; it propagates into the cache shortly after.
         scheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
 
         h.handle(
@@ -277,7 +282,7 @@ class ProduceTransitionMsgHandlerTest {
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        assertTrue(acker.acks.get(0).success());
+        assertTrue(acker.acks.get(0).isSuccess());
     }
 
     @Test
@@ -292,13 +297,12 @@ class ProduceTransitionMsgHandlerTest {
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
-        assertFalse(ack.success());
+        assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("timeout"));
     }
 
     @Test
     void switchAcksFailureWhenVersionOvershoots() throws Exception {
-        // Cache skipped past the coordinated version (concurrent modification) => fail fast.
         seed(12);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
@@ -311,7 +315,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.SWITCH, ack.stage());
-        assertFalse(ack.success());
+        assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("overshot"));
     }
 
@@ -336,7 +340,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
-        assertFalse(ack.success());
+        assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("overshot"));
     }
 
@@ -353,7 +357,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.COMPLETED, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
     }
 
     @Test
@@ -369,7 +373,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.ABORTED, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
     }
 
     @Test
@@ -385,27 +389,18 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PENDING, ack.stage());
-        assertTrue(ack.success());
+        assertTrue(ack.isSuccess());
     }
 
-    /**
-     * Records warm requests; returns a future that fails when {@code toFail} is set, or resolves to
-     * {@link TransitionPrepareResult#NOT_INVOLVED} (without recording a warm) when {@code notInvolved}
-     * is set — mirroring a pod that is not producing the topic.
-     */
     private static final class RecordingWarmer implements
         BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> {
         private final CopyOnWriteArrayList<String> warmed = new CopyOnWriteArrayList<>();
         private volatile RuntimeException toFail;
-        private volatile boolean notInvolved;
 
         @Override
         public CompletableFuture<TransitionPrepareResult> apply(VaradhiTopicName topicFqn, String target) {
             if (toFail != null) {
                 return CompletableFuture.failedFuture(toFail);
-            }
-            if (notInvolved) {
-                return CompletableFuture.completedFuture(TransitionPrepareResult.NOT_INVOLVED);
             }
             warmed.add(topicFqn.toFqn() + "@" + target);
             return CompletableFuture.completedFuture(TransitionPrepareResult.INVOLVED);

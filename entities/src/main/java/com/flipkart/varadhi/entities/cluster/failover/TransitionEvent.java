@@ -50,8 +50,8 @@ public record TransitionEvent(
         if (awaitVersion != stage.isVersionGated()) {
             throw new IllegalArgumentException("awaitVersion=" + awaitVersion + " incompatible with stage " + stage);
         }
-        if (awaitVersion && topicVersionToAwait <= 0) {
-            throw new IllegalArgumentException("a version-gated stage requires a positive topicVersionToAwait");
+        if (awaitVersion && topicVersionToAwait < 0) {
+            throw new IllegalArgumentException("a version-gated stage requires a non-negative topicVersionToAwait");
         }
         if (stage.requiresTarget() && target == null) {
             throw new IllegalArgumentException("PREPARE requires a non-null target to pre-warm");

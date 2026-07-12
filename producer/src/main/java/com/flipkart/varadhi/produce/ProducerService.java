@@ -47,7 +47,7 @@ public final class ProducerService {
     private static final ExecutorService PRODUCER_LOAD_EXECUTOR = Executors.newFixedThreadPool(
         PRODUCER_LOAD_POOL_SIZE,
         r -> {
-            Thread t = new Thread(r, "producer-cache-load");
+            Thread t = new Thread(r, "producer-create-cache-load");
             t.setDaemon(true);
             return t;
         }
@@ -232,7 +232,7 @@ public final class ProducerService {
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(topic.getName(), storageTopic, produceRegion).thenCompose(
+        return getProducer(topic.getName(), storageTopic.getId(), produceRegion).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }
@@ -250,25 +250,25 @@ public final class ProducerService {
      */
     public CompletableFuture<Producer<? extends Offset>> getProducer(
         String topicFQN,
-        StorageTopic storageTopic,
+        int storageTopicId,
         String region
     ) {
-        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic.getId(), region);
+        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopicId, region);
         Producer<? extends Offset> producer = producerCache.getIfPresent(key);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
 
-        return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key, storageTopic), PRODUCER_LOAD_EXECUTOR);
+        return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), PRODUCER_LOAD_EXECUTOR);
     }
 
-    private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key, StorageTopic storageTopic) {
+    private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {
         try {
             return producerCache.get(key);
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
-                storageTopic.getName(),
+                key.varadhiTopicFQN(),
                 e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()
             );
             throw new ProduceException(errorMsg, e);
@@ -307,7 +307,7 @@ public final class ProducerService {
                 )
             );
         }
-        return getProducer(topicFQN, internalTopic.getTopicToProduce(), region.value());
+        return getProducer(topicFQN, internalTopic.getTopicToProduce().getId(), region.value());
     }
 
     /**

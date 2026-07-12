@@ -13,10 +13,10 @@ import lombok.experimental.UtilityClass;
  * <ul>
  *   <li><b>Forward leg (controller → all pods):</b> the controller publishes a
  *       {@code TransitionEvent} to
- *       {@code ROUTE_TOPIC_TRANSITION + "." + STAGE_BROADCAST_API + ".publish"}; every pod
- *       registers a {@code publishHandler} there.</li>
+ *       {@code ROUTE_TOPIC_TRANSITION + "." + EVENT_PUBLISH_API + ".publish"}; every pod
+ *       registers a {@code registerPublishHandler} there.</li>
  *   <li><b>Back leg (pod → controller):</b> a pod sends a {@code TransitionAck} to
- *       {@code <controllerRoute>." + STAGE_ACK_API + ".send"} (the controller route is
+ *       {@code <controllerRoute>." + TRANSITION_EVENT_ACK_API + ".send"} (the controller route is
  *       {@code ControllerApi.ROUTE_CONTROLLER}).</li>
  * </ul>
  */
@@ -27,8 +27,8 @@ public final class TransitionBusAddress {
     public final String ROUTE_TOPIC_TRANSITION = "topic.transition";
 
     /** Api (under {@link #ROUTE_TOPIC_TRANSITION}) on which the per-stage event is broadcast to all pods. */
-    public final String STAGE_BROADCAST_API = "stage.broadcast";
+    public final String EVENT_PUBLISH_API = "event.publish";
 
     /** Api (under the controller route) for the pod-to-controller per-stage acknowledgement. */
-    public final String STAGE_ACK_API = "stage.ack";
+    public final String TRANSITION_EVENT_ACK_API = "topic.transition.event.ack";
 }

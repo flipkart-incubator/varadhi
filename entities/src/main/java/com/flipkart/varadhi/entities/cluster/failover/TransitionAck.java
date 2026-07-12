@@ -8,7 +8,7 @@ package com.flipkart.varadhi.entities.cluster.failover;
  * <p>The controller matches an ack to its current stage barrier by {@code (opId, stage)}.
  *
  * <p>{@code errorMsg} is the single source of truth for outcome: it is {@code null}/blank on
- * success and a non-blank reason on failure. {@link #success()} is derived from it so the two
+ * success and a non-blank reason on failure. {@link #isSuccess()} is derived from it so the two
  * can never disagree.
  *
  * @param opId     the transition operation id this ack belongs to
@@ -19,8 +19,13 @@ package com.flipkart.varadhi.entities.cluster.failover;
 public record TransitionAck(String opId, String hostname, TransitionStage stage, String errorMsg) {
 
     /** Whether this ack represents success — derived solely from {@link #errorMsg()}. */
-    public boolean success() {
+    public boolean isSuccess() {
         return errorMsg == null || errorMsg.isEmpty();
+    }
+
+    /** Whether this ack represents failure — the inverse of {@link #isSuccess()}. */
+    public boolean isFailure() {
+        return !isSuccess();
     }
 
     public static TransitionAck success(String opId, String hostname, TransitionStage stage) {

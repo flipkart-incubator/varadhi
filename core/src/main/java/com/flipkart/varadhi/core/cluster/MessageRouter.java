@@ -93,7 +93,7 @@ public class MessageRouter {
      * Event Bus docs on publish/subscribe semantics. Publish is fire-and-forget, so unlike
      * {@link #sendHandler} and {@link #requestHandler} no reply is sent back to the publisher.
      */
-    public void publishHandler(String routeName, String apiName, MsgHandler handler) {
+    public void registerPublishHandler(String routeName, String apiName, MsgHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
@@ -105,7 +105,7 @@ public class MessageRouter {
                 // exception here can only be logged. Any application-level acknowledgment is the
                 // handler's responsibility and is sent as a separate message, not a bus reply.
                 // Log the message id (not the full body) with the full stack trace for diagnosis.
-                log.error("publish handler.handle failed for msg {} on {}", msg.getId(), apiPath, e);
+                log.error("publish handler.handle failed for {}/{} for msg {}", routeName, apiPath, msg.getId(), e);
             }
         });
     }

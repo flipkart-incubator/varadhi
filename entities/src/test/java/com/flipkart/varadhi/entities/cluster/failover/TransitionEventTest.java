@@ -65,6 +65,20 @@ class TransitionEventTest {
     }
 
     @Test
+    void of_prepare_allowsVersionZero() {
+        TransitionEvent event = TransitionEvent.of(
+            OP_ID,
+            TOPIC,
+            TransitionType.TOPIC_FAILOVER,
+            TransitionStage.PREPARE,
+            0L,
+            "region-b"
+        );
+
+        assertEquals(0L, event.topicVersionToAwait());
+    }
+
+    @Test
     void of_prepare_requiresTarget() {
         assertThrows(
             IllegalArgumentException.class,

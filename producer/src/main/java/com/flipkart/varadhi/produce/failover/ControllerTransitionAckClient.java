@@ -25,15 +25,16 @@ public final class ControllerTransitionAckClient implements TransitionAckClient 
     @Override
     public void ack(TransitionAck ack) {
         ClusterMessage message = ClusterMessage.of(ack);
-        exchange.send(ControllerApi.ROUTE_CONTROLLER, TransitionBusAddress.STAGE_ACK_API, message).exceptionally(t -> {
-            log.warn(
-                "Failed to deliver transition ack op={} stage={} host={}",
-                ack.opId(),
-                ack.stage(),
-                ack.hostname(),
-                t
-            );
-            return null;
-        });
+        exchange.send(ControllerApi.ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, message)
+                .exceptionally(t -> {
+                    log.warn(
+                        "Failed to deliver transition ack op={} stage={} host={}",
+                        ack.opId(),
+                        ack.stage(),
+                        ack.hostname(),
+                        t
+                    );
+                    return null;
+                });
     }
 }

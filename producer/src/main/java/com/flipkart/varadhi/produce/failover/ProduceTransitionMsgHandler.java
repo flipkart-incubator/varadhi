@@ -11,6 +11,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import com.flipkart.varadhi.produce.ProducerService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -58,13 +59,13 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private final TransitionAckClient ackClient;
+    private final ProducerService producerService;
     /**
      * PREPARE pre-warm action per {@link TransitionType}. Each accepts {@code (topicFqn, target)}
      * and asynchronously prepares this pod for the transition's target (region for failover,
      * storage-topic id for migration). It returns {@link TransitionPrepareResult#INVOLVED} when the
-     * pod was producing the topic and pre-created the producer, or
-     * {@link TransitionPrepareResult#NOT_INVOLVED} when the pod has no producer for the topic and
-     * therefore creates nothing; the returned future fails if warming fails.
+     * pod was producing the topic and pre-created the producer; the returned future fails if warming
+     * fails.
      */
     private final Map<TransitionType, BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>>> prepareActions;
     private final PodTransitionConfig config;
@@ -74,7 +75,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     @Override
     public void handle(ClusterMessage message) {
         TransitionEvent event = message.getData(TransitionEvent.class);
-        metrics.stageReceived(event.transitionType(), event.stage());
+        metrics.stageReceived(event.transitionType(), event.stage(), event.topicFqn());
         // Non-version-gated stages ack immediately on receipt.
         if (!event.awaitVersion()) {
             ackOk(event);
@@ -156,18 +157,26 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             ackOk(event);
             return;
         }
-        BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> warmer = prepareActions.get(
-            event.transitionType()
-        );
+        if (!producerService.isProducingTopic(event.topicFqn())) {
+            metrics.prepareNotInvolved(event.transitionType(), event.topicFqn());
+            log.debug(
+                "Transition PREPARE: pod not involved for {} op={} type={}; nothing to pre-warm",
+                event.topicFqn().toFqn(),
+                event.opId(),
+                event.transitionType()
+            );
+            ackOk(event);
+            return;
+        }
+        var warmer = prepareActions.get(event.transitionType());
         if (warmer == null) {
             ackFail(event, "no prepare action registered for transition type " + event.transitionType());
             return;
         }
         // PREPARE doubles as readiness: pods already producing this topic pre-warm the target
-        // producer so it is live before SWITCH; pods not producing it stay NOT_INVOLVED and create
-        // nothing (no unnecessary producers), still acking so the controller barrier completes. A
-        // warm failure fails the ack, letting the controller abort before any switch. Done
-        // asynchronously so producer creation never blocks the scheduler thread.
+        // producer so it is live before SWITCH. A warm failure fails the ack, letting the controller
+        // abort before any switch. Done asynchronously so producer creation never blocks the scheduler
+        // thread.
         warmer.apply(event.topicFqn(), event.target()).whenComplete((result, t) -> {
             if (t != null) {
                 log.warn(
@@ -177,17 +186,8 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                     event.transitionType(),
                     t
                 );
-                ackFail(event, "prepare warm failed: " + t.getMessage());
+                ackFail(event, "prepare warm failed: " + RetryUtils.rootMessage(t));
                 return;
-            }
-            if (result == TransitionPrepareResult.NOT_INVOLVED) {
-                metrics.prepareNotInvolved(event.transitionType());
-                log.debug(
-                    "Transition PREPARE: pod not involved for {} op={} type={}; nothing to pre-warm",
-                    event.topicFqn().toFqn(),
-                    event.opId(),
-                    event.transitionType()
-                );
             }
             ackOk(event);
         });
@@ -198,12 +198,12 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackOk(TransitionEvent event) {
-        metrics.stageAcked(event.transitionType(), event.stage(), true);
+        metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn(), true);
         ackClient.ack(TransitionAck.success(event.opId(), hostname, event.stage()));
     }
 
     private void ackFail(TransitionEvent event, String errorMsg) {
-        metrics.stageAcked(event.transitionType(), event.stage(), false);
+        metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn(), false);
         String msg = (errorMsg == null || errorMsg.isBlank()) ? "transition stage failed" : errorMsg;
         ackClient.ack(TransitionAck.failure(event.opId(), hostname, event.stage(), msg));
     }

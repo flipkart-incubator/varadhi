@@ -8,8 +8,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import lombok.EqualsAndHashCode;
 
 /**
- * Test fixture that builds a <b>multi-region</b> {@link VaradhiTopic} — one
- * {@link SegmentedStorageTopic} per region, all initially {@code Producing}.
+ * Builds multi-region {@link VaradhiTopic} fixtures for topic-failover integration tests.
  *
  * <p>The normal create path ({@code VaradhiTopicFactory.planDeployment}) only provisions the single
  * deployment region, so a topic produced that way cannot be failed over (failover validation requires
@@ -17,7 +16,7 @@ import lombok.EqualsAndHashCode;
  * integration / E2E tests can exercise the failover stages until the factory grows native multi-region
  * provisioning.
  */
-public final class MultiRegionTopicFixture {
+public final class FailoverTestTopicFixture {
 
     /** Minimal concrete {@link StorageTopic} for tests (no real messaging stack). */
     @EqualsAndHashCode (callSuper = true)
@@ -27,7 +26,7 @@ public final class MultiRegionTopicFixture {
         }
     }
 
-    private MultiRegionTopicFixture() {
+    private FailoverTestTopicFixture() {
     }
 
     /**
