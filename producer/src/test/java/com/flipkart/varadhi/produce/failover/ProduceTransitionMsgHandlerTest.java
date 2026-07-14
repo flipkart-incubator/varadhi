@@ -15,6 +15,7 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -82,7 +84,7 @@ class ProduceTransitionMsgHandlerTest {
             CompletableFuture.completedFuture(mock(Producer.class))
         );
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        metrics = new TransitionMetricsImpl(new SimpleMeterRegistry());
+        metrics = new TransitionMetrics(new SimpleMeterRegistry());
     }
 
     @AfterEach
@@ -149,6 +151,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionStage.PREPARE, ack.stage());
         assertEquals(TOPIC_NAME, ack.topicFqn());
         assertEquals(TransitionType.TOPIC_FAILOVER, ack.transitionType());
+        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService).getProducer(TOPIC_NAME, TARGET_REGION);
     }
@@ -177,6 +180,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionStage.PREPARE, ack.stage());
         assertEquals(TOPIC_NAME, ack.topicFqn());
         assertEquals(TransitionType.STORAGE_MIGRATION, ack.transitionType());
+        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService).getProducer(TOPIC_NAME, TARGET_STORAGE_TOPIC_ID);
         verify(producerService, never()).getProducer(any(VaradhiTopicName.class), any(RegionName.class));
@@ -207,8 +211,63 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
+        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("prepare warm failed"));
+    }
+
+    @Test
+    void prepareAcksFailureWhenTargetBlank() throws Exception {
+        seed(10);
+        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
+
+        h.handle(
+            ClusterMessage.of(
+                TransitionEvent.of(
+                    OP_ID,
+                    TOPIC_NAME,
+                    TransitionType.TOPIC_FAILOVER,
+                    TransitionStage.PREPARE,
+                    true,
+                    10,
+                    "  "
+                )
+            )
+        );
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        TransitionAck ack = acker.acks.get(0);
+        assertFalse(ack.isSuccess());
+        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
+        assertTrue(ack.errorMsg().contains("non-blank target"));
+        verify(producerService, never()).getProducer(any(VaradhiTopicName.class), any(RegionName.class));
+    }
+
+    @Test
+    void prepareAcksFailureWhenStorageTargetNotNumeric() throws Exception {
+        seed(10);
+        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
+
+        h.handle(
+            ClusterMessage.of(
+                TransitionEvent.of(
+                    OP_ID,
+                    TOPIC_NAME,
+                    TransitionType.STORAGE_MIGRATION,
+                    TransitionStage.PREPARE,
+                    true,
+                    10,
+                    "not-an-id"
+                )
+            )
+        );
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        TransitionAck ack = acker.acks.get(0);
+        assertFalse(ack.isSuccess());
+        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
+        assertTrue(ack.errorMsg().contains("storage-topic id"));
+        verify(producerService, never()).getProducer(any(VaradhiTopicName.class), anyInt());
     }
 
     @Test
@@ -234,6 +293,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.PREPARE, ack.stage());
+        assertEquals(TransitionParticipation.NOT_INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducer(any(VaradhiTopicName.class), any(RegionName.class));
         verify(producerService, never()).getProducer(any(VaradhiTopicName.class), anyInt());
@@ -286,6 +346,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.SWITCH, ack.stage());
+        assertNull(ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducer(any(VaradhiTopicName.class), any(RegionName.class));
         verify(producerService, never()).getProducer(any(VaradhiTopicName.class), anyInt());

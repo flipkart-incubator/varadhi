@@ -10,8 +10,8 @@ import java.util.Objects;
  * broadcast in a {@link TransitionEvent}.
  *
  * <p>The controller matches an ack to its current stage barrier by {@code (opId, stage)}.
- * {@code topicFqn} and {@code transitionType} are echoed from the event so logs and metrics
- * remain self-describing without an op-store lookup.
+ * {@code topicFqn}, {@code transitionType}, and {@code participation} are echoed so logs and
+ * barriers remain self-describing without an op-store lookup.
  *
  * <p>{@code errorMsg} is the single source of truth for outcome: it is {@code null}/blank on
  * success and a non-blank reason on failure. {@link #isSuccess()} is derived from it so the two
@@ -20,6 +20,7 @@ import java.util.Objects;
  * @param opId           the transition operation id this ack belongs to
  * @param topicFqn       the topic the transition is for
  * @param transitionType which transition this ack belongs to
+ * @param participation  pod involvement for PREPARE; {@code null} for stages that do not decide
  * @param hostname       the acking pod's hostname
  * @param stage          the stage being acknowledged
  * @param errorMsg       {@code null} (or blank) on success; a non-blank failure reason otherwise
@@ -28,10 +29,19 @@ public record TransitionAck(
     String opId,
     VaradhiTopicName topicFqn,
     TransitionType transitionType,
+    TransitionParticipation participation,
     String hostname,
     TransitionStage stage,
     String errorMsg
 ) {
+
+    public TransitionAck {
+        Objects.requireNonNull(opId, "opId must not be null");
+        Objects.requireNonNull(topicFqn, "topicFqn must not be null");
+        Objects.requireNonNull(transitionType, "transitionType must not be null");
+        Objects.requireNonNull(hostname, "hostname must not be null");
+        Objects.requireNonNull(stage, "stage must not be null");
+    }
 
     /** Whether this ack represents success — derived solely from {@link #errorMsg()}. */
     public boolean isSuccess() {
@@ -47,16 +57,18 @@ public record TransitionAck(
         String opId,
         VaradhiTopicName topicFqn,
         TransitionType transitionType,
+        TransitionParticipation participation,
         String hostname,
         TransitionStage stage
     ) {
-        return new TransitionAck(opId, topicFqn, transitionType, hostname, stage, null);
+        return new TransitionAck(opId, topicFqn, transitionType, participation, hostname, stage, null);
     }
 
     public static TransitionAck failure(
         String opId,
         VaradhiTopicName topicFqn,
         TransitionType transitionType,
+        TransitionParticipation participation,
         String hostname,
         TransitionStage stage,
         String errorMsg
@@ -64,6 +76,6 @@ public record TransitionAck(
         if (errorMsg == null || errorMsg.isEmpty()) {
             throw new IllegalArgumentException("failure ack requires a non-blank errorMsg");
         }
-        return new TransitionAck(opId, topicFqn, transitionType, hostname, stage, errorMsg);
+        return new TransitionAck(opId, topicFqn, transitionType, participation, hostname, stage, errorMsg);
     }
 }

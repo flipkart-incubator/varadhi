@@ -200,12 +200,13 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
         // Delivery is accepted here; stage-barrier orchestration will consume these acks when wired.
         log.info(
-            "Received topic-transition ack: opId={} topic={} type={} stage={} host={} error={}",
+            "Received topic-transition ack: opId={} topic={} type={} stage={} host={} participation={} error={}",
             ack.opId(),
             ack.topicFqn().toFqn(),
             ack.transitionType(),
             ack.stage(),
             ack.hostname(),
+            ack.participation(),
             ack.errorMsg()
         );
         return CompletableFuture.completedFuture(null);

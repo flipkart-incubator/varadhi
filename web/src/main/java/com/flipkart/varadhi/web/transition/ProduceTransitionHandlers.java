@@ -14,7 +14,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProducerService;
 import com.flipkart.varadhi.produce.failover.PodTransitionConfig;
 import com.flipkart.varadhi.produce.failover.ProduceTransitionMsgHandler;
-import com.flipkart.varadhi.produce.failover.TransitionMetricsImpl;
+import com.flipkart.varadhi.produce.failover.TransitionMetrics;
 import com.flipkart.varadhi.common.utils.HostUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -67,7 +67,7 @@ public final class ProduceTransitionHandlers {
                 producerOptions.getTransitionPollIntervalMs()
             ),
             scheduler,
-            new TransitionMetricsImpl(meterRegistry)
+            new TransitionMetrics(meterRegistry)
         );
         messageRouter.registerPublishHandler(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
