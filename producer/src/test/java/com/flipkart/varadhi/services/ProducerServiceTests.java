@@ -54,7 +54,8 @@ class ProducerServiceTests {
     Random random;
     String topic = "topic1";
     Project project = Project.of("project1", "", "team1", "org1");
-    String region = "region1";
+    RegionName regionName = new RegionName("region1");
+    String region = regionName.value();
 
     @BeforeAll
     static void setup() {
@@ -298,7 +299,7 @@ class ProducerServiceTests {
 
         Producer<? extends Offset> resolved = service.getProducer(
             VaradhiTopicName.of(project.getName(), topic),
-            RegionName.of(region)
+            regionName
         ).join();
 
         Assertions.assertSame(producer, resolved);
@@ -311,7 +312,7 @@ class ProducerServiceTests {
 
         CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducer(
             VaradhiTopicName.of(project.getName(), topic),
-            RegionName.of(region)
+            regionName
         );
 
         CompletionException ex = Assertions.assertThrows(CompletionException.class, future::join);
@@ -324,10 +325,11 @@ class ProducerServiceTests {
     void getProducerFailsWhenRegionNotConfigured() {
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+        RegionName unknownRegion = new RegionName("unknown-region");
 
         CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducer(
             VaradhiTopicName.of(project.getName(), topic),
-            RegionName.of("unknown-region")
+            unknownRegion
         );
 
         CompletionException ex = Assertions.assertThrows(CompletionException.class, future::join);
@@ -343,14 +345,14 @@ class ProducerServiceTests {
 
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        service.getProducer(topicName, RegionName.of(region)).join();
+        service.getProducer(topicName, regionName).join();
 
         assertTrue(service.isProducingTopic(topicName));
     }
 
     @Test
     void getProducerUsesDistinctCacheEntriesPerRegion() {
-        String regionB = "region-b";
+        RegionName regionB = new RegionName("region-b");
         VaradhiTopic entity = VaradhiTopic.of(
             project.getName(),
             topic,
@@ -362,7 +364,7 @@ class ProducerServiceTests {
         StorageTopic storageA = new DummyStorageTopic(entity.getName() + ".a");
         StorageTopic storageB = new DummyStorageTopic(entity.getName() + ".b");
         entity.addInternalTopic(region, SegmentedStorageTopic.of(storageA));
-        entity.addInternalTopic(regionB, SegmentedStorageTopic.of(storageB));
+        entity.addInternalTopic(regionB.value(), SegmentedStorageTopic.of(storageB));
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
 
@@ -371,11 +373,11 @@ class ProducerServiceTests {
 
         Producer<? extends Offset> resolvedA = service.getProducer(
             VaradhiTopicName.of(project.getName(), topic),
-            RegionName.of(region)
+            regionName
         ).join();
         Producer<? extends Offset> resolvedB = service.getProducer(
             VaradhiTopicName.of(project.getName(), topic),
-            RegionName.of(regionB)
+            regionB
         ).join();
 
         Assertions.assertSame(producer, resolvedA);

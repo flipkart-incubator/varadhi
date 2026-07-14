@@ -12,6 +12,7 @@ import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
@@ -338,8 +339,13 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
 
-        // Register send handler for updates
+        // Register send handlers for pod → controller updates
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
+        messageRouter.sendHandler(
+            ROUTE_CONTROLLER,
+            TransitionBusAddress.TRANSITION_EVENT_ACK_API,
+            handler::ackTopicTransition
+        );
 
         log.info("Controller API handlers registered successfully");
     }

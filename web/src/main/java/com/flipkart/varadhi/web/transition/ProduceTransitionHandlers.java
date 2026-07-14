@@ -6,45 +6,38 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerClient;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.config.ProducerOptions;
-import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.produce.failover.ControllerTransitionAckClient;
 import com.flipkart.varadhi.produce.failover.PodTransitionConfig;
 import com.flipkart.varadhi.produce.failover.ProduceTransitionMsgHandler;
 import com.flipkart.varadhi.produce.failover.TransitionMetricsImpl;
-import com.flipkart.varadhi.produce.failover.TransitionPrepareResult;
 import com.flipkart.varadhi.common.utils.HostUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiFunction;
 
 /**
- * Wires the pod-side topic-transition stage handler onto the cluster broadcast bus.
+ * Registers the pod-side topic-transition stage handler on the cluster broadcast bus.
  */
 @Slf4j
-public final class ProduceTransitionHandlerInstaller {
+public final class ProduceTransitionHandlers {
 
-    private ProduceTransitionHandlerInstaller() {
+    private ProduceTransitionHandlers() {
     }
 
     /**
      * Registers {@link ProduceTransitionMsgHandler} when a cluster manager is configured.
      *
-     * @return the scheduler used for version polling, or {@code null} when installation was skipped
+     * @return the scheduler used for version polling, or {@code null} when registration was skipped
      */
-    public static ScheduledExecutorService install(
+    public static ScheduledExecutorService register(
         VaradhiClusterManager clusterManager,
         Vertx vertx,
         ResourceReadCacheRegistry cacheRegistry,
@@ -67,9 +60,8 @@ public final class ProduceTransitionHandlerInstaller {
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
-            new ControllerTransitionAckClient(messageExchange),
+            new ControllerConsumerClient(messageExchange),
             producerService,
-            buildPrepareActions(producerService),
             new PodTransitionConfig(
                 producerOptions.getTransitionVersionWaitMs(),
                 producerOptions.getTransitionPollIntervalMs()
@@ -84,16 +76,5 @@ public final class ProduceTransitionHandlerInstaller {
         );
         log.info("Registered topic-transition stage handler");
         return scheduler;
-    }
-
-    private static Map<TransitionType, BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>>> buildPrepareActions(
-        ProducerService producerService
-    ) {
-        BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>> failoverWarm = (
-            topicName,
-            targetRegion
-        ) -> producerService.getProducer(topicName, RegionName.of(targetRegion))
-                            .thenApply(producer -> TransitionPrepareResult.INVOLVED);
-        return Map.of(TransitionType.TOPIC_FAILOVER, failoverWarm);
     }
 }

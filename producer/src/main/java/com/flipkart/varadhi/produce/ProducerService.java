@@ -244,7 +244,7 @@ public final class ProducerService {
      * to load it using the producer provider function.
      *
      * @param topicFQN the name of the Varadhi topic (used for caching)
-     * @param storageTopic   the storage topic to get a producer for
+     * @param storageTopicId   the storage topic to get a producer for
      * @param region         the region the producer produces to (part of the cache key)
      * @return a future that completes with the producer
      */
@@ -308,6 +308,18 @@ public final class ProducerService {
             );
         }
         return getProducer(topicFQN, internalTopic.getTopicToProduce().getId(), region.value());
+    }
+
+    /**
+     * Returns (creating if needed) the producer for {@code storageTopicId} in this pod's produce
+     * region. Used by storage-migration PREPARE to pre-warm the destination storage topic.
+     *
+     * @param topicName      the Varadhi topic whose producer is requested
+     * @param storageTopicId the destination storage-topic id to warm
+     * @return a future completing with the producer
+     */
+    public CompletableFuture<Producer<? extends Offset>> getProducer(VaradhiTopicName topicName, int storageTopicId) {
+        return getProducer(topicName.toFqn(), storageTopicId, produceRegion);
     }
 
     /**

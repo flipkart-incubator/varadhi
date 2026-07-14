@@ -4,8 +4,10 @@ package com.flipkart.varadhi.core.cluster;
 import com.flipkart.varadhi.core.cluster.messages.*;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.entities.JsonMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.micrometer.backends.BackendRegistries;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ExecutionException;
@@ -25,6 +27,8 @@ import java.util.concurrent.ExecutionException;
 
 @Slf4j
 public class MessageRouter {
+
+    private static final String PUBLISH_HANDLER_FAILED = "cluster.message_router.publish.handler.failed";
 
     private final EventBus vertxEventBus;
     private final DeliveryOptions deliveryOptions;
@@ -105,9 +109,18 @@ public class MessageRouter {
                 // exception here can only be logged. Any application-level acknowledgment is the
                 // handler's responsibility and is sent as a separate message, not a bus reply.
                 // Log the message id (not the full body) with the full stack trace for diagnosis.
+                recordPublishHandlerFailure(routeName, apiName);
                 log.error("publish handler.handle failed for {}/{} for msg {}", routeName, apiPath, msg.getId(), e);
             }
         });
+    }
+
+    private void recordPublishHandlerFailure(String routeName, String apiName) {
+        MeterRegistry registry = BackendRegistries.getDefaultNow();
+        if (registry == null) {
+            return;
+        }
+        registry.counter(PUBLISH_HANDLER_FAILED, "route", routeName, "api", apiName).increment();
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {

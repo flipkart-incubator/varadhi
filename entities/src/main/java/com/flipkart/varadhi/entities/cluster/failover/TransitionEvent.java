@@ -47,43 +47,25 @@ public record TransitionEvent(
         Objects.requireNonNull(topicFqn, "topicFqn must not be null");
         Objects.requireNonNull(transitionType, "transitionType must not be null");
         Objects.requireNonNull(stage, "stage must not be null");
-        if (awaitVersion != stage.isVersionGated()) {
-            throw new IllegalArgumentException("awaitVersion=" + awaitVersion + " incompatible with stage " + stage);
-        }
         if (awaitVersion && topicVersionToAwait < 0) {
-            throw new IllegalArgumentException("a version-gated stage requires a non-negative topicVersionToAwait");
-        }
-        if (stage.requiresTarget() && target == null) {
-            throw new IllegalArgumentException("PREPARE requires a non-null target to pre-warm");
+            throw new IllegalArgumentException("awaitVersion requires a non-negative topicVersionToAwait");
         }
     }
 
     /**
-     * Creates a stage broadcast for pods. {@code topicVersionToAwait} and {@code target} are
-     * interpreted from {@link TransitionStage}:
-     * <ul>
-     *   <li>{@link TransitionStage#PREPARE} — version N and non-null {@code target} (pre-warm)</li>
-     *   <li>{@link TransitionStage#SWITCH} — version N+1; {@code target} ignored</li>
-     *   <li>{@link TransitionStage#PENDING}, {@link TransitionStage#COMPLETED},
-     *       {@link TransitionStage#ABORTED} — immediate ack; version and target ignored</li>
-     * </ul>
+     * Creates a stage broadcast for pods. {@code awaitVersion}, {@code topicVersionToAwait}, and
+     * {@code target} are controller-driven wire fields — the controller decides per stage whether
+     * pods must converge on a version and whether a pre-warm target is carried.
      */
     public static TransitionEvent of(
         String opId,
         VaradhiTopicName topicFqn,
         TransitionType transitionType,
         TransitionStage stage,
+        boolean awaitVersion,
         long topicVersionToAwait,
         String target
     ) {
-        return new TransitionEvent(
-            opId,
-            topicFqn,
-            transitionType,
-            stage,
-            stage.isVersionGated(),
-            stage.isVersionGated() ? topicVersionToAwait : 0L,
-            stage.requiresTarget() ? target : null
-        );
+        return new TransitionEvent(opId, topicFqn, transitionType, stage, awaitVersion, topicVersionToAwait, target);
     }
 }

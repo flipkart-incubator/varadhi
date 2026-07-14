@@ -5,6 +5,7 @@ import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
 import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +56,22 @@ public class ControllerApiHandler {
             opResponse.getErrorMsg()
         ).exceptionally(throwable -> {
             log.error("Shard update ({}) failed {}.", opResponse, throwable.getMessage());
+            return null;
+        });
+    }
+
+    public void ackTopicTransition(ClusterMessage message) {
+        TransitionAck ack = message.getData(TransitionAck.class);
+        controllerMgr.ackTopicTransition(ack).exceptionally(throwable -> {
+            log.error(
+                "Topic-transition ack failed for op={} topic={} type={} stage={} host={}: {}",
+                ack.opId(),
+                ack.topicFqn().toFqn(),
+                ack.transitionType(),
+                ack.stage(),
+                ack.hostname(),
+                throwable.getMessage()
+            );
             return null;
         });
     }

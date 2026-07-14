@@ -15,12 +15,13 @@ class TransitionEventTest {
     private static final VaradhiTopicName TOPIC = VaradhiTopicName.of("proj", "topic");
 
     @Test
-    void of_prepare_setsVersionGatedFields() {
+    void of_preservesControllerDrivenWireFields() {
         TransitionEvent event = TransitionEvent.of(
             OP_ID,
             TOPIC,
             TransitionType.TOPIC_FAILOVER,
             TransitionStage.PREPARE,
+            true,
             10L,
             "region-b"
         );
@@ -32,36 +33,38 @@ class TransitionEventTest {
     }
 
     @Test
-    void of_switch_clearsTarget() {
+    void of_switchPreservesTargetWhenControllerSetsIt() {
         TransitionEvent event = TransitionEvent.of(
             OP_ID,
             TOPIC,
             TransitionType.TOPIC_FAILOVER,
             TransitionStage.SWITCH,
+            true,
             11L,
-            "ignored"
+            "ignored-by-handler"
         );
 
         assertEquals(TransitionStage.SWITCH, event.stage());
         assertTrue(event.awaitVersion());
         assertEquals(11L, event.topicVersionToAwait());
-        assertNull(event.target());
+        assertEquals("ignored-by-handler", event.target());
     }
 
     @Test
-    void of_immediateAckStage_ignoresVersionAndTarget() {
+    void of_immediateAckStageUsesControllerAwaitVersionFalse() {
         TransitionEvent event = TransitionEvent.of(
             OP_ID,
             TOPIC,
             TransitionType.TOPIC_FAILOVER,
             TransitionStage.COMPLETED,
+            false,
             99L,
             "ignored"
         );
 
         assertFalse(event.awaitVersion());
-        assertEquals(0L, event.topicVersionToAwait());
-        assertNull(event.target());
+        assertEquals(99L, event.topicVersionToAwait());
+        assertEquals("ignored", event.target());
     }
 
     @Test
@@ -71,6 +74,7 @@ class TransitionEventTest {
             TOPIC,
             TransitionType.TOPIC_FAILOVER,
             TransitionStage.PREPARE,
+            true,
             0L,
             "region-b"
         );
@@ -79,15 +83,22 @@ class TransitionEventTest {
     }
 
     @Test
-    void of_prepare_requiresTarget() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> TransitionEvent.of(OP_ID, TOPIC, TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, 10L, null)
+    void of_prepare_allowsNullTarget() {
+        TransitionEvent event = TransitionEvent.of(
+            OP_ID,
+            TOPIC,
+            TransitionType.TOPIC_FAILOVER,
+            TransitionStage.PREPARE,
+            true,
+            10L,
+            null
         );
+
+        assertNull(event.target());
     }
 
     @Test
-    void constructor_rejectsMismatchedAwaitVersion() {
+    void constructor_rejectsNegativeVersionWhenAwaitVersion() {
         assertThrows(
             IllegalArgumentException.class,
             () -> new TransitionEvent(
@@ -95,8 +106,8 @@ class TransitionEventTest {
                 TOPIC,
                 TransitionType.TOPIC_FAILOVER,
                 TransitionStage.SWITCH,
-                false,
-                11L,
+                true,
+                -1L,
                 null
             )
         );

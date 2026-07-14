@@ -10,7 +10,7 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.web.transition.ProduceTransitionHandlerInstaller;
+import com.flipkart.varadhi.web.transition.ProduceTransitionHandlers;
 import com.flipkart.varadhi.web.authz.DefaultAuthorizationProvider;
 import com.flipkart.varadhi.web.authz.IamPolicyService;
 import com.flipkart.varadhi.web.config.WebConfiguration;
@@ -292,7 +292,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 cacheRegistry.getCache(ResourceType.TOPIC)
             )
         );
-        this.transitionScheduler = ProduceTransitionHandlerInstaller.install(
+        this.transitionScheduler = ProduceTransitionHandlers.register(
             clusterManager,
             vertx,
             cacheRegistry,

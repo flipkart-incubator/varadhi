@@ -63,12 +63,12 @@ class TransitionMetricsImplTest {
     }
 
     @Test
-    void prepareNotInvolved_incrementsCounterWithTypeTag() {
-        metrics.prepareNotInvolved(TransitionType.STORAGE_MIGRATION, TOPIC);
+    void notInvolved_incrementsCounterWithTypeTag() {
+        metrics.notInvolved(TransitionType.STORAGE_MIGRATION, TOPIC);
 
         assertEquals(
             1.0,
-            registry.find("topic.transition.prepare.not_involved")
+            registry.find("topic.transition.not_involved")
                     .tag("type", "STORAGE_MIGRATION")
                     .tag("topic", "proj.topic")
                     .counter()

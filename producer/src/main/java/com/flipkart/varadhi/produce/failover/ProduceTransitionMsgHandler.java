@@ -3,10 +3,11 @@ package com.flipkart.varadhi.produce.failover;
 import com.flipkart.varadhi.common.utils.RetryUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.MsgHandler;
+import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerApi;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
-import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
@@ -15,34 +16,29 @@ import com.flipkart.varadhi.produce.ProducerService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiFunction;
 
 /**
  * Minimal pod-side handler for topic-transition stage broadcasts (topic failover and
  * storage-topic migration alike). It reacts using only the self-contained
- * {@link TransitionEvent} and the pod's local {@code TopicCache};
+ * {@link TransitionEvent} and the pod's local {@code TopicCache}.
  *
- * <p>The stage machine and version-convergence logic are identical across
- * {@link TransitionType}s; only the PREPARE pre-warm differs and is supplied per type via
- * {@code prepareActions}. Each action takes {@code (topicFqn, target)} — a typed
- * {@link VaradhiTopicName} and an opaque {@code target} string the action interprets for its
- * type (region for failover, storage-topic id for migration) — and returns a
- * {@link CompletableFuture} that completes when the producer is warmed (or fails). Keeping it
- * asynchronous means a producer cache-miss never blocks the transition scheduler thread.
+ * <p>Participation ({@link TransitionParticipation#INVOLVED} vs
+ * {@link TransitionParticipation#NOT_INVOLVED}) and type-specific PREPARE warm live here so the
+ * policy is owned and tested with the handler — not in wiring lambdas.
  *
  * <p><b>Every</b> stage is acknowledged. Version-gated stages wait for the local TopicCache to
  * converge to the <em>exact</em> coordinated version before acking; all others ack immediately
  * on receipt:
  * <ul>
  *   <li><b>PREPARE</b> ({@code topicVersionToAwait} = N) — readiness: poll until the cache
- *       observes exactly version N, then pre-warm this pod's producer (only if the pod is already
- *       producing the topic; otherwise it stays {@link TransitionPrepareResult#NOT_INVOLVED} and
- *       creates nothing) and ack; a stale/unreachable pod times out, and a pod that cannot warm its
- *       producer acks failure — both let the controller abort before any change.</li>
+ *       observes exactly version N, then if this pod is already producing the topic pre-warm the
+ *       target producer ({@link TransitionParticipation#INVOLVED}); otherwise stay
+ *       {@link TransitionParticipation#NOT_INVOLVED} (no producer created; fencing can plug in
+ *       later) and ack. A stale/unreachable pod times out, and a warm failure acks failure — both
+ *       let the controller abort before any change.</li>
  *   <li><b>SWITCH</b> ({@code topicVersionToAwait} = N+1) — convergence: same exact-version
  *       wait but for N+1, then ack.</li>
  *   <li>For version-gated stages, if the cache has already moved <em>past</em> the target, the
@@ -58,16 +54,8 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final TransitionAckClient ackClient;
+    private final ControllerConsumerApi controllerClient;
     private final ProducerService producerService;
-    /**
-     * PREPARE pre-warm action per {@link TransitionType}. Each accepts {@code (topicFqn, target)}
-     * and asynchronously prepares this pod for the transition's target (region for failover,
-     * storage-topic id for migration). It returns {@link TransitionPrepareResult#INVOLVED} when the
-     * pod was producing the topic and pre-created the producer; the returned future fails if warming
-     * fails.
-     */
-    private final Map<TransitionType, BiFunction<VaradhiTopicName, String, CompletableFuture<TransitionPrepareResult>>> prepareActions;
     private final PodTransitionConfig config;
     private final ScheduledExecutorService scheduler;
     private final TransitionMetrics metrics;
@@ -152,15 +140,16 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void onVersionReached(TransitionEvent event) {
-        // Only PREPARE pre-warms; every other version-gated stage just acks on convergence.
+        // Only PREPARE runs participant work; every other version-gated stage just acks on convergence.
         if (event.stage() != TransitionStage.PREPARE) {
             ackOk(event);
             return;
         }
         if (!producerService.isProducingTopic(event.topicFqn())) {
-            metrics.prepareNotInvolved(event.transitionType(), event.topicFqn());
+            // NOT_INVOLVED: no warm. Local fencing can plug in here later.
+            metrics.notInvolved(event.transitionType(), event.topicFqn());
             log.debug(
-                "Transition PREPARE: pod not involved for {} op={} type={}; nothing to pre-warm",
+                "Transition: pod not involved for {} op={} type={}; skipping participant work",
                 event.topicFqn().toFqn(),
                 event.opId(),
                 event.transitionType()
@@ -168,16 +157,10 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             ackOk(event);
             return;
         }
-        var warmer = prepareActions.get(event.transitionType());
-        if (warmer == null) {
-            ackFail(event, "no prepare action registered for transition type " + event.transitionType());
-            return;
-        }
-        // PREPARE doubles as readiness: pods already producing this topic pre-warm the target
-        // producer so it is live before SWITCH. A warm failure fails the ack, letting the controller
-        // abort before any switch. Done asynchronously so producer creation never blocks the scheduler
-        // thread.
-        warmer.apply(event.topicFqn(), event.target()).whenComplete((result, t) -> {
+        // INVOLVED: pre-warm the type-specific target so it is live before SWITCH. A warm failure
+        // fails the ack, letting the controller abort before any switch. Async so producer creation
+        // never blocks the scheduler thread.
+        warmTarget(event).whenComplete((ignored, t) -> {
             if (t != null) {
                 log.warn(
                     "Transition PREPARE warm failed for {} op={} type={}",
@@ -193,18 +176,76 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         });
     }
 
+    /**
+     * Type-specific PREPARE warm for an {@link TransitionParticipation#INVOLVED} pod.
+     * {@code target} meaning comes from {@link TransitionType}.
+     */
+    private CompletableFuture<Void> warmTarget(TransitionEvent event) {
+        String target = event.target();
+        if (target == null || target.isBlank()) {
+            return CompletableFuture.failedFuture(
+                new IllegalArgumentException("PREPARE requires a non-blank target for " + event.transitionType())
+            );
+        }
+        return switch (event.transitionType()) {
+            case TOPIC_FAILOVER -> producerService.getProducer(event.topicFqn(), new RegionName(target))
+                                                 .thenAccept(producer -> {});
+            case STORAGE_MIGRATION -> {
+                int storageTopicId;
+                try {
+                    storageTopicId = Integer.parseInt(target);
+                } catch (NumberFormatException e) {
+                    yield CompletableFuture.failedFuture(
+                        new IllegalArgumentException(
+                            "STORAGE_MIGRATION target must be a storage-topic id, got: " + target,
+                            e
+                        )
+                    );
+                }
+                yield producerService.getProducer(event.topicFqn(), storageTopicId).thenAccept(producer -> {});
+            }
+        };
+    }
+
     private static String describe(Optional<Long> version) {
         return version.map(Object::toString).orElse("absent from cache");
     }
 
     private void ackOk(TransitionEvent event) {
         metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn(), true);
-        ackClient.ack(TransitionAck.success(event.opId(), hostname, event.stage()));
+        sendAck(
+            TransitionAck.success(event.opId(), event.topicFqn(), event.transitionType(), hostname, event.stage())
+        );
     }
 
     private void ackFail(TransitionEvent event, String errorMsg) {
         metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn(), false);
         String msg = (errorMsg == null || errorMsg.isBlank()) ? "transition stage failed" : errorMsg;
-        ackClient.ack(TransitionAck.failure(event.opId(), hostname, event.stage(), msg));
+        sendAck(
+            TransitionAck.failure(
+                event.opId(),
+                event.topicFqn(),
+                event.transitionType(),
+                hostname,
+                event.stage(),
+                msg
+            )
+        );
+    }
+
+    private void sendAck(TransitionAck ack) {
+        // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
+        controllerClient.ackTopicTransition(ack).exceptionally(t -> {
+            log.warn(
+                "Failed to deliver transition ack op={} topic={} type={} stage={} host={}",
+                ack.opId(),
+                ack.topicFqn().toFqn(),
+                ack.transitionType(),
+                ack.stage(),
+                ack.hostname(),
+                t
+            );
+            return null;
+        });
     }
 }

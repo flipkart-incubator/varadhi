@@ -10,34 +10,23 @@ package com.flipkart.varadhi.entities.cluster.failover;
  * <p>This enum is part of the pod-facing <b>wire contract</b> (it travels inside
  * {@link TransitionEvent} and {@link TransitionAck}). It carries no controller-only state.
  *
- * <p>Some stages are <i>version-gated</i>: the pod must observe a specific topic version
- * in its local TopicCache before acking.
+ * <p>Typical controller usage (see {@link TransitionEvent#awaitVersion()} and
+ * {@link TransitionEvent#target()} — those wire fields are controller-driven, not derived
+ * from this enum):
  * <ul>
  *   <li>{@link #PREPARE} — readiness probe: pod confirms it is alive and caught up to
  *       the current topic version (N). Lets the controller abort before applying any
  *       change if a pod is unreachable or stale.</li>
  *   <li>{@link #SWITCH} — convergence: pod confirms it observed the new topic version
  *       (N+1) so produce re-gates to the new region.</li>
+ *   <li>{@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED} — lifecycle markers;
+ *       usually acked immediately on receipt.</li>
  * </ul>
- *
- * <p>All other stages ({@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED}) carry no
- * version and are acked immediately on receipt — a confirmation that the pod processed the
- * stage.
  */
 public enum TransitionStage {
     PENDING, PREPARE, SWITCH, COMPLETED, ABORTED;
 
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
-    }
-
-    /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */
-    public boolean isVersionGated() {
-        return this == PREPARE || this == SWITCH;
-    }
-
-    /** Only {@link #PREPARE} carries a {@code target} for producer pre-warm. */
-    public boolean requiresTarget() {
-        return this == PREPARE;
     }
 }

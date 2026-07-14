@@ -1,9 +1,13 @@
 package com.flipkart.varadhi.core.cluster;
 
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.micrometer.MicrometerMetricsFactory;
+import io.vertx.micrometer.MicrometerMetricsOptions;
+import io.vertx.micrometer.backends.BackendRegistries;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -127,6 +131,34 @@ public class MessageRouterTest {
             throw new RuntimeException("boom");
         });
         mr.registerPublishHandler("route", "api", message -> healthy.flag());
+        me.publish("route", "api", getClusterMessage("foo"));
+    }
+
+    @Test
+    public void testPublishHandlerRecordsFailureMetric(VertxTestContext testContext) throws Exception {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        MicrometerMetricsOptions metricsOptions = new MicrometerMetricsOptions().setFactory(
+            new MicrometerMetricsFactory(registry)
+        ).setEnabled(true);
+        BackendRegistries.setupBackend(metricsOptions, registry);
+
+        Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        mr.registerPublishHandler("route", "api", message -> {
+            throw new RuntimeException("boom");
+        });
+        mr.registerPublishHandler("route", "api", message -> testContext.verify(() -> {
+            Assertions.assertEquals(
+                1.0,
+                registry.find("cluster.message_router.publish.handler.failed")
+                        .tag("route", "route")
+                        .tag("api", "api")
+                        .counter()
+                        .count()
+            );
+            testContext.completeNow();
+        }));
         me.publish("route", "api", getClusterMessage("foo"));
     }
 

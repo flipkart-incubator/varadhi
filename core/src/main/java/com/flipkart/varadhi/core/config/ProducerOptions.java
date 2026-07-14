@@ -24,7 +24,7 @@ public class ProducerOptions {
      * {@code (ceil(waitMs / pollIntervalMs) - 1) * pollIntervalMs}.
      */
     @Builder.Default
-    private long transitionVersionWaitMs = 5000;
+    private long transitionVersionWaitMs = 1000;
 
     /** Fixed poll interval (ms) between TopicCache version checks during a topic-transition stage. */
     @Builder.Default

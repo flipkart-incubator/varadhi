@@ -22,6 +22,7 @@ import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -193,6 +194,21 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
+    }
+
+    @Override
+    public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
+        // Delivery is accepted here; stage-barrier orchestration will consume these acks when wired.
+        log.info(
+            "Received topic-transition ack: opId={} topic={} type={} stage={} host={} error={}",
+            ack.opId(),
+            ack.topicFqn().toFqn(),
+            ack.transitionType(),
+            ack.stage(),
+            ack.hostname(),
+            ack.errorMsg()
+        );
+        return CompletableFuture.completedFuture(null);
     }
 
 

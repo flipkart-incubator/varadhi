@@ -14,7 +14,6 @@ import java.util.Objects;
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
-@JsonIgnoreProperties (ignoreUnknown = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final Map<String, SegmentedStorageTopic> internalTopics;
@@ -61,7 +60,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
         this.internalTopics = internalTopics;
-        this.topicState = topicState != null ? topicState : TopicState.Producing;
+        this.topicState = topicState;
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.status = status;
