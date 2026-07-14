@@ -3,12 +3,14 @@
 - Start a discussion on the issue, once you choose to work on it and we will help you in all the ways we can.
 - You can also start a [discussion](https://github.com/flipkart-incubator/varadhi/discussions) or a new issue.
 
+**AI assistants (Cursor, Claude Code):** see [AGENTS.md](./AGENTS.md) for repo map and workflows.
+
 # Setting Up your IDE
 
 ## IntelliJ IDEA
 
 - Enable annotation processing. Enable `Obtain processors from project classpath`.
-- Configure Project JDK to JDK 17, if not configured automatically.
+- Configure Project JDK to JDK 25, if not configured automatically.
 - Install `Adapter for Eclipse Code Formatter` plugin for code formatting. Configure it via `Settings | Adapter for Eclipse Code Formatter`. Check `Use Eclipse's Code Formatter`. Check `Eclipse workspace/project folder or config file` and choose `varadhi/codestyle.xml`. Choose `VaradhiStyle` as the formatter profile. Check `Optimize Imports`. Under Manual Import Order put `java;;\#java;\#`.
 
 ## VSCode
@@ -40,6 +42,10 @@
 - Use real db, if the test is supposed to validate db interaction.
 - Mockito usage should be very minimal and careful. Mocking static method is big NO NO.
 - Assert as much as you can. Make least amount of assumptions in the tests.
+
+## Integration tests (E2E)
+
+Server integration tests live under `server/src/testE2E/`. See [README — Integration Tests (E2E)](./README.md#integration-tests-e2e) for the full Docker workflow. Always run `docker compose ... down -v` before starting the test stack so prior runs do not leave stale metadata that breaks setup.
 
 # Raising Pull Request
 - Fork the repository.

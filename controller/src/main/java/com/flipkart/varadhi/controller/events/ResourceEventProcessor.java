@@ -200,7 +200,7 @@ public final class ResourceEventProcessor implements ResourceEventListener<Resou
     private void setupMembershipListener(VaradhiClusterManager clusterManager) {
         clusterManager.addMembershipListener(new MembershipListener() {
             @Override
-            public CompletableFuture<Void> joined(MemberInfo memberInfo) {
+            public CompletableFuture<Void> joined(String nodeId, MemberInfo memberInfo) {
                 initializeNewMember(memberInfo);
                 return CompletableFuture.completedFuture(null);
             }

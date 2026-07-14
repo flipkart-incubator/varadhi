@@ -7,13 +7,13 @@ dependencies {
     implementation(project(":entities"))
     implementation(project(":common"))
     implementation(project(":spi"))
-    implementation("org.apache.pulsar:pulsar-client-admin:3.3.7")
-    implementation("org.apache.commons:commons-text:1.10.0")
+    implementation(libs.pulsar.client.admin)
+    implementation(libs.commons.text)
 
     testImplementation(testFixtures(project(":spi")))
     testImplementation(testFixtures(project(":entities")))
 
-    testE2EImplementation("org.apache.commons:commons-text:1.10.0")
+    testE2EImplementation(libs.commons.text)
 }
 
 // reference -- https://github.com/gradle/gradle/issues/17236

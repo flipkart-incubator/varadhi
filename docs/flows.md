@@ -1,20 +1,30 @@
+---
+type: Flows
+title: Varadhi — Flows
+description: Behavioral flows — patterns plus architecturally central and deviating paths across Varadhi's containers.
+okf_version: "0.1"
+format_version: "0.1"
+generated_by: flow-synthesis@0.2.0
+timestamp: 2026-06-21T11:04:39Z
+---
+
 # Varadhi — Flows
 
-> Behavioral view: how work moves through Varadhi's containers and components in response to triggers. The structural complement to [System Context](./system-context.md) (L1), [Containers](./containers.md) (L2), and the per-container component docs (L3). Flows reference components by their `container.component` names — they don't re-describe what those components are.
->
-> **Pattern-first**: the bulk of the API surface (admin CRUD, subscription operations) is captured as **patterns**; only flows that deviate or are architecturally central are documented individually.
+Behavioral view: how work moves through Varadhi's containers and components in response to triggers. The structural complement to [System Context](./system-context.md) (L1), [Containers](./containers.md) (L2), and the per-container component docs (L3). Flows reference components by their `container.component` names — they don't re-describe what those components are.
+
+**Pattern-first**: the bulk of the API surface (admin CRUD, subscription operations) is captured as **patterns**; only flows that deviate or are architecturally central are documented individually.
 
 ## Flow Patterns
 
 ### pattern.control-plane-request — Control-Plane Request Handling
 
-**Path**: client → `varadhi-server.request-telemetry` → `varadhi-server.authentication` → `varadhi-server.authorization` → `varadhi-server.http-ingress` (resource handler) → `shared.entity-services` → `shared.backend-spi` (ZooKeeper)
-**Applies to**: all control-plane CRUD/reads exposed by `varadhi-server.http-ingress` — orgs, teams, projects, regions, topics, subscriptions, queues, and IAM policies.
+**Path**: client → `varadhi-server.request-telemetry` → `varadhi-server.authentication` → `varadhi-server.authorization` → `varadhi-server.http-ingress` (resource handler) → `shared.entity-services` → `shared.metadata-spi` (ZooKeeper)
+**Applies to**: all control-plane CRUD/reads exposed by `varadhi-server.http-ingress` — `concept.org`, `concept.team`, `concept.project`, regions, `concept.topic`, `concept.subscription`, `concept.queue`, and IAM policies.
 **Variations**: the handler, the `shared.entity-services` service, and the metastore entity differ per resource. **Reads** stop at the metastore; **create/delete** of topics/subscriptions/queues additionally provision on the messaging stack (see `flow.admin.create-topic`). The authn+authz sub-path is identical for every route → `flow.auth.request-authorization`.
 
 ```mermaid
 sequenceDiagram
-    actor Admin as Administrator
+    participant Admin as actor.administrator
     box varadhi-server
         participant Ingress as varadhi-server.http-ingress
         participant Tele as varadhi-server.request-telemetry
@@ -38,16 +48,16 @@ sequenceDiagram
     Ingress-->>Admin: HTTP response
 ```
 
-**Notes / runtime**:
+**Notes**:
 - Control-plane handlers run **blocking on the Vert.x worker pool** (`http-ingress`) — worker-pool saturation throttles *all* control-plane throughput (blast radius), independent of the produce event-loop path.
 - The behaviour-chain order (authn → hierarchy → authz) is architecturally significant; auth is **fail-closed** (401/403). `authorization` reads role bindings via `iam-policy-management` only when the built-in provider is configured.
-- **Availability**: writes require ZooKeeper (no fallback); reads of org/project/topic can be served from `shared.resource-cache`, so reads survive a brief metastore blip while writes do not.
+- Writes require ZooKeeper (no fallback); reads of org/project/topic can be served from `shared.resource-cache`, so reads survive a brief metastore blip while writes do not.
 
 ---
 
 ### pattern.subscription-operation — Controller Subscription Operation
 
-**Path**: trigger → `varadhi-controller.subscription-coordinator` (validate) → `varadhi-controller.operation-manager` (persist + enqueue, serialized per subscription) → `varadhi-controller.operation-executors` (assign via `assignment-manager`, dispatch shard op to consumers) → `varadhi-consumer.consumer-api` (apply) → consumer reports back (`update`) → `operation-manager` advances state, retries on failure
+**Path**: trigger → `varadhi-controller.subscription-coordinator` (validate) → `varadhi-controller.operation-manager` (persist + enqueue, serialized per `concept.subscription`) → `varadhi-controller.operation-executors` (assign via `assignment-manager`, dispatch shard op to consumers) → `varadhi-consumer.consumer-api` (apply) → consumer reports back (`update`) → `operation-manager` advances state, retries on failure
 **Applies to**: `start`, `stop`, `unsideline`, and `reassign` subscription operations.
 **Variations**: **start** assigns shards then starts them on consumers; **stop** stops then unassigns; **reassign** moves one shard to another node (triggered internally by `flow.rebalance.consumer-membership-change`); **unsideline** triggers DLQ reprocessing on the owning consumers. Trigger differs — server cluster-RPC for start/stop/unsideline; internal membership for reassign.
 
@@ -76,7 +86,7 @@ sequenceDiagram
     OpMgr->>ZK: update op state, retry on failure
 ```
 
-**Notes / runtime**:
+**Notes**:
 - Operations are **serialized per subscription** (ordering key) and run in parallel across subscriptions (`operation-manager` thread pool). A newer operation preempts a pending retry of an older one.
 - A persist failure on the failure path can **head-of-line-block that subscription's queue** — see `operation-manager` runtime characteristics in L3.
 - **SPOF**: all operations run on the single active controller (no leader election) — a controller outage pauses all subscription operations until restart, when in-flight ops are re-queued during leadership state-restore.
@@ -109,6 +119,13 @@ sequenceDiagram
     AuthZ-->>AuthZ: permit if a bound role grants the action, else 403
 ```
 
+#### Side Effects
+
+| Side Effect | Component | Condition |
+|---|---|---|
+| Set `USER_CONTEXT` on the request | `varadhi-server.authentication` | successful authentication |
+| Read IAM policy from metastore | `varadhi-server.iam-policy-management` | built-in authz provider only |
+
 #### Failure Paths
 
 | Condition | Component | Result | Notes |
@@ -118,43 +135,49 @@ sequenceDiagram
 | Authz metastore connection down | `varadhi-server.authorization` | request fails | Authz uses its own metastore connection (L3) |
 
 #### Notes
-- With a custom/external authz provider, `iam-policy-management` is not wired and role bindings live outside Varadhi (the IAM read step is provider-specific).
+- With a custom/external authz provider (`ext.authorization-provider`), `iam-policy-management` is not wired and role bindings live outside Varadhi (the IAM read step is provider-specific).
 
 ---
 
 ### flow.produce.message-to-topic — Produce a Message
 
 **Trigger**: HTTP `POST /v1/projects/:project/topics/:topic/produce`
-**Purpose**: accept a message from a publisher and durably persist it to the messaging stack for later delivery.
+**Purpose**: accept a `concept.message` from a publisher and durably persist it to the messaging stack for later delivery.
 **Containers**: varadhi-server, pulsar
 **Pattern**: deviates from `pattern.control-plane-request` — same auth, but a non-blocking handler with no metastore write.
 
 ```mermaid
 sequenceDiagram
-    actor Producer as Publisher / Producer App
+    participant Publisher as actor.producer
     box varadhi-server
         participant Ingress as varadhi-server.http-ingress
         participant Prod as varadhi-server.produce-service
+        participant RL as varadhi-server.produce-rate-limiter
     end
+    participant Cache as shared.resource-cache
     participant Pulsar as pulsar
+    participant Otel as otel-collector
 
-    Producer->>Ingress: POST .../produce (payload + headers)
+    Publisher->>Ingress: POST .../produce (payload + headers)
     Note over Ingress,Prod: → flow.auth.request-authorization (TOPIC_PRODUCE)
     Ingress->>Prod: produce(message) [non-blocking / event loop]
-    Note over Prod,Pulsar: ▶ 1. Validate & resolve
-    Prod->>Prod: filter/validate headers, resolve topic (shared.resource-cache)
-    Prod->>Prod: org NFR filter, capacity check
+    Note over Prod,Cache: ▶ 1. Validate, filter & admit
+    Prod->>Cache: resolve topic metadata
+    Prod->>Prod: filter/validate headers, org NFR filter
+    Prod->>RL: check(topic, messageBytes)
+    RL-->>Prod: admit | throttle (429, enforced mode)
     Note over Prod,Pulsar: ▶ 2. Publish
     Prod->>Pulsar: produceAsync (cached producer)
     Pulsar-->>Prod: offset / failure
-    Prod-->>Producer: 200 (messageId) | 4xx/5xx
+    Prod->>Otel: produce metrics
+    Prod-->>Publisher: 200 (messageId) | 4xx/5xx
 ```
 
 #### Side Effects
 
 | Side Effect | Component | Condition |
 |---|---|---|
-| Publish message to storage topic | `varadhi-server.produce-service` | produce allowed + not filtered |
+| Publish message to `concept.storage-topic` | `varadhi-server.produce-service` | produce allowed + not filtered |
 | Producer cached (Caffeine) | `varadhi-server.produce-service` | first produce to a storage topic |
 | Produce metrics emitted | `varadhi-server.produce-service` | always (to otel-collector) |
 
@@ -162,24 +185,24 @@ sequenceDiagram
 
 | Condition | Component | Result | Notes |
 |---|---|---|---|
-| Topic missing / inactive | `varadhi-server.produce-service` | 404 / 422 | `ResourceNotFoundException` |
+| `concept.topic` missing / inactive | `varadhi-server.produce-service` | 404 / 422 | [ResourceNotFoundException](/common/src/main/java/com/flipkart/varadhi/common/exceptions/ResourceNotFoundException.java) |
 | Produce blocked / not allowed | `varadhi-server.produce-service` | 422 | topic state gate |
-| Over capacity | `varadhi-server.produce-service` | 429 | throttle is expected behaviour |
+| Over per-pod quota | `varadhi-server.produce-rate-limiter` | 429 | enforced mode; shadow mode admits but records the would-be rejection; throttle is expected behaviour |
 | Org NFR filter matches | `varadhi-server.produce-service` | 200, message dropped | treated as delivered for bookkeeping |
 | Pulsar publish fails | `varadhi-server.produce-service` | 500 | |
 
 #### Runtime Characteristics
-- **Availability**: topic/project/org are read from the in-process `shared.resource-cache`, so produce keeps serving metadata during a **ZooKeeper outage** (fail-open reads) — it hard-fails only if **Pulsar** (the write target) is down. But authorization (`varadhi-server.authorization`) reads IAM policy from its **own** metastore connection with no cache, so an authz-metastore outage rejects produce (fail-closed) even though the produce path itself wouldn't need ZK.
-- **Performance shape**: the system's hot path and the **only non-blocking / event-loop** route — must stay async to Pulsar; blocking work here stalls the event loop for all in-flight produces. Producers are cached (Caffeine, access-TTL) so steady state avoids producer setup. Per-topic capacity policy throttles (429) by design.
-- **Consistency / durability**: **at-least-once with no dedup** — a client retry after an ambiguous response creates a duplicate; durability is whatever Pulsar acks. For grouped topics, produce hashes by GroupId to a partition (produce-side ordering only — end-to-end ordered *delivery* is inactive, consumer grouped path unwired).
-- **Eventually consistent**: a just-created topic can briefly 404 on a node until `flow.cache.entity-event-propagation` refreshes that node's cache.
+- Topic/project/org metadata reads come from the in-process `shared.resource-cache`, so produce keeps serving during a **ZooKeeper outage** (fail-open reads) — it hard-fails only if **Pulsar** (the write target) is down. Authorization (`varadhi-server.authorization`) reads IAM policy from its **own** metastore connection with no cache, so an authz-metastore outage rejects produce (fail-closed) even though the produce path itself wouldn't need ZK.
+- The system's hot path and the **only non-blocking / event-loop** route — must stay async to Pulsar; blocking work here stalls the event loop for all in-flight produces. Producers are cached (Caffeine, access-TTL) so steady state avoids producer setup. `varadhi-server.produce-rate-limiter` admits each message against this pod's even-split share of the topic's produce quota (in-memory token buckets, fail-open); over-quota produce throttles (429) by design.
+- **At-least-once with no dedup** — a client retry after an ambiguous response creates a duplicate; durability is whatever Pulsar acks. For grouped (`concept.grouping`) topics, produce hashes by GroupId to a partition (produce-side ordering only — end-to-end ordered *delivery* is inactive, consumer grouped path unwired).
+- A just-created topic can briefly 404 on a node until `flow.cache.entity-event-propagation` refreshes that node's cache.
 
 ---
 
 ### flow.consume.message-delivery — Consume & Deliver
 
 **Trigger**: per-shard consumption loop for an assigned, running subscription
-**Purpose**: read messages from the messaging stack and push them to the subscription's HTTP endpoint, escalating failures through retry/DLQ.
+**Purpose**: read `concept.message`s from the messaging stack and push them to the subscription's HTTP endpoint, escalating failures through retry/DLQ.
 **Containers**: varadhi-consumer, pulsar, subscriber endpoint (external)
 
 ```mermaid
@@ -190,19 +213,21 @@ sequenceDiagram
         participant FC as varadhi-consumer.flow-control
         participant Deliver as varadhi-consumer.message-delivery
         participant Fail as varadhi-consumer.message-failure-routing
+        participant Tele as varadhi-consumer.telemetry
     end
     participant Pulsar as pulsar
-    actor Endpoint as Subscriber Endpoint
+    participant Subscriber as actor.subscriber
 
     Poller->>Pulsar: poll main + retry topics
     Pulsar-->>Poller: message batch
     Poller->>Engine: next batch (tracked for ack)
     Note over Engine,FC: ▶ 1. Gate (parallelism + error-rate throttle)
     Engine->>FC: acquire delivery slot
-    Note over Deliver,Endpoint: ▶ 2. Deliver (HTTP push)
+    Note over Deliver,Subscriber: ▶ 2. Deliver (HTTP push)
     Engine->>Deliver: deliver(message)
-    Deliver->>Endpoint: HTTP request
-    Endpoint-->>Deliver: 2xx | non-2xx
+    Deliver->>Subscriber: HTTP request
+    Subscriber-->>Deliver: 2xx | non-2xx
+    Engine->>Tele: consumption metrics
     alt delivery success (2xx)
         Engine->>Poller: ack (commit offset)
     else delivery failure (non-2xx / error)
@@ -219,7 +244,7 @@ sequenceDiagram
 |---|---|---|
 | Consume + ack from Pulsar | `varadhi-consumer.message-poller` | each iteration |
 | HTTP push to endpoint | `varadhi-consumer.message-delivery` | per message |
-| Produce to retry/DLQ topic | `varadhi-consumer.message-failure-routing` | on delivery failure |
+| Produce to `concept.retry-queue`/`concept.dead-letter-queue` topic | `varadhi-consumer.message-failure-routing` | on delivery failure |
 | Consumption metrics | `varadhi-consumer.telemetry` | always |
 
 #### Failure Paths
@@ -232,24 +257,25 @@ sequenceDiagram
 | Failure-path produce slow/failing | `varadhi-consumer.message-failure-routing` | in-flight backs up → consumption slows | backpressure |
 
 #### Runtime Characteristics
-- **Blast radius (node-level)**: every shard on a node shares **one `execution-context` thread** and **one `HttpClient`** — a blocking task or a slow/stalled subscriber endpoint contends with, and can starve, every other shard on that node. There is no per-subscription isolation within a node.
-- **Availability / degradation**: endpoint failures degrade gracefully — non-2xx routes the message to retry→DLQ rather than erroring, and a rising error rate trips `flow-control`'s dynamic throttle (intentional brownout). But the failure path **also writes to Pulsar**, so if Pulsar is unavailable the retry/DLQ produce can't drain, in-flight backs up, and `maxInFlightMessages` backpressure halts consumption for that shard.
-- **Consistency / durability**: **at-least-once** — the offset is acked only after the delivery outcome is decided (delivered, or moved to retry/DLQ), so a crash between push and ack redelivers; endpoints must be idempotent. Per-GroupId ordering is **not** implemented yet. The DLQ is terminal (no automatic redelivery).
-- **Performance shape**: throughput is bounded by `flow-control` parallelism and `maxInFlightMessages`; retry topics are consumed with a fixed delay; shutdown blocks while draining in-flight.
+- Every shard on a node shares **one `execution-context` thread** and **one `HttpClient`** — a blocking task or a slow/stalled subscriber endpoint contends with, and can starve, every other shard on that node. There is no per-subscription isolation within a node.
+- Endpoint failures degrade gracefully — non-2xx routes the message to retry→DLQ rather than erroring, and a rising error rate trips `flow-control`'s dynamic throttle (intentional brownout). But the failure path **also writes to Pulsar**, so if Pulsar is unavailable the retry/DLQ produce can't drain, in-flight backs up, and `maxInFlightMessages` backpressure halts consumption for that shard.
+- **At-least-once** — the offset is acked only after the delivery outcome is decided (delivered, or moved to retry/DLQ), so a crash between push and ack redelivers; endpoints must be idempotent. Per-GroupId ordering is **not** implemented yet. The DLQ is terminal (no automatic redelivery).
+- Throughput is bounded by `flow-control` parallelism and `maxInFlightMessages`; retry topics are consumed with a fixed delay; shutdown blocks while draining in-flight.
 
 ---
 
 ### flow.subscription.start — Start a Subscription
 
 **Trigger**: HTTP subscription-start (control-plane) → controller
-**Purpose**: bring a subscription's shards online — assign them to consumer nodes and start consumption. The canonical instance of `pattern.subscription-operation`.
+**Purpose**: bring a `concept.subscription`'s shards online — assign them to consumer nodes and start consumption. The canonical instance of `pattern.subscription-operation`.
 **Containers**: varadhi-server, varadhi-controller, varadhi-consumer
 **Pattern**: `pattern.subscription-operation` (start variation)
 
 ```mermaid
 sequenceDiagram
-    actor Admin as Administrator
+    participant Admin as actor.administrator
     participant Server as varadhi-server.http-ingress
+    participant RPC as shared.cluster-rpc
     box varadhi-controller
         participant Coord as varadhi-controller.subscription-coordinator
         participant OpMgr as varadhi-controller.operation-manager
@@ -259,8 +285,10 @@ sequenceDiagram
     participant ConsumerApi as varadhi-consumer.consumer-api
     participant CMgr as varadhi-consumer.consumers-manager
 
-    Admin->>Server: start subscription (→ flow.auth.request-authorization)
-    Server->>Coord: start (event bus, ROUTE_CONTROLLER)
+    Admin->>Server: start subscription
+    Note over Server: → flow.auth.request-authorization
+    Server->>RPC: start (event bus, ROUTE_CONTROLLER)
+    RPC->>Coord: forward to controller
     Coord->>Coord: validate NOT_ASSIGNED
     Coord->>OpMgr: enqueue StartOp
     Coord-->>Server: operation accepted (async)
@@ -279,28 +307,28 @@ sequenceDiagram
 | Side Effect | Component | Condition |
 |---|---|---|
 | Persist + advance operation | `varadhi-controller.operation-manager` | always (OpStore) |
-| Create/persist assignments | `varadhi-controller.assignment-manager` | unassigned shards |
+| Create/persist `concept.assignment`s | `varadhi-controller.assignment-manager` | unassigned shards |
 | Start shard consumer | `varadhi-consumer.consumers-manager` | per assigned shard |
 
 #### Failure Paths
 
 | Condition | Component | Result | Notes |
 |---|---|---|---|
-| Subscription already assigned | `varadhi-controller.subscription-coordinator` | rejected | `InvalidOperationForResourceException` |
+| Subscription already assigned | `varadhi-controller.subscription-coordinator` | rejected | [InvalidOperationForResourceException](/common/src/main/java/com/flipkart/varadhi/common/exceptions/InvalidOperationForResourceException.java) |
 | No capacity / no consumer nodes | `varadhi-controller.assignment-manager` | shards unassigned | op may fail/retry |
-| Shard start dispatch fails | `varadhi-controller.operation-executors` | shard-op failed → op retry | per `RetryPolicy` |
+| Shard start dispatch fails | `varadhi-controller.operation-executors` | shard-op failed → op retry | per [RetryPolicy](/controller/src/main/java/com/flipkart/varadhi/controller/RetryPolicy.java) |
 
 #### Runtime Characteristics
-- **Blast radius / SPOF**: all subscription operations run on the **single active controller** (no leader election yet) — if it is down, no start/stop/unsideline happens until it restarts. Within the controller, ops are **serialized per subscription**; a stuck op (e.g. an `OpStore` write failure on the failure path) head-of-line-blocks *that subscription's* queue only — other subscriptions proceed in parallel (bounded by `maxConcurrentOps`).
-- **Availability / recovery**: shard-dispatch failures to consumers retry with backoff (`RetryPolicy`); on controller restart, leadership state-restore re-queues in-flight operations and drops assignments of departed consumers. Recovery of already-failed operations beyond restart is a known gap.
-- **Consistency / correctness**: assignments (`AssignmentStore`) and operations (`OpStore`) are persisted in ZooKeeper; assignment is idempotent (skips already-assigned shards). Partial starts are **not rolled back** — if some shards fail, the rest stay assigned/running and the op is retried.
-- **Performance shape**: acceptance is async (caller gets an operation handle); shards come online as executors complete; subscription state is assembled by querying each shard's consumer. `stop`/`unsideline`/`reassign` share this profile (executor + assign/unassign direction differ).
+- All subscription operations run on the **single active controller** (no leader election yet) — if it is down, no start/stop/unsideline happens until it restarts. Within the controller, ops are **serialized per subscription**; a stuck op (e.g. an [OpStore](/spi/src/main/java/com/flipkart/varadhi/spi/db/OpStore.java) write failure on the failure path) head-of-line-blocks *that subscription's* queue only — other subscriptions proceed in parallel (bounded by `maxConcurrentOps`).
+- Shard-dispatch failures to consumers retry with backoff (`RetryPolicy`); on controller restart, leadership state-restore re-queues in-flight operations and drops assignments of departed consumers. Recovery of already-failed operations beyond restart is a known gap.
+- Assignments ([AssignmentStore](/spi/src/main/java/com/flipkart/varadhi/spi/db/AssignmentStore.java)) and operations (`OpStore`) are persisted in ZooKeeper; assignment is idempotent (skips already-assigned shards). Partial starts are **not rolled back** — if some shards fail, the rest stay assigned/running and the op is retried.
+- Acceptance is async (caller gets an operation handle); shards come online as executors complete; subscription state is assembled by querying each shard's consumer. `stop`/`unsideline`/`reassign` share this profile (executor + assign/unassign direction differ).
 
 ---
 
 ### flow.cache.entity-event-propagation — Entity-Change Cache Coherence
 
-**Trigger**: metastore entity change (ZooKeeper watch) on a topic/subscription/project/org/region
+**Trigger**: metastore entity change (ZooKeeper watch) on a `concept.topic`/`concept.subscription`/`concept.project`/`concept.org`/region
 **Purpose**: keep every node's in-process `shared.resource-cache` consistent with the metastore after a control-plane change.
 **Containers**: varadhi-controller (source), varadhi-server + varadhi-consumer (all nodes)
 
@@ -308,16 +336,13 @@ sequenceDiagram
 sequenceDiagram
     participant ZK as zookeeper
     participant Dist as varadhi-controller.event-distributor
-    participant NodeA as varadhi-server (resource-cache)
-    participant NodeB as varadhi-consumer (resource-cache)
+    participant Cache as shared.resource-cache
 
     ZK-->>Dist: entity change event (metastore watch)
     Dist->>Dist: translate → ResourceEvent (UPSERT / INVALIDATE)
-    Note over Dist,NodeB: ▶ fan out to ALL nodes (per-member virtual threads)
-    Dist->>NodeA: entity event (event bus, ENTITY_EVENTS_HANDLER)
-    Dist->>NodeB: entity event (event bus)
-    NodeA-->>Dist: ack (cache refreshed)
-    NodeB-->>Dist: ack (cache refreshed)
+    Note over Dist,Cache: ▶ fan out to ALL nodes (server + consumer)
+    Dist->>Cache: entity event (event bus, ENTITY_EVENTS_HANDLER)
+    Cache-->>Dist: ack (cache refreshed per node)
     Note over Dist: commit only after ALL nodes ack → mark change processed
 ```
 
@@ -326,7 +351,7 @@ sequenceDiagram
 | Side Effect | Component | Condition |
 |---|---|---|
 | Register metastore watch | `varadhi-controller.event-distributor` | controller start |
-| Fan out entity event to all nodes | `varadhi-controller.event-distributor` | per metastore change |
+| Fan out `concept.entity-change-event` to all nodes | `varadhi-controller.event-distributor` | per metastore change |
 | Refresh local resource cache | `shared.resource-cache` (each node) | on event receipt |
 
 #### Failure Paths
@@ -337,10 +362,10 @@ sequenceDiagram
 | A node leaves mid-event | `varadhi-controller.event-distributor` | removed as participant | unblocks the event |
 
 #### Runtime Characteristics
-- **Blast radius (cluster-wide)**: the committer processes one event at a time and waits for **all** nodes to ack before advancing, so a single slow/unreachable node **head-of-line-blocks propagation for the entire cluster** until that node leaves (and is cleaned up) or shutdown. And because there is a single controller with no failover, a controller outage means **no propagation at all**.
-- **Availability / degradation**: lagging nodes are retried per-node with backoff (Failsafe); a node that leaves is dropped as a participant, unblocking the event. Reads **fail-open on staleness** — `varadhi-server`/`varadhi-consumer` keep serving from their last-known `shared.resource-cache` while propagation is delayed or halted (so a controller outage degrades freshness, not availability).
-- **Consistency**: "applied only after all-ack" gives strong convergence *when healthy* but trades availability for it (above). UPSERT refreshes / INVALIDATE evicts a cache entry; the staleness window equals propagation latency — unbounded if a node is stuck.
-- **Performance shape**: per-member virtual-thread senders fan out concurrently; the single committer thread is the serialization point.
+- The committer processes one event at a time and waits for **all** nodes to ack before advancing, so a single slow/unreachable node **head-of-line-blocks propagation for the entire cluster** until that node leaves (and is cleaned up) or shutdown. And because there is a single controller with no failover, a controller outage means **no propagation at all**.
+- Lagging nodes are retried per-node with backoff (Failsafe); a node that leaves is dropped as a participant, unblocking the event. Reads **fail-open on staleness** — `varadhi-server`/`varadhi-consumer` keep serving from their last-known `shared.resource-cache` while propagation is delayed or halted (so a controller outage degrades freshness, not availability).
+- "Applied only after all-ack" gives strong convergence *when healthy* but trades availability for it (above). UPSERT refreshes / INVALIDATE evicts a cache entry; the staleness window equals propagation latency — unbounded if a node is stuck.
+- Per-member virtual-thread senders fan out concurrently; the single committer thread is the serialization point.
 
 ---
 
@@ -371,7 +396,7 @@ flowchart TD
 | Side Effect | Component | Condition |
 |---|---|---|
 | Remove node + free capacity | `varadhi-controller.assignment-manager` | node left |
-| Enqueue reassign operation per orphaned shard | `varadhi-controller.subscription-coordinator` | node left with assignments |
+| Enqueue reassign operation per orphaned shard | `varadhi-controller.subscription-coordinator` | node left with `concept.assignment`s |
 | Add node to pool + event-sender queue | `varadhi-controller.assignment-manager` / `event-distributor` | node joined |
 
 #### Failure Paths
@@ -379,13 +404,13 @@ flowchart TD
 | Condition | Component | Result | Notes |
 |---|---|---|---|
 | No surviving node with capacity | `varadhi-controller.assignment-manager` | shard stays unassigned | until capacity frees |
-| Reassign op fails | `varadhi-controller.operation-manager` | retried | per `RetryPolicy` |
+| Reassign op fails | `varadhi-controller.operation-manager` | retried | per [RetryPolicy](/controller/src/main/java/com/flipkart/varadhi/controller/RetryPolicy.java) |
 
 #### Runtime Characteristics
-- **Availability / detection latency**: rebalance is triggered by a cluster-membership change, which depends on the **ZooKeeper session timeout (~60s configured)** — a crashed consumer's shards stay **down until the session expires and reassignment completes**. And since rebalance runs on the **single controller with no leader election**, a controller outage means no rebalance happens at all.
-- **Blast radius**: a departing node's shards are all unavailable until reassigned and restarted on survivors; reassignments contend for the **single-threaded `assignment-manager`** and the per-subscription op queues. If no surviving node has capacity, shards stay **silently unassigned** — a delivery gap with no error surfaced.
-- **Consistency / recovery**: assignments are idempotent and persisted in `AssignmentStore`; in-memory node capacity is rebuilt from the store + consumer info on controller restart. Each orphaned shard is an independent reassign op (parallel across subscriptions).
-- **Performance shape**: rebalance cost scales with the departed node's shard count.
+- Rebalance is triggered by a cluster-membership change, which depends on the **ZooKeeper session timeout** (a configured knob) — a crashed consumer's shards stay **down until the session expires and reassignment completes**. And since rebalance runs on the **single controller with no leader election**, a controller outage means no rebalance happens at all.
+- A departing node's shards are all unavailable until reassigned and restarted on survivors; reassignments contend for the **single-threaded `assignment-manager`** and the per-subscription op queues. If no surviving node has capacity, shards stay **silently unassigned** — a delivery gap with no error surfaced.
+- Assignments are idempotent and persisted in [AssignmentStore](/spi/src/main/java/com/flipkart/varadhi/spi/db/AssignmentStore.java); in-memory node capacity is rebuilt from the store + consumer info on controller restart. Each orphaned shard is an independent reassign op (parallel across subscriptions).
+- Rebalance cost scales with the departed node's shard count.
 
 ---
 
@@ -398,13 +423,14 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    actor Admin as Administrator
+    participant Admin as actor.administrator
     participant Ingress as varadhi-server.http-ingress
     participant Svc as shared.entity-services
     participant ZK as zookeeper
     participant Pulsar as pulsar
 
-    Admin->>Ingress: POST topic (→ flow.auth.request-authorization, TOPIC_CREATE)
+    Admin->>Ingress: POST topic
+    Note over Ingress: → flow.auth.request-authorization (TOPIC_CREATE)
     Ingress->>Svc: VaradhiTopicService.create
     Note over Svc,Pulsar: ▶ provisioning deviation (vs plain CRUD)
     Svc->>Pulsar: create storage topic(s) (StorageTopicService)
@@ -417,11 +443,19 @@ sequenceDiagram
 
 | Side Effect | Component | Condition |
 |---|---|---|
-| Provision storage topic(s) on Pulsar | `shared.entity-services` (via `shared.backend-spi` messaging) | topic/queue create |
+| Provision `concept.storage-topic`(s) on Pulsar | `shared.entity-services` (via `shared.messaging-spi`) | topic/queue create |
 | Persist entity in metastore | `shared.entity-services` | always |
 
+#### Failure Paths
+
+| Condition | Component | Result | Notes |
+|---|---|---|---|
+| Pulsar provision fails | `shared.entity-services` | request fails | storage topic not created |
+| Metastore persist fails | `shared.entity-services` | request fails | entity not recorded |
+| Topic already exists | `shared.entity-services` | 4xx conflict | validation rejects duplicate |
+
 #### Notes
-- This is the part `pattern.control-plane-request` abstracts over: **reads** and non-messaging entities (org/team/project/region) skip the Pulsar step; topic/subscription/queue **create/delete** include it. Subscription create additionally provisions retry/DLQ storage subscriptions.
+- This is the part `pattern.control-plane-request` abstracts over: **reads** and non-messaging entities (org/team/project/region) skip the Pulsar step; `concept.topic`/`concept.subscription`/`concept.queue` **create/delete** include it. Subscription create additionally provisions `concept.retry-queue`/`concept.dead-letter-queue` storage subscriptions.
 - The new entity becomes visible on other nodes via `flow.cache.entity-event-propagation`.
 
 ---
@@ -429,17 +463,18 @@ sequenceDiagram
 ### flow.dlq.browse-unsideline — DLQ Browse / Unsideline
 
 **Trigger**: HTTP DLQ routes (`/v1/projects/:project/subscriptions/:sub/dlt...`)
-**Purpose**: inspect dead-lettered messages (browse) and re-drive them through delivery (unsideline).
+**Purpose**: inspect dead-lettered `concept.message`s in the `concept.dead-letter-queue` (browse) and re-drive them through delivery (unsideline).
 **Containers**: varadhi-server, varadhi-controller, varadhi-consumer
 
 ```mermaid
 sequenceDiagram
-    actor Admin as Administrator
+    participant Admin as actor.administrator
     participant Dlq as varadhi-server.dlq-service
     participant Coord as varadhi-controller.subscription-coordinator
     participant ConsumerApi as varadhi-consumer.consumer-api
 
-    Admin->>Dlq: DLQ request (→ flow.auth.request-authorization)
+    Admin->>Dlq: DLQ request
+    Note over Dlq: → flow.auth.request-authorization
     alt browse (get messages)
         Dlq->>ConsumerApi: get DLQ messages (event bus, fan-out to shards)
         ConsumerApi-->>Dlq: messages [currently STUB → empty]
@@ -450,6 +485,13 @@ sequenceDiagram
     Dlq-->>Admin: response
 ```
 
+#### Side Effects
+
+| Side Effect | Component | Condition |
+|---|---|---|
+| Fan-out DLQ browse to shard consumers | `varadhi-consumer.consumer-api` | browse path |
+| Enqueue unsideline operation | `varadhi-controller.subscription-coordinator` | unsideline path |
+
 #### Failure Paths
 
 | Condition | Component | Result | Notes |
@@ -459,6 +501,4 @@ sequenceDiagram
 
 #### Notes
 - Partially implemented: the direct `varadhi-server → varadhi-consumer` browse edge exists, but `consumer-api` DLQ get-messages and `unsideline` are **stubs** (see memory / L3). Document reflects current behavior, not the intended end state.
-
-
 

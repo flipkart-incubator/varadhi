@@ -9,7 +9,6 @@ import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.entities.web.TopicResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -26,7 +25,6 @@ class VaradhiTopicFactoryTest {
     @Mock
     private StorageTopicFactory<StorageTopic> storageTopicFactory;
 
-    @InjectMocks
     private VaradhiTopicFactory varadhiTopicFactory;
 
     private Project project;

@@ -27,7 +27,7 @@ public class OrgReadCache extends ResourceReadCache<OrgDetails> {
             resources.merge(orgName, event.resource(), OrgReadCache::merge);
         } else if (operation == EventType.INVALIDATE) {
             log.info("Invalidating OrgDetails: {}", orgName);
-            resources.remove(orgName);
+            invalidate(orgName);
         }
     }
 

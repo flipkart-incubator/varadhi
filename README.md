@@ -22,7 +22,7 @@ spec and other detailed information.
 
 ## Try locally
 
-Give it a go locally on your machine. You will require java 21, docker & python.
+Give it a go locally on your machine. You will require Java 25, docker & python.
 Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/varadhi/wiki/Try-Locally)
 
 ## Build
@@ -31,17 +31,51 @@ Follow this guide: [Wiki/Try Locally](https://github.com/flipkart-incubator/vara
 ./gradlew build test
 ```
 
-## Integration Tests
+See [AGENTS.md](./AGENTS.md) for a repo map and agent-oriented workflows (Cursor, Claude Code). See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor conventions.
+
+## Dev Setup
+Start Apache Pulsar (message broker) and ZooKeeper (metadata store) with Docker Compose, then run the Varadhi server on your host with Gradle.
+
+> **Note:** `PULSAR_ADVERTISED_ADDRESS=localhost` is required so that Pulsar advertises a host-reachable address. Without this, the server (running on your host) will not be able to connect to Pulsar's binary protocol port.
 
 ```bash
-./gradlew copyDependencies copyE2EConfig -x test
+PULSAR_ADVERTISED_ADDRESS=localhost docker compose --profile dev -f setup/docker/compose.yml up -d --wait --wait-timeout 300
+```
 
-docker build . --file setup/docker/Dockerfile --tag varadhi.docker.registry/varadhi:latest --build-arg
+Starts a long-running server (it does not return until you stop it). Run the commands below in **another terminal** while it is running.
+```bash
+./gradlew run
+```
 
+### Create Sample Entities
+```bash
+bash setup/create_entities.sh default_org team default_project default_topic
+```
+
+### Stopping Dependencies
+```bash
+docker compose --profile dev -f setup/docker/compose.yml down -v
+```
+
+## Integration Tests (E2E)
+
+E2E tests run against a Docker stack (`server`, `zookeeper`, `pulsar`) with the Varadhi server image built from your working tree. **Always tear down with `-v` before bringing the stack up** — leftover ZooKeeper/Pulsar data causes setup failures (e.g. HTTP 409 when creating orgs/projects that already exist from a prior run).
+
+```bash
+./gradlew clean build copyDependencies copyE2EConfig -x test
+
+docker build . --file setup/docker/Dockerfile \
+  --tag varadhi.docker.registry/varadhi:latest \
+  --build-arg ENV=test \
+  --build-arg SKIP_CERT_CHECK=true
+
+docker compose --profile test -f setup/docker/compose.yml down -v
 docker compose --profile test -f setup/docker/compose.yml up -d --wait --wait-timeout 180
 
-./gradlew testE2E
+./gradlew test testE2E
 ```
+
+`SKIP_CERT_CHECK=true` skips TLS verification when the image build downloads Apache ZooKeeper/Pulsar archives — use it if `docker build` fails with an untrusted `archive.apache.org` certificate. CI uses the same compose file and matches this flow (see `.github/workflows/e2e.yml`).
 
 ### Dependencies
 
