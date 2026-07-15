@@ -15,6 +15,7 @@ import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
 import com.flipkart.varadhi.core.config.ProducerOptions;
+import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
@@ -75,6 +76,7 @@ public final class ProducerService {
 
     private final Map<String, ProducerMetrics> metrics = new ConcurrentHashMap<>();
     private final Function<String, ProducerMetrics> metricsProvider;
+    private final ProduceRateLimiter rateLimiter;
 
     /**
      * Creates a new ProducerService with default options.
@@ -102,7 +104,8 @@ public final class ProducerService {
             projectCache,
             topicCache,
             t -> ProducerMetrics.NOOP,
-            ProducerOptions.defaultOptions()
+            ProducerOptions.defaultOptions(),
+            ProduceRateLimiter.disabled()
         );
     }
 
@@ -126,10 +129,33 @@ public final class ProducerService {
         Function<String, ProducerMetrics> metricsRecorderProvider,
         ProducerOptions producerOptions
     ) {
+        this(
+            produceRegion,
+            producerFactory,
+            orgCache,
+            projectCache,
+            topicCache,
+            metricsRecorderProvider,
+            producerOptions,
+            ProduceRateLimiter.disabled()
+        );
+    }
+
+    public ProducerService(
+        String produceRegion,
+        ProducerFactory producerFactory,
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
+        Function<String, ProducerMetrics> metricsRecorderProvider,
+        ProducerOptions producerOptions,
+        ProduceRateLimiter rateLimiter
+    ) {
         this.produceRegion = produceRegion;
         this.topicCache = topicCache;
         this.projectCache = projectCache;
         this.orgCache = orgCache;
+        this.rateLimiter = rateLimiter;
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
@@ -191,7 +217,9 @@ public final class ProducerService {
         ProducerMetrics metrics = getMetrics(topicFQN);
         metrics.received(message.getPayload().length, message.getTotalSizeBytes());
 
-        return produceToValidTopic(topic.get().getEntity(), message).whenComplete(metrics::accepted);
+        return produceToValidTopic(topic.get().getEntity(), message).whenComplete(
+            (result, t) -> metrics.accepted(result, t, message.getTotalSizeBytes())
+        );
     }
 
     /**
@@ -219,6 +247,10 @@ public final class ProducerService {
 
         if (applyOrgFilter(topic, message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
+        }
+
+        if (rateLimiter.check(topic, message.getTotalSizeBytes())) {
+            return CompletableFuture.completedFuture(ProduceResult.ofThrottled(message.getMessageId()));
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();

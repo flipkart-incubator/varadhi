@@ -63,7 +63,7 @@ featureFlags:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 
-{{ template "configMap.metastore.zookeeper" . }}
+{{ template "configMap.varadhi.vertxZookeeperStore" . }}
 
 {{ with .Values.varadhi.app.controller }}
 controller:

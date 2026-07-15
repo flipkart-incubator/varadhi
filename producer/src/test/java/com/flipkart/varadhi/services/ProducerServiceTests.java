@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -58,7 +59,9 @@ class ProducerServiceTests {
 
     @BeforeAll
     static void setup() {
-        StdHeaders.init(TestStdHeaders.get());
+        if (!StdHeaders.isGlobalInstanceInitialized()) {
+            StdHeaders.init(TestStdHeaders.get());
+        }
     }
 
     @BeforeEach
@@ -261,7 +264,7 @@ class ProducerServiceTests {
     @Test
     void testMetricEmitFailureNotIgnored() throws InterruptedException {
         ProducerMetrics emitter = mock(ProducerMetrics.class);
-        doThrow(new RuntimeException("Failed to send metric.")).when(emitter).accepted(any(), any());
+        doThrow(new RuntimeException("Failed to send metric.")).when(emitter).accepted(any(), any(), anyLong());
 
         service = new ProducerService(
             region,
@@ -285,7 +288,7 @@ class ProducerServiceTests {
         Assertions.assertNull(rc.produceResult);
         Assertions.assertNotNull(rc.throwable);
         verify(producer, times(1)).produceAsync(eq(msg1));
-        verify(emitter, times(1)).accepted(any(), isNull());
+        verify(emitter, times(1)).accepted(any(), isNull(), anyLong());
         // Exception gets wrapped in CompletionException.
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
     }

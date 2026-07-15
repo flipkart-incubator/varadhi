@@ -3,6 +3,8 @@ package com.flipkart.varadhi.entities;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 @Data
 @NoArgsConstructor
 public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
@@ -36,5 +38,15 @@ public class TopicCapacityPolicy implements Comparable<TopicCapacityPolicy> {
 
     public static TopicCapacityPolicy getDefault() {
         return new TopicCapacityPolicy(100, 1000, 1, 2);
+    }
+
+    /**
+     * Whether {@code throughputKBps} can sustain {@code qps} at the profile's maximum message size.
+     */
+    public boolean isConsistentWith(MessageSizeProfile messageSizeProfile) {
+        Objects.requireNonNull(messageSizeProfile);
+        long maxRequiredBytesPerSec = (long)qps * messageSizeProfile.getMaxMsgSizeBytes();
+        long actualBytesPerSec = (long)throughputKBps * 1024L;
+        return actualBytesPerSec >= maxRequiredBytesPerSec;
     }
 }

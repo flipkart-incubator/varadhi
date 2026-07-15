@@ -65,7 +65,7 @@ dependencies {
 reporting {
     reports {
         combinedJacocoReport(JacocoCoverageReport) {
-            testType = TestSuiteType.UNIT_TEST
+            testSuiteName = 'test'
         }
     }
 }

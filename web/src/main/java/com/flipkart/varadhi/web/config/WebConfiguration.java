@@ -5,6 +5,7 @@ import com.flipkart.varadhi.core.config.AppConfiguration;
 import com.flipkart.varadhi.web.spi.authn.AuthenticationOptions;
 import com.flipkart.varadhi.web.spi.authz.AuthorizationOptions;
 import io.vertx.core.http.HttpServerOptions;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
@@ -29,4 +30,8 @@ public class WebConfiguration extends AppConfiguration {
 
     @NotNull
     private RestOptions restOptions;
+
+    @NotNull
+    @Valid
+    private RateLimiterOptions rateLimiterOptions = new RateLimiterOptions();
 }

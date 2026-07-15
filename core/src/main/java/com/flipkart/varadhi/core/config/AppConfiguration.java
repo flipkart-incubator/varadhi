@@ -58,10 +58,10 @@ public class AppConfiguration implements Validatable {
     private MetaStoreOptions metaStoreOptions;
 
     /**
-     * zookeeper options. This is used to connect to zookeeper for managing node cluster.
+     * ZooKeeper connection for the Vert.x cluster manager (event bus / membership).
      */
     @NotNull
-    private ZookeeperConnectConfig zookeeperOptions;
+    private ZookeeperConnectConfig vertxZookeeperOptions;
 
     @NotNull
     private FeatureFlags featureFlags;
