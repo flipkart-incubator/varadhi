@@ -197,16 +197,18 @@ public class ControllerVerticle extends AbstractVerticle {
         // TODO: Handling membership changes during controller bootstrap.
         setupMembershipListener(controllerApiMgr);
 
-        // Get all cluster members and initialize consumer nodes
+        // Register API handlers immediately so they are available before consumer-node init
+        setupApiHandlers(messageRouter, handler);
+
+        // Get all cluster members and initialize consumer nodes asynchronously
         return clusterManager.getAllMembers()
                              .compose(allMembers -> initializeConsumerNodes(allMembers, controllerApiMgr))
                              .compose(consumerIds -> {
-                                 // Set up API handlers and restore controller state
-                                 setupApiHandlers(messageRouter, handler);
                                  restoreControllerState(controllerApiMgr, consumerIds);
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
+                                 log.error("Failed to initialize consumer nodes during leader election: {}", e.getMessage());
                                  abortLeadership();
                              });
     }

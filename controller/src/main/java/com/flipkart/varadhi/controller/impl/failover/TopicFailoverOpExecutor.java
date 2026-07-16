@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 /**
@@ -81,12 +82,16 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         if (stage == TransitionStage.PENDING || stage == TransitionStage.PREPARE) {
             chain = chain.thenCompose(v -> prepare(op));
         }
+        // Use thenComposeAsync to break any Vert.x event-loop thread continuation that may be
+        // inherited from stage-barrier completion callbacks (which are triggered from the event-loop
+        // sendHandler). Running blocking ZK ops or calling serverHosts().join() on the event-loop
+        // thread would deadlock because Vert.x Future completion is itself dispatched on that loop.
         if (stage == TransitionStage.PENDING || stage == TransitionStage.PREPARE || stage == TransitionStage.SWITCH) {
-            chain = chain.thenCompose(v -> switchStage(op));
+            chain = chain.thenComposeAsync(v -> switchStage(op), ForkJoinPool.commonPool());
         }
         if (stage != TransitionStage.COMPLETED && stage != TransitionStage.ABORTED) {
-            chain = chain.thenCompose(v -> drain(op));
-            chain = chain.thenCompose(v -> complete(op));
+            chain = chain.thenComposeAsync(v -> drain(op), ForkJoinPool.commonPool());
+            chain = chain.thenComposeAsync(v -> complete(op), ForkJoinPool.commonPool());
         }
         return chain;
     }
@@ -183,6 +188,10 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
             VaradhiTopicName.parse(op.getTopicFqn()),
             TransitionType.TOPIC_FAILOVER,
             stage,
+<<<<<<< HEAD
+=======
+            stage.isVersionGated(),
+>>>>>>> 7fa07080 (fix in failover testing)
             topicVersionToAwait,
             target
         );

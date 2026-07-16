@@ -1,4 +1,4 @@
-deployedRegion: "default"
+deployedRegion: "region-a"
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
@@ -23,6 +23,9 @@ deliveryOptions:
 
 producerOptions:
   producerCacheTtlSeconds: 3600
+  # ZK watch → TopicCache can lag a few seconds under load; 1s default fails SWITCH flaky.
+  transitionVersionWaitMs: 30000
+  transitionPollIntervalMs: 50
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
