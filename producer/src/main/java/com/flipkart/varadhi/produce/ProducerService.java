@@ -237,8 +237,6 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        RegionName podRegion = RegionName.of(deployedRegion);
-
         SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(topic.getActiveRegion().value());
 
         if (internalTopic == null) {

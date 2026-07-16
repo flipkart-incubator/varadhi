@@ -37,7 +37,7 @@ Pod client: `ControllerConsumerClient` implements `PodToControllerApi` and sends
 
 ## Wiring
 
-`TopicTransitionPodWiring.install(...)` registers `ProduceTransitionMsgHandler` on the broadcast bus when a cluster manager is present. Returns an `Handle` (`AutoCloseable`) that owns the version-wait scheduler; the caller must `close()` it on pod shutdown (`WebServerVerticle.stop`).
+`TopicTransitionPodWiring.install(...)` registers `ProduceTransitionMsgHandler` on the broadcast bus when a cluster manager is present. Returns an `AutoCloseable` wiring handle that owns the version-wait scheduler; the verticle closes it on shutdown.
 
 ## Participation rules (producer pods)
 
@@ -67,7 +67,7 @@ Version-gated stages (PREPARE, SWITCH) poll TopicCache on a dedicated scheduler 
 
 **Pod** (`TransitionMetrics`):
 
-- Gauges (low cardinality): `topic.transition.stage.received`, `topic.transition.stage.acked`, `topic.transition.participation`, `topic.transition.ack.send.failed` — tags `type`, `stage`, `success`, `participation` as applicable. **No topic tag.**
+- Counters (low cardinality): `topic.transition.stage.received`, `topic.transition.stage.acked`, `topic.transition.participation`, `topic.transition.ack.send.failed` — tags `type`, `stage`, `success`, `participation` as applicable. **No topic tag.**
 - Gauge: `topic.transition.version_waits.in_flight` (concurrent waits, not cumulative).
 
 **Controller** (`TopicTransitionMetrics`):

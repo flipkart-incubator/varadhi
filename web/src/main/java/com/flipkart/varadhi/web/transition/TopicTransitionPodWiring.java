@@ -24,37 +24,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * Wires the pod-side topic-transition stage handler on the cluster broadcast bus.
+ * Wires the pod-side topic-transition stage handler on the cluster broadcast bus and owns the
+ * version-wait scheduler it creates.
  */
 @Slf4j
-public final class TopicTransitionPodWiring {
+public final class TopicTransitionPodWiring implements AutoCloseable {
 
-    private TopicTransitionPodWiring() {
-    }
+    private final ScheduledExecutorService scheduler;
 
-    /**
-     * Scheduler and other resources created for topic-transition handling on this pod.
-     * The caller that invoked {@link #install} must {@link #close()} it during shutdown.
-     */
-    public static final class Handle implements AutoCloseable {
-        private final ScheduledExecutorService scheduler;
-
-        private Handle(ScheduledExecutorService scheduler) {
-            this.scheduler = scheduler;
-        }
-
-        @Override
-        public void close() {
-            scheduler.shutdownNow();
-        }
+    private TopicTransitionPodWiring(ScheduledExecutorService scheduler) {
+        this.scheduler = scheduler;
     }
 
     /**
      * Installs {@link ProduceTransitionMsgHandler} when a cluster manager is configured.
      *
-     * @return a closeable handle, or {@code null} when installation was skipped
+     * @return a closeable wiring handle, or {@code null} when installation was skipped
      */
-    public static Handle install(
+    public static TopicTransitionPodWiring install(
         VaradhiClusterManager clusterManager,
         Vertx vertx,
         ResourceReadCacheRegistry cacheRegistry,
@@ -92,6 +79,11 @@ public final class TopicTransitionPodWiring {
             handler
         );
         log.info("Installed topic-transition stage handler");
-        return new Handle(scheduler);
+        return new TopicTransitionPodWiring(scheduler);
+    }
+
+    @Override
+    public void close() {
+        scheduler.shutdownNow();
     }
 }

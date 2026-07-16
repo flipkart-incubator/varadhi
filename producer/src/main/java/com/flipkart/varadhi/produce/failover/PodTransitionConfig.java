@@ -19,6 +19,6 @@ public record PodTransitionConfig(long podVersionWaitMs, long podPollIntervalMs)
 
     /** Failsafe max-attempts for version polling: {@code ceil(podVersionWaitMs / podPollIntervalMs)}. */
     public int versionWaitMaxAttempts() {
-        return Math.max(1, (int) Math.ceil((double) podVersionWaitMs / podPollIntervalMs));
+        return Math.max(1, (int)Math.ceil((double)podVersionWaitMs / podPollIntervalMs));
     }
 }

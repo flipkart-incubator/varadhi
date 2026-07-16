@@ -17,6 +17,7 @@ public sealed interface PrepareTarget {
         }
     }
 
+
     record StorageTopicTarget(int storageTopicId) implements PrepareTarget {
         public StorageTopicTarget {
             if (storageTopicId < 0) {

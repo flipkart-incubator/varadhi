@@ -46,18 +46,15 @@ public final class RetryUtils {
         Predicate<T> retryOnResult
     ) {
         RetryPolicy<T> policy = RetryPolicy.<T>builder()
-                                          .withMaxAttempts(maxAttempts)
-                                          .withDelay(Duration.ofMillis(delayInMs))
-                                          .handleResultIf(retryOnResult::test)
-                                          .abortOn(Exception.class)
-                                          .build();
+                                           .withMaxAttempts(maxAttempts)
+                                           .withDelay(Duration.ofMillis(delayInMs))
+                                           .handleResultIf(retryOnResult::test)
+                                           .abortOn(Exception.class)
+                                           .build();
         return new ResultPollingExecutor<>(Failsafe.with(policy).with(executor));
     }
 
-    public static <T> CompletableFuture<T> getAsync(
-        ResultPollingExecutor<T> executor,
-        Supplier<T> probe
-    ) {
+    public static <T> CompletableFuture<T> getAsync(ResultPollingExecutor<T> executor, Supplier<T> probe) {
         return executor.getAsync(probe);
     }
 

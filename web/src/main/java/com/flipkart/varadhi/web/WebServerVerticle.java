@@ -127,7 +127,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
-    private TopicTransitionPodWiring.Handle topicTransition;
+    private TopicTransitionPodWiring topicTransitionWiring;
     private ClusterMembershipView clusterMembershipView;
 
     /**
@@ -232,8 +232,8 @@ public class WebServerVerticle extends AbstractVerticle {
         if (clusterMembershipView != null) {
             clusterMembershipView.stop();
         }
-        if (topicTransition != null) {
-            topicTransition.close();
+        if (topicTransitionWiring != null) {
+            topicTransitionWiring.close();
         }
         if (httpServer != null) {
             httpServer.close(stopPromise);
@@ -317,7 +317,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 rateLimiter
             )
         );
-        this.topicTransition = TopicTransitionPodWiring.install(
+        this.topicTransitionWiring = TopicTransitionPodWiring.install(
             clusterManager,
             vertx,
             cacheRegistry,

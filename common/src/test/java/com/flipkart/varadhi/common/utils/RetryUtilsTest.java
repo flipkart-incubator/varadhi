@@ -67,16 +67,10 @@ class RetryUtilsTest {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         AtomicInteger attempts = new AtomicInteger();
 
-        CompletableFuture<Optional<Long>> future = RetryUtils.getAsync(
-            scheduler,
-            5,
-            5L,
-            Optional::isEmpty,
-            () -> {
-                attempts.getAndIncrement();
-                throw new IllegalStateException("cache read failed");
-            }
-        );
+        CompletableFuture<Optional<Long>> future = RetryUtils.getAsync(scheduler, 5, 5L, Optional::isEmpty, () -> {
+            attempts.getAndIncrement();
+            throw new IllegalStateException("cache read failed");
+        });
 
         try {
             future.get(2, TimeUnit.SECONDS);
@@ -90,12 +84,7 @@ class RetryUtilsTest {
     @Test
     void getAsync_reusesExecutorAcrossProbes() throws Exception {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        var executor = RetryUtils.<Optional<Long>>newResultPollingExecutor(
-            scheduler,
-            5,
-            5L,
-            Optional::isEmpty
-        );
+        var executor = RetryUtils.<Optional<Long>>newResultPollingExecutor(scheduler, 5, 5L, Optional::isEmpty);
         AtomicInteger attempts = new AtomicInteger();
 
         CompletableFuture<Optional<Long>> first = RetryUtils.getAsync(

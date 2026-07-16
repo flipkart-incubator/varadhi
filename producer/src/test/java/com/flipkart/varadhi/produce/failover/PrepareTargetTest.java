@@ -26,10 +26,7 @@ class PrepareTargetTest {
 
     @Test
     void parse_rejectsBlankTarget() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> PrepareTarget.parse(TransitionType.TOPIC_FAILOVER, "  ")
-        );
+        assertThrows(IllegalArgumentException.class, () -> PrepareTarget.parse(TransitionType.TOPIC_FAILOVER, "  "));
         assertThrows(IllegalArgumentException.class, () -> PrepareTarget.parse(TransitionType.TOPIC_FAILOVER, null));
     }
 

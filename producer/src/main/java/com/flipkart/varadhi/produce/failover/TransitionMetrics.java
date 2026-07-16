@@ -4,18 +4,15 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Micrometer metrics for the pod-side topic-transition handler.
  *
- * <p>Event totals use low-cardinality tagged gauges ({@code type}, {@code stage}, {@code success},
+ * <p>Event rates use low-cardinality counters ({@code type}, {@code stage}, {@code success},
  * {@code participation}). Topic identity stays in logs / {@code TransitionAck}, not metric tags.
- * In-flight version waits are exposed as a separate gauge.
+ * In-flight version waits are exposed as a gauge.
  */
 public final class TransitionMetrics {
 
@@ -26,7 +23,6 @@ public final class TransitionMetrics {
     private static final String VERSION_WAITS_IN_FLIGHT = "topic.transition.version_waits.in_flight";
 
     private final MeterRegistry registry;
-    private final ConcurrentMap<String, AtomicInteger> gaugeValues = new ConcurrentHashMap<>();
     private final AtomicInteger versionWaitsInFlight = new AtomicInteger();
 
     public TransitionMetrics(MeterRegistry registry) {
@@ -36,30 +32,23 @@ public final class TransitionMetrics {
 
     /** A stage broadcast was received by this pod. */
     public void stageReceived(TransitionType type, TransitionStage stage) {
-        incrementGauge(STAGE_RECEIVED, "type", type.name(), "stage", stage.name());
+        registry.counter(STAGE_RECEIVED, "type", type.name(), "stage", stage.name()).increment();
     }
 
     /** This pod acked a stage; {@code success} is the ack outcome. */
     public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
-        incrementGauge(
-            STAGE_ACKED,
-            "type",
-            type.name(),
-            "stage",
-            stage.name(),
-            "success",
-            Boolean.toString(success)
-        );
+        registry.counter(STAGE_ACKED, "type", type.name(), "stage", stage.name(), "success", Boolean.toString(success))
+                .increment();
     }
 
     /** PREPARE participation decision on this pod. */
     public void participation(TransitionType type, TransitionParticipation participation) {
-        incrementGauge(PARTICIPATION, "type", type.name(), "participation", participation.name());
+        registry.counter(PARTICIPATION, "type", type.name(), "participation", participation.name()).increment();
     }
 
     /** Failed to deliver a {@code TransitionAck} to the controller. */
     public void ackSendFailed(TransitionType type, TransitionStage stage) {
-        incrementGauge(ACK_SEND_FAILED, "type", type.name(), "stage", stage.name());
+        registry.counter(ACK_SEND_FAILED, "type", type.name(), "stage", stage.name()).increment();
     }
 
     /** A version-gated wait started on this pod. */
@@ -70,22 +59,5 @@ public final class TransitionMetrics {
     /** A version-gated wait finished (success, failure, or timeout). */
     public void versionWaitFinished() {
         versionWaitsInFlight.decrementAndGet();
-    }
-
-    private void incrementGauge(String name, String... tagKeyValues) {
-        Tags tags = Tags.of(tagKeyValues);
-        String cacheKey = name + tags;
-        AtomicInteger existing = gaugeValues.get(cacheKey);
-        if (existing != null) {
-            existing.incrementAndGet();
-            return;
-        }
-        AtomicInteger created = new AtomicInteger();
-        AtomicInteger prior = gaugeValues.putIfAbsent(cacheKey, created);
-        AtomicInteger ref = prior != null ? prior : created;
-        if (prior == null) {
-            registry.gauge(name, tags, created, AtomicInteger::get);
-        }
-        ref.incrementAndGet();
     }
 }

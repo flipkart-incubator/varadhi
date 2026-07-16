@@ -100,29 +100,29 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         metrics.versionWaitStarted();
         String topicFqn = event.topicFqn().toFqn();
         long targetVersion = event.topicVersionToAwait();
-        RetryUtils.getAsync(versionWaitExecutor, () -> probeVersion(topicFqn, targetVersion)).whenComplete((outcome, t) -> {
-            metrics.versionWaitFinished();
-            if (t != null) {
-                if (RetryUtils.isRetriesExceeded(t)) {
-                    ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
-                    return;
-                }
-                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
-                ackFail(event, "transition poll error: " + ThrowableUtils.rootMessage(t));
-                return;
-            }
-            if (outcome.isEmpty()) {
-                ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
-                return;
-            }
-            onVersionResolved(event, outcome.get());
-        });
+        RetryUtils.getAsync(versionWaitExecutor, () -> probeVersion(topicFqn, targetVersion))
+                  .whenComplete((outcome, t) -> {
+                      metrics.versionWaitFinished();
+                      if (t != null) {
+                          if (RetryUtils.isRetriesExceeded(t)) {
+                              ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
+                              return;
+                          }
+                          log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
+                          ackFail(event, "transition poll error: " + ThrowableUtils.rootMessage(t));
+                          return;
+                      }
+                      if (outcome.isEmpty()) {
+                          ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
+                          return;
+                      }
+                      onVersionResolved(event, outcome.get());
+                  });
     }
 
     private String versionWaitTimeoutMessage(long targetVersion, String topicFqn) {
-        return "timeout awaiting topic version " + targetVersion + " (current " + describe(
-            currentVersion(topicFqn)
-        ) + ")";
+        return "timeout awaiting topic version " + targetVersion + " (current " + describe(currentVersion(topicFqn))
+               + ")";
     }
 
     /**
@@ -153,14 +153,19 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             );
             return;
         }
-        onVersionReached(event);
+        Optional<Resource.EntityResource<VaradhiTopic>> cached = topicCache.get(event.topicFqn().toFqn());
+        if (cached.isEmpty()) {
+            ackFail(event, "topic absent from cache after version convergence");
+            return;
+        }
+        onVersionReached(event, cached.get().getEntity());
     }
 
     private Optional<Long> currentVersion(String topicFqn) {
         return topicCache.get(topicFqn).map(Resource::getVersion).map(Integer::longValue);
     }
 
-    private void onVersionReached(TransitionEvent event) {
+    private void onVersionReached(TransitionEvent event, VaradhiTopic topic) {
         // Only PREPARE runs participant work; every other version-gated stage just acks on convergence.
         if (event.stage() != TransitionStage.PREPARE) {
             ackOk(event);
@@ -180,7 +185,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         }
         TransitionParticipation participation = TransitionParticipation.INVOLVED;
         recordParticipation(event, participation);
-        createTarget(event).whenComplete((ignored, t) -> {
+        createTarget(event, topic).whenComplete((ignored, t) -> {
             if (t != null) {
                 log.warn(
                     "Transition PREPARE warm failed for {} op={} type={}",
@@ -189,11 +194,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                     event.transitionType(),
                     t
                 );
-                ackFail(
-                    event,
-                    participation,
-                    "prepare warm failed: " + ThrowableUtils.rootMessage(t)
-                );
+                ackFail(event, participation, "prepare warm failed: " + ThrowableUtils.rootMessage(t));
                 return;
             }
             ackOk(event, participation);
@@ -204,7 +205,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
      * Type-specific PREPARE warm for an {@link TransitionParticipation#INVOLVED} pod.
      * Parses {@link TransitionEvent#target()} once at the boundary via {@link PrepareTarget}.
      */
-    private CompletableFuture<Void> createTarget(TransitionEvent event) {
+    private CompletableFuture<Void> createTarget(TransitionEvent event, VaradhiTopic topic) {
         final PrepareTarget prepareTarget;
         try {
             prepareTarget = PrepareTarget.parse(event.transitionType(), event.target());
@@ -213,7 +214,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         }
         return switch (prepareTarget) {
             case PrepareTarget.RegionTarget regionTarget -> producerService.getProducerForRegion(
-                event.topicFqn(),
+                topic,
                 regionTarget.region()
             ).thenAccept(producer -> {});
             case PrepareTarget.StorageTopicTarget storageTarget -> producerService.getProducerForStorageTopic(
@@ -241,9 +242,9 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private TransitionParticipation deriveParticipation(VaradhiTopicName topicFqn) {
-        return producerService.hasCachedProducer(topicFqn)
-            ? TransitionParticipation.INVOLVED
-            : TransitionParticipation.NOT_INVOLVED;
+        return producerService.hasCachedProducer(topicFqn) ?
+            TransitionParticipation.INVOLVED :
+            TransitionParticipation.NOT_INVOLVED;
     }
 
     private void clearParticipationIfTerminal(TransitionEvent event) {
