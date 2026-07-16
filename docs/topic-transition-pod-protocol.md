@@ -9,11 +9,13 @@ Pod-side contract for topic failover and storage-topic migration. Controller orc
 | Controller → pods | `topic.transition` / `event.publish` | publish | `TransitionEvent` |
 | Pod → controller | `controller` / `topic.transition.event.ack` | send | `TransitionAck` |
 
-Constants: `TransitionBusAddress`, `ControllerApi.ROUTE_CONTROLLER`.
+Constants: `TransitionBusAddress`, `PodToControllerApi.ROUTE_CONTROLLER` (same value as `ControllerApi.ROUTE_CONTROLLER`).
+
+Pod client: `ControllerConsumerClient` implements `PodToControllerApi` and sends over the controller route. Controller handler: `ControllerApiHandler.ackTopicTransition` → `ControllerApiMgr.ackTopicTransition`.
 
 ## `TransitionEvent`
 
-| Field | Meaning |
+| Field | Role |
 |---|---|
 | `opId` | Controller-assigned operation id (UUID). Barrier key with `stage`. |
 | `topicFqn` | Topic under transition (`VaradhiTopicName`). |
@@ -25,29 +27,57 @@ Constants: `TransitionBusAddress`, `ControllerApi.ROUTE_CONTROLLER`.
 
 ## `TransitionAck`
 
-| Field | Meaning |
+| Field | Role |
 |---|---|
-| `opId`, `stage` | Barrier match key. |
+| `opId`, `stage` | Barrier match key — which stage barrier this ack belongs to. |
+| `hostname` | Hostname of pod acknowledging transition. |
 | `topicFqn`, `transitionType` | Echoed for logs / ops (no op-store lookup). |
-| `participation` | `INVOLVED` / `NOT_INVOLVED` on PREPARE; `null` on other stages. |
-| `hostname` | Acking pod. |
+| `participation` | `INVOLVED` / `NOT_INVOLVED` on **every** ack; decided at PREPARE, sticky for the op. |
 | `errorMsg` | `null`/blank = success; non-blank = failure (`isSuccess()` derived). |
+
+## Wiring
+
+`TopicTransitionPodWiring.install(...)` registers `ProduceTransitionMsgHandler` on the broadcast bus when a cluster manager is present. Returns an `Handle` (`AutoCloseable`) that owns the version-wait scheduler; the caller must `close()` it on pod shutdown (`WebServerVerticle.stop`).
 
 ## Participation rules (producer pods)
 
-Decided in `ProduceTransitionMsgHandler` (not in wiring):
+Decided in `ProduceTransitionMsgHandler` (not in wiring lambdas):
 
-1. **INVOLVED** — pod already has a cached producer for the topic (`ProducerService.isProducingTopic`). PREPARE pre-warms the typed target (`PrepareTarget`), then acks.
+1. **INVOLVED** — pod already has a cached producer for the topic (`ProducerService.hasCachedProducer`). PREPARE pre-warms the typed target (`PrepareTarget`), then acks.
 2. **NOT_INVOLVED** — no cached producer. PREPARE skips warm (local fencing may plug in later) and still acks success so the barrier can complete.
 
-Version wait uses a **fixed** poll interval up to `transitionVersionWaitMs` (not exponential backoff): this is cache convergence within a deadline.
+## Participation persistence (controller)
+
+Participation is decided at **PREPARE** (`hasCachedProducer` → INVOLVED / NOT_INVOLVED) and stored per `opId` on the pod. **Every** subsequent ack echoes that sticky value so the controller knows involvement on every stage without an op-store lookup.
+
+Late joiners (first event not PREPARE) derive participation once from `hasCachedProducer` and cache it for the op. State is cleared on `COMPLETED` / `ABORTED`.
+
+Barrier completion: `(opId, stage)` identifies the barrier; `hostname` dedupes per-pod acks within it. Outcome comes from `errorMsg`; `participation` tells the controller gate set membership on every ack.
+
+## Version wait
+
+Version-gated stages (PREPARE, SWITCH) poll TopicCache on a dedicated scheduler via `RetryUtils.getAsync`:
+
+- **Fixed** poll interval up to `podVersionWaitMs` (not exponential backoff): cache convergence within a deadline.
+- Config source: `ProducerOptions.transitionVersionWaitMs` / `transitionPollIntervalMs` → `PodTransitionConfig.podVersionWaitMs` / `podPollIntervalMs`.
+- Attempts: `ceil(podVersionWaitMs / podPollIntervalMs)`; actual wait ≈ `(attempts - 1) * podPollIntervalMs`.
+- Retries only while the probe returns empty (cache behind); probe exceptions abort immediately (`abortOn(Exception.class)`), so they surface as poll errors, not version timeouts.
 
 ## Observability
 
-- Counters (low cardinality): stage received/acked, participation, ack send failed — tags `type`, `stage`, `success`, `participation` as applicable. **No topic tag.**
-- Gauge: `topic.transition.version_waits.in_flight`.
-- Topic identity: logs and `TransitionAck` only.
+**Pod** (`TransitionMetrics`):
+
+- Gauges (low cardinality): `topic.transition.stage.received`, `topic.transition.stage.acked`, `topic.transition.participation`, `topic.transition.ack.send.failed` — tags `type`, `stage`, `success`, `participation` as applicable. **No topic tag.**
+- Gauge: `topic.transition.version_waits.in_flight` (concurrent waits, not cumulative).
+
+**Controller** (`TopicTransitionMetrics`):
+
+- Gauge: `topic.transition.ack.processing.failed` — tags `type`, `stage`.
+
+Topic identity: logs and `TransitionAck` only (full ack object logged on delivery/processing failure).
 
 ## Delivery failure
 
-Ack send is best-effort. On failure the pod increments `topic.transition.ack.send.failed` and logs; the controller is expected to time out the stage barrier and re-push (orchestrator not fully wired yet).
+Ack send is best-effort. On failure the pod bumps `topic.transition.ack.send.failed`, logs the full `TransitionAck`, and the controller is expected to time out the stage barrier and re-push (orchestrator not fully wired yet).
+
+On controller-side processing failure, `topic.transition.ack.processing.failed` is bumped and the full ack is logged.

@@ -23,6 +23,11 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * produce gate and topic failover read this field.
      */
     private final TopicState topicState;
+    /**
+     * Region that currently receives produce traffic for this topic. Updated atomically with
+     * {@link #topicState} during topic failover SWITCH.
+     */
+    private RegionName activeRegion;
     private final boolean grouped;
 
     private final String nfrFilterName;
@@ -54,6 +59,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param internalTopics the internal topics associated with this topic
      * @param topicState     runtime produce state; defaults to {@link TopicState#Producing} when
      *                       {@code null}
+     * @param activeRegion   region receiving produce; set on first {@link #addInternalTopic} when
+     *                       {@code null}
      * @param status         the status of the topic
      * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
      * @param topicCategory  topic vs queue classification; must not be {@code null}
@@ -68,6 +75,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TopicCapacityPolicy capacity,
         Map<String, SegmentedStorageTopic> internalTopics,
         TopicState topicState,
+        RegionName activeRegion,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory,
@@ -78,8 +86,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.internalTopics = internalTopics != null ? internalTopics : new HashMap<>();
-        this.topicState = topicState;
+        this.internalTopics = internalTopics != null ? new HashMap<>(internalTopics) : new HashMap<>();
+        this.topicState = topicState != null ? topicState : TopicState.Producing;
+        this.activeRegion = activeRegion;
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
@@ -156,6 +165,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             capacity,
             new HashMap<>(),
             TopicState.Producing,
+            null,
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory,
@@ -184,11 +194,36 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      */
     public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         this.internalTopics.put(region, internalTopic);
+        if (this.activeRegion == null) {
+            this.activeRegion = RegionName.of(region);
+        }
+    }
+
+    /**
+     * Returns a copy of this topic with an updated {@link #activeRegion}. Used when persisting a new
+     * topic snapshot (e.g. topic failover SWITCH) without mutating the cached instance.
+     */
+    public VaradhiTopic withActiveRegion(RegionName region) {
+        return new VaradhiTopic(
+            getName(),
+            getVersion(),
+            grouped,
+            capacity,
+            internalTopics,
+            topicState,
+            Objects.requireNonNull(region, "activeRegion must not be null"),
+            getStatus(),
+            nfrFilterName,
+            topicCategory,
+            perRegionQuotaWeights,
+            messageSizeProfile,
+            rateLimiterMode
+        );
     }
 
     /**
      * Returns a copy of this topic with an updated {@link #topicState}. Used when persisting a new
-     * topic snapshot (e.g. topic failover SWITCH) without mutating the cached instance.
+     * topic snapshot (e.g. topic failover SWITCH/COMPLETE) without mutating the cached instance.
      */
     public VaradhiTopic withTopicState(TopicState state) {
         return new VaradhiTopic(
@@ -197,10 +232,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             grouped,
             capacity,
             internalTopics,
-            Objects.requireNonNull(state, "topic state must not be null"),
+            state,
+            activeRegion,
             getStatus(),
             nfrFilterName,
-            topicCategory
+            topicCategory,
+            perRegionQuotaWeights,
+            messageSizeProfile,
+            rateLimiterMode
         );
     }
 

@@ -13,7 +13,7 @@ import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.web.transition.ProduceTransitionHandlers;
+import com.flipkart.varadhi.web.transition.TopicTransitionPodWiring;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
@@ -78,7 +78,6 @@ import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -128,7 +127,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
-    private ScheduledExecutorService transitionScheduler;
+    private TopicTransitionPodWiring.Handle topicTransition;
     private ClusterMembershipView clusterMembershipView;
 
     /**
@@ -233,8 +232,8 @@ public class WebServerVerticle extends AbstractVerticle {
         if (clusterMembershipView != null) {
             clusterMembershipView.stop();
         }
-        if (transitionScheduler != null) {
-            transitionScheduler.shutdownNow();
+        if (topicTransition != null) {
+            topicTransition.close();
         }
         if (httpServer != null) {
             httpServer.close(stopPromise);
@@ -318,7 +317,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 rateLimiter
             )
         );
-        this.transitionScheduler = ProduceTransitionHandlers.register(
+        this.topicTransition = TopicTransitionPodWiring.install(
             clusterManager,
             vertx,
             cacheRegistry,

@@ -2,8 +2,6 @@ package com.flipkart.varadhi.entities.cluster.failover;
 
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 
-import java.util.Objects;
-
 /**
  * Immutable, self-contained payload the controller broadcasts to every pod when a topic
  * transition advances to a stage that needs pod participation. The same event drives every
@@ -43,10 +41,6 @@ public record TransitionEvent(
 ) {
 
     public TransitionEvent {
-        Objects.requireNonNull(opId, "opId must not be null");
-        Objects.requireNonNull(topicFqn, "topicFqn must not be null");
-        Objects.requireNonNull(transitionType, "transitionType must not be null");
-        Objects.requireNonNull(stage, "stage must not be null");
         if (awaitVersion && topicVersionToAwait < 0) {
             throw new IllegalArgumentException("awaitVersion requires a non-negative topicVersionToAwait");
         }

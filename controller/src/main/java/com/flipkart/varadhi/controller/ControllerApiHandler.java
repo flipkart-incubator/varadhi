@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.controller;
 
+import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
@@ -13,9 +14,11 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class ControllerApiHandler {
     private final ControllerApiMgr controllerMgr;
+    private final TopicTransitionMetrics transitionMetrics;
 
-    public ControllerApiHandler(ControllerApiMgr controllerMgr) {
+    public ControllerApiHandler(ControllerApiMgr controllerMgr, TopicTransitionMetrics transitionMetrics) {
         this.controllerMgr = controllerMgr;
+        this.transitionMetrics = transitionMetrics;
     }
 
     public CompletableFuture<ResponseMessage> start(ClusterMessage message) {
@@ -63,15 +66,8 @@ public class ControllerApiHandler {
     public void ackTopicTransition(ClusterMessage message) {
         TransitionAck ack = message.getData(TransitionAck.class);
         controllerMgr.ackTopicTransition(ack).exceptionally(throwable -> {
-            log.error(
-                "Topic-transition ack failed for op={} topic={} type={} stage={} host={}: {}",
-                ack.opId(),
-                ack.topicFqn().toFqn(),
-                ack.transitionType(),
-                ack.stage(),
-                ack.hostname(),
-                throwable.getMessage()
-            );
+            transitionMetrics.ackProcessingFailed(ack.transitionType(), ack.stage());
+            log.error("Topic-transition ack processing failed for ack={}", ack, throwable);
             return null;
         });
     }

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
+import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MembershipListener;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
@@ -73,7 +74,10 @@ public class ControllerVerticle extends AbstractVerticle {
 
         // Create controller API manager and handler
         ControllerApiMgr controllerApiMgr = createControllerApiMgr(messageExchange);
-        ControllerApiHandler apiHandler = new ControllerApiHandler(controllerApiMgr);
+        ControllerApiHandler apiHandler = new ControllerApiHandler(
+            controllerApiMgr,
+            new TopicTransitionMetrics(meterRegistry)
+        );
 
         // Assume leadership and initialize event system
         onLeaderElected(controllerApiMgr, apiHandler, messageRouter).compose(v -> initializeEventSystem())

@@ -24,20 +24,37 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * Registers the pod-side topic-transition stage handler on the cluster broadcast bus.
+ * Wires the pod-side topic-transition stage handler on the cluster broadcast bus.
  */
 @Slf4j
-public final class ProduceTransitionHandlers {
+public final class TopicTransitionPodWiring {
 
-    private ProduceTransitionHandlers() {
+    private TopicTransitionPodWiring() {
     }
 
     /**
-     * Registers {@link ProduceTransitionMsgHandler} when a cluster manager is configured.
-     *
-     * @return the scheduler used for version polling, or {@code null} when registration was skipped
+     * Scheduler and other resources created for topic-transition handling on this pod.
+     * The caller that invoked {@link #install} must {@link #close()} it during shutdown.
      */
-    public static ScheduledExecutorService register(
+    public static final class Handle implements AutoCloseable {
+        private final ScheduledExecutorService scheduler;
+
+        private Handle(ScheduledExecutorService scheduler) {
+            this.scheduler = scheduler;
+        }
+
+        @Override
+        public void close() {
+            scheduler.shutdownNow();
+        }
+    }
+
+    /**
+     * Installs {@link ProduceTransitionMsgHandler} when a cluster manager is configured.
+     *
+     * @return a closeable handle, or {@code null} when installation was skipped
+     */
+    public static Handle install(
         VaradhiClusterManager clusterManager,
         Vertx vertx,
         ResourceReadCacheRegistry cacheRegistry,
@@ -69,12 +86,12 @@ public final class ProduceTransitionHandlers {
             scheduler,
             new TransitionMetrics(meterRegistry)
         );
-        messageRouter.registerPublishHandler(
+        messageRouter.registerPublishReceiveHandler(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
             TransitionBusAddress.EVENT_PUBLISH_API,
             handler
         );
-        log.info("Registered topic-transition stage handler");
-        return scheduler;
+        log.info("Installed topic-transition stage handler");
+        return new Handle(scheduler);
     }
 }

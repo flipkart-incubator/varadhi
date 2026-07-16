@@ -9,7 +9,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerConsumerClient implements ControllerConsumerApi {
+public class ControllerConsumerClient implements PodToControllerApi {
     private final MessageExchange exchange;
 
     public ControllerConsumerClient(MessageExchange exchange) {

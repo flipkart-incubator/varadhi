@@ -2,8 +2,8 @@ package com.flipkart.varadhi.entities.cluster.failover;
 
 /**
  * Whether a producer pod participates in a topic transition (failover or storage migration).
- * Decided on the pod for the lifetime of the transition; carried on {@link TransitionAck} for
- * PREPARE so the controller can see involvement without an op-store lookup.
+ * Decided on the pod at PREPARE and echoed on every {@link TransitionAck} for the op so the
+ * controller always knows involvement without an op-store lookup.
  *
  * <ul>
  *   <li>{@link #INVOLVED} — the pod is already producing the topic and runs participant work

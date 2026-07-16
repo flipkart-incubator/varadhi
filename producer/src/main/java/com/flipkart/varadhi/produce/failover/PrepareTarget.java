@@ -31,11 +31,8 @@ public sealed interface PrepareTarget {
      * @throws IllegalArgumentException if {@code target} is blank or not valid for {@code type}
      */
     static PrepareTarget parse(TransitionType type, String target) {
-        if (type == null) {
-            throw new IllegalArgumentException("transition type must not be null");
-        }
         if (target == null || target.isBlank()) {
-            throw new IllegalArgumentException("PREPARE requires a non-blank target for " + type);
+            throw new IllegalArgumentException("target must be a non-blank target");
         }
         return switch (type) {
             case TOPIC_FAILOVER -> new RegionTarget(new RegionName(target.trim()));

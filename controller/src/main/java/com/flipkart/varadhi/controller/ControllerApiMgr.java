@@ -8,7 +8,7 @@ import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerApi;
+import com.flipkart.varadhi.core.cluster.controller.PodToControllerApi;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
 @Slf4j
-public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
+public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;
@@ -199,16 +199,7 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     @Override
     public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
         // Delivery is accepted here; stage-barrier orchestration will consume these acks when wired.
-        log.info(
-            "Received topic-transition ack: opId={} topic={} type={} stage={} host={} participation={} error={}",
-            ack.opId(),
-            ack.topicFqn().toFqn(),
-            ack.transitionType(),
-            ack.stage(),
-            ack.hostname(),
-            ack.participation(),
-            ack.errorMsg()
-        );
+        log.debug("Received topic-transition ack: {}", ack);
         return CompletableFuture.completedFuture(null);
     }
 

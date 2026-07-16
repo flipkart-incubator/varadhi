@@ -300,7 +300,7 @@ class ProducerServiceTests {
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         doReturn(producer).when(producerFactory).newProducer(any(), any());
 
-        Producer<? extends Offset> resolved = service.getProducer(
+        Producer<? extends Offset> resolved = service.getProducerForRegion(
             VaradhiTopicName.of(project.getName(), topic),
             regionName
         ).join();
@@ -313,7 +313,7 @@ class ProducerServiceTests {
     void getProducerFailsWhenTopicAbsentFromCache() {
         when(topicReadCache.get(any())).thenReturn(Optional.empty());
 
-        CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducer(
+        CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducerForRegion(
             VaradhiTopicName.of(project.getName(), topic),
             regionName
         );
@@ -330,7 +330,7 @@ class ProducerServiceTests {
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         RegionName unknownRegion = new RegionName("unknown-region");
 
-        CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducer(
+        CompletableFuture<? extends Producer<? extends Offset>> future = service.getProducerForRegion(
             VaradhiTopicName.of(project.getName(), topic),
             unknownRegion
         );
@@ -342,15 +342,69 @@ class ProducerServiceTests {
     }
 
     @Test
-    void isProducingTopicReflectsProducerCachePresence() {
+    void hasCachedProducerReflectsProducerCachePresence() {
         VaradhiTopicName topicName = VaradhiTopicName.of(project.getName(), topic);
-        assertFalse(service.isProducingTopic(topicName));
+        assertFalse(service.hasCachedProducer(topicName));
 
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        service.getProducer(topicName, regionName).join();
+        service.getProducerForRegion(topicName, regionName).join();
 
-        assertTrue(service.isProducingTopic(topicName));
+        assertTrue(service.hasCachedProducer(topicName));
+    }
+
+    @Test
+    void produceRejectsWhenPodRegionIsNotActiveRegion() {
+        String activeRegion = "region-b";
+        VaradhiTopic entity = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+        entity.markCreated();
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")));
+        entity.addInternalTopic(activeRegion, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b")));
+        entity = entity.withActiveRegion(RegionName.of(activeRegion));
+        Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        Message msg = getMessage(0, 1, null, 10);
+        Assertions.assertThrows(ResourceNotFoundException.class, () -> service.produceToTopic(msg, vt.getName()));
+        verify(producerFactory, never()).newProducer(any(), any());
+    }
+
+    @Test
+    void produceSucceedsWhenPodRegionMatchesActiveRegion() throws InterruptedException {
+        String activeRegion = "region-b";
+        ProducerService regionalService = new ProducerService(
+            activeRegion,
+            producerFactory::newProducer,
+            orgCache,
+            projectCache,
+            topicReadCache
+        );
+        VaradhiTopic entity = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+        entity.markCreated();
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")));
+        entity.addInternalTopic(activeRegion, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b")));
+        entity = entity.withActiveRegion(RegionName.of(activeRegion));
+        Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        Message msg = getMessage(0, 1, null, 10);
+        ResultCapture rc = getResult(regionalService.produceToTopic(msg, vt.getName()));
+
+        Assertions.assertNotNull(rc.produceResult);
+        Assertions.assertNull(rc.throwable);
+        verify(producer, times(1)).produceAsync(eq(msg));
     }
 
     @Test
@@ -374,11 +428,11 @@ class ProducerServiceTests {
         Producer<? extends Offset> producerB = spy(new DummyProducer(JsonMapper.getMapper()));
         doReturn(producer).doReturn(producerB).when(producerFactory).newProducer(any(), any());
 
-        Producer<? extends Offset> resolvedA = service.getProducer(
+        Producer<? extends Offset> resolvedA = service.getProducerForRegion(
             VaradhiTopicName.of(project.getName(), topic),
             regionName
         ).join();
-        Producer<? extends Offset> resolvedB = service.getProducer(
+        Producer<? extends Offset> resolvedB = service.getProducerForRegion(
             VaradhiTopicName.of(project.getName(), topic),
             regionB
         ).join();

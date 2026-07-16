@@ -113,8 +113,8 @@ public class MessageRouterTest {
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
-        mr.registerPublishHandler("route", "api", message -> checkpoint.flag());
-        mr.registerPublishHandler("route", "api", message -> checkpoint.flag());
+        mr.registerPublishReceiveHandler("route", "api", message -> checkpoint.flag());
+        mr.registerPublishReceiveHandler("route", "api", message -> checkpoint.flag());
         ClusterMessage cm = getClusterMessage("foo");
         me.publish("route", "api", cm);
     }
@@ -127,10 +127,10 @@ public class MessageRouterTest {
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
-        mr.registerPublishHandler("route", "api", message -> {
+        mr.registerPublishReceiveHandler("route", "api", message -> {
             throw new RuntimeException("boom");
         });
-        mr.registerPublishHandler("route", "api", message -> healthy.flag());
+        mr.registerPublishReceiveHandler("route", "api", message -> healthy.flag());
         me.publish("route", "api", getClusterMessage("foo"));
     }
 
@@ -145,10 +145,10 @@ public class MessageRouterTest {
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
-        mr.registerPublishHandler("route", "api", message -> {
+        mr.registerPublishReceiveHandler("route", "api", message -> {
             throw new RuntimeException("boom");
         });
-        mr.registerPublishHandler("route", "api", message -> testContext.verify(() -> {
+        mr.registerPublishReceiveHandler("route", "api", message -> testContext.verify(() -> {
             Assertions.assertEquals(
                 1.0,
                 registry.find("cluster.message_router.publish.handler.failed")

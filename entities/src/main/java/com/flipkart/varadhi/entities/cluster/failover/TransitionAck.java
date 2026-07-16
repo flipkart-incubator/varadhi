@@ -2,8 +2,6 @@ package com.flipkart.varadhi.entities.cluster.failover;
 
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 
-import java.util.Objects;
-
 /**
  * Immutable pod-to-controller acknowledgment for a single {@link TransitionStage} of a
  * topic transition. Sent by each pod after it has applied (or failed to apply) the stage
@@ -20,7 +18,7 @@ import java.util.Objects;
  * @param opId           the transition operation id this ack belongs to
  * @param topicFqn       the topic the transition is for
  * @param transitionType which transition this ack belongs to
- * @param participation  pod involvement for PREPARE; {@code null} for stages that do not decide
+ * @param participation  pod involvement; decided at PREPARE, echoed on every stage ack
  * @param hostname       the acking pod's hostname
  * @param stage          the stage being acknowledged
  * @param errorMsg       {@code null} (or blank) on success; a non-blank failure reason otherwise
@@ -34,14 +32,6 @@ public record TransitionAck(
     TransitionStage stage,
     String errorMsg
 ) {
-
-    public TransitionAck {
-        Objects.requireNonNull(opId, "opId must not be null");
-        Objects.requireNonNull(topicFqn, "topicFqn must not be null");
-        Objects.requireNonNull(transitionType, "transitionType must not be null");
-        Objects.requireNonNull(hostname, "hostname must not be null");
-        Objects.requireNonNull(stage, "stage must not be null");
-    }
 
     /** Whether this ack represents success — derived solely from {@link #errorMsg()}. */
     public boolean isSuccess() {

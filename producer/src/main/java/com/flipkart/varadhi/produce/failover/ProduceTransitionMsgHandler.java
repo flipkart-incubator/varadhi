@@ -1,22 +1,25 @@
 package com.flipkart.varadhi.produce.failover;
 
 import com.flipkart.varadhi.common.utils.RetryUtils;
+import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.MsgHandler;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerApi;
+import com.flipkart.varadhi.core.cluster.controller.PodToControllerApi;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.produce.ProducerService;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -25,8 +28,8 @@ import java.util.concurrent.ScheduledExecutorService;
  * {@link TransitionEvent} and the pod's local {@code TopicCache}.
  *
  * <p>Participation ({@link TransitionParticipation#INVOLVED} vs
- * {@link TransitionParticipation#NOT_INVOLVED}) and type-specific PREPARE warm live here so the
- * policy is owned and tested with the handler — not in wiring lambdas.
+ * {@link TransitionParticipation#NOT_INVOLVED}) is decided at PREPARE and echoed on every
+ * subsequent ack so the controller always knows pod involvement without an op-store lookup.
  *
  * <p><b>Every</b> stage is acknowledged. Version-gated stages wait for the local TopicCache to
  * converge to the <em>exact</em> coordinated version before acking; all others ack immediately
@@ -48,16 +51,37 @@ import java.util.concurrent.ScheduledExecutorService;
  * </ul>
  */
 @Slf4j
-@AllArgsConstructor
 public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final ControllerConsumerApi controllerClient;
+    private final PodToControllerApi controllerClient;
     private final ProducerService producerService;
-    private final PodTransitionConfig config;
-    private final ScheduledExecutorService scheduler;
     private final TransitionMetrics metrics;
+    private final RetryUtils.ResultPollingExecutor<Optional<Long>> versionWaitExecutor;
+    private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
+
+    public ProduceTransitionMsgHandler(
+        String hostname,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
+        PodToControllerApi controllerClient,
+        ProducerService producerService,
+        PodTransitionConfig config,
+        ScheduledExecutorService scheduler,
+        TransitionMetrics metrics
+    ) {
+        this.hostname = hostname;
+        this.topicCache = topicCache;
+        this.controllerClient = controllerClient;
+        this.producerService = producerService;
+        this.metrics = metrics;
+        this.versionWaitExecutor = RetryUtils.newResultPollingExecutor(
+            scheduler,
+            config.versionWaitMaxAttempts(),
+            config.podPollIntervalMs(),
+            Optional::isEmpty
+        );
+    }
 
     @Override
     public void handle(ClusterMessage message) {
@@ -65,43 +89,39 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         metrics.stageReceived(event.transitionType(), event.stage());
         // Non-version-gated stages ack immediately on receipt.
         if (!event.awaitVersion()) {
-            ackOk(event, null);
+            ackOk(event);
             return;
         }
         // handle() runs on the event-bus thread that delivered this publish. The version wait (and
-        // the PREPARE pre-warm it triggers) runs on the transition scheduler via RetryUtils so the
-        // event bus is never stalled. Polling uses a fixed interval (not exponential backoff): this
-        // is cache convergence within a deadline, not failure retry.
-        int maxAttempts = Math.max(1, (int)Math.ceil((double)config.podVersionWaitMs() / config.podPollIntervalMs()));
+        // the PREPARE pre-warm it triggers) runs on the transition scheduler via a reusable
+        // versionWaitExecutor so the event bus is never stalled and the retry policy is not
+        // rebuilt per event. Polling uses a fixed interval (not exponential backoff): cache
+        // convergence within a deadline, not failure retry.
         metrics.versionWaitStarted();
-        RetryUtils.getAsync(
-            scheduler,
-            maxAttempts,
-            config.podPollIntervalMs(),
-            Optional::isEmpty,
-            () -> probeVersion(event)
-        ).whenComplete((outcome, t) -> {
+        String topicFqn = event.topicFqn().toFqn();
+        long targetVersion = event.topicVersionToAwait();
+        RetryUtils.getAsync(versionWaitExecutor, () -> probeVersion(topicFqn, targetVersion)).whenComplete((outcome, t) -> {
             metrics.versionWaitFinished();
             if (t != null) {
                 if (RetryUtils.isRetriesExceeded(t)) {
-                    ackFail(event, null, versionWaitTimeoutMessage(event));
+                    ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
                     return;
                 }
-                log.error("transition version wait failed for {} op={}", event.topicFqn().toFqn(), event.opId(), t);
-                ackFail(event, null, "transition poll error: " + RetryUtils.rootMessage(t));
+                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
+                ackFail(event, "transition poll error: " + ThrowableUtils.rootMessage(t));
                 return;
             }
             if (outcome.isEmpty()) {
-                ackFail(event, null, versionWaitTimeoutMessage(event));
+                ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
                 return;
             }
             onVersionResolved(event, outcome.get());
         });
     }
 
-    private String versionWaitTimeoutMessage(TransitionEvent event) {
-        return "timeout awaiting topic version " + event.topicVersionToAwait() + " (current " + describe(
-            currentVersion(event)
+    private String versionWaitTimeoutMessage(long targetVersion, String topicFqn) {
+        return "timeout awaiting topic version " + targetVersion + " (current " + describe(
+            currentVersion(topicFqn)
         ) + ")";
     }
 
@@ -109,14 +129,13 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
      * Terminal when the cache has reached (or overshot) the coordinated version, empty while it is
      * still behind or absent (keep polling). Returns the observed version on termination.
      */
-    private Optional<Long> probeVersion(TransitionEvent event) {
-        Optional<Long> current = currentVersion(event);
+    private Optional<Long> probeVersion(String topicFqn, long targetVersion) {
+        Optional<Long> current = currentVersion(topicFqn);
         if (current.isEmpty()) {
             return Optional.empty();
         }
         long version = current.get();
-        long target = event.topicVersionToAwait();
-        if (version >= target) {
+        if (version >= targetVersion) {
             return Optional.of(version);
         }
         return Optional.empty();
@@ -129,7 +148,6 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             // act on a version it never coordinated.
             ackFail(
                 event,
-                null,
                 "topic version overshot target " + event.topicVersionToAwait() + " (current " + current
                        + "), concurrent modification"
             );
@@ -138,33 +156,31 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         onVersionReached(event);
     }
 
-    private Optional<Long> currentVersion(TransitionEvent event) {
-        return topicCache.get(event.topicFqn().toFqn()).map(Resource::getVersion).map(Integer::longValue);
+    private Optional<Long> currentVersion(String topicFqn) {
+        return topicCache.get(topicFqn).map(Resource::getVersion).map(Integer::longValue);
     }
 
     private void onVersionReached(TransitionEvent event) {
         // Only PREPARE runs participant work; every other version-gated stage just acks on convergence.
         if (event.stage() != TransitionStage.PREPARE) {
-            ackOk(event, null);
+            ackOk(event);
             return;
         }
-        if (!producerService.isProducingTopic(event.topicFqn())) {
-            // NOT_INVOLVED: no warm. Local fencing can plug in here later.
-            metrics.participation(event.transitionType(), TransitionParticipation.NOT_INVOLVED);
+        if (!producerService.hasCachedProducer(event.topicFqn())) {
+            TransitionParticipation participation = TransitionParticipation.NOT_INVOLVED;
+            recordParticipation(event, participation);
             log.debug(
                 "Transition: pod not involved for {} op={} type={}; skipping participant work",
                 event.topicFqn().toFqn(),
                 event.opId(),
                 event.transitionType()
             );
-            ackOk(event, TransitionParticipation.NOT_INVOLVED);
+            ackOk(event, participation);
             return;
         }
-        metrics.participation(event.transitionType(), TransitionParticipation.INVOLVED);
-        // INVOLVED: pre-warm the type-specific target so it is live before SWITCH. A warm failure
-        // fails the ack, letting the controller abort before any switch. Async so producer creation
-        // never blocks the scheduler thread.
-        warmTarget(event).whenComplete((ignored, t) -> {
+        TransitionParticipation participation = TransitionParticipation.INVOLVED;
+        recordParticipation(event, participation);
+        createTarget(event).whenComplete((ignored, t) -> {
             if (t != null) {
                 log.warn(
                     "Transition PREPARE warm failed for {} op={} type={}",
@@ -175,12 +191,12 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                 );
                 ackFail(
                     event,
-                    TransitionParticipation.INVOLVED,
-                    "prepare warm failed: " + RetryUtils.rootMessage(t)
+                    participation,
+                    "prepare warm failed: " + ThrowableUtils.rootMessage(t)
                 );
                 return;
             }
-            ackOk(event, TransitionParticipation.INVOLVED);
+            ackOk(event, participation);
         });
     }
 
@@ -188,7 +204,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
      * Type-specific PREPARE warm for an {@link TransitionParticipation#INVOLVED} pod.
      * Parses {@link TransitionEvent#target()} once at the boundary via {@link PrepareTarget}.
      */
-    private CompletableFuture<Void> warmTarget(TransitionEvent event) {
+    private CompletableFuture<Void> createTarget(TransitionEvent event) {
         final PrepareTarget prepareTarget;
         try {
             prepareTarget = PrepareTarget.parse(event.transitionType(), event.target());
@@ -196,11 +212,11 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             return CompletableFuture.failedFuture(e);
         }
         return switch (prepareTarget) {
-            case PrepareTarget.RegionTarget regionTarget -> producerService.getProducer(
+            case PrepareTarget.RegionTarget regionTarget -> producerService.getProducerForRegion(
                 event.topicFqn(),
                 regionTarget.region()
             ).thenAccept(producer -> {});
-            case PrepareTarget.StorageTopicTarget storageTarget -> producerService.getProducer(
+            case PrepareTarget.StorageTopicTarget storageTarget -> producerService.getProducerForStorageTopic(
                 event.topicFqn(),
                 storageTarget.storageTopicId()
             ).thenAccept(producer -> {});
@@ -209,6 +225,35 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private static String describe(Optional<Long> version) {
         return version.map(Object::toString).orElse("absent from cache");
+    }
+
+    private void recordParticipation(TransitionEvent event, TransitionParticipation participation) {
+        participationByOpId.put(event.opId(), participation);
+        metrics.participation(event.transitionType(), participation);
+    }
+
+    /**
+     * Participation decided at PREPARE and sticky for the op. Late joiners (first event not PREPARE)
+     * derive from {@link ProducerService#hasCachedProducer(VaradhiTopicName)}.
+     */
+    private TransitionParticipation resolveParticipation(TransitionEvent event) {
+        return participationByOpId.computeIfAbsent(event.opId(), ignored -> deriveParticipation(event.topicFqn()));
+    }
+
+    private TransitionParticipation deriveParticipation(VaradhiTopicName topicFqn) {
+        return producerService.hasCachedProducer(topicFqn)
+            ? TransitionParticipation.INVOLVED
+            : TransitionParticipation.NOT_INVOLVED;
+    }
+
+    private void clearParticipationIfTerminal(TransitionEvent event) {
+        if (event.stage() == TransitionStage.COMPLETED || event.stage() == TransitionStage.ABORTED) {
+            participationByOpId.remove(event.opId());
+        }
+    }
+
+    private void ackOk(TransitionEvent event) {
+        ackOk(event, resolveParticipation(event));
     }
 
     private void ackOk(TransitionEvent event, TransitionParticipation participation) {
@@ -223,6 +268,11 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                 event.stage()
             )
         );
+        clearParticipationIfTerminal(event);
+    }
+
+    private void ackFail(TransitionEvent event, String errorMsg) {
+        ackFail(event, resolveParticipation(event), errorMsg);
     }
 
     private void ackFail(TransitionEvent event, TransitionParticipation participation, String errorMsg) {
@@ -239,22 +289,14 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                 msg
             )
         );
+        clearParticipationIfTerminal(event);
     }
 
     private void sendAck(TransitionAck ack) {
         // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
         controllerClient.ackTopicTransition(ack).exceptionally(t -> {
             metrics.ackSendFailed(ack.transitionType(), ack.stage());
-            log.warn(
-                "Failed to deliver transition ack op={} topic={} type={} stage={} host={} participation={}",
-                ack.opId(),
-                ack.topicFqn().toFqn(),
-                ack.transitionType(),
-                ack.stage(),
-                ack.hostname(),
-                ack.participation(),
-                t
-            );
+            log.warn("Failed to deliver transition ack ack={}", ack, t);
             return null;
         });
     }

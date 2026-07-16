@@ -24,7 +24,6 @@ import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
@@ -253,7 +252,6 @@ class ProducerServiceRateLimitIntegrationTest {
         topic.markCreated();
         StorageTopic storageTopic = new DummyStorageTopic(topic.getName());
         SegmentedStorageTopic internal = SegmentedStorageTopic.of(storageTopic);
-        internal.setTopicState(TopicState.Producing);
         topic.addInternalTopic(REGION, internal);
         return topic;
     }

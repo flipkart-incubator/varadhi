@@ -45,24 +45,10 @@ public final class ProducerService {
 
     private static final int PRODUCER_LOAD_POOL_SIZE = Math.max(4, Runtime.getRuntime().availableProcessors());
 
-    private static final ExecutorService PRODUCER_LOAD_EXECUTOR = Executors.newFixedThreadPool(
-        PRODUCER_LOAD_POOL_SIZE,
-        r -> {
-            Thread t = new Thread(r, "producer-create-cache-load");
-            t.setDaemon(true);
-            return t;
-        }
-    );
-
-    /**
-     * A record that serves as a cache key for producers.
-     *
-     * @param varadhiTopicFQN the full name of the Varadhi topic
-     * @param storageTopicId     the storage topic id
-     * @param region             the region the producer produces to
-     */
     private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId, String region) {
     }
+
+    private final ExecutorService producerLoadExecutor;
 
     /**
      * Cache of producers for storage topics.
@@ -70,9 +56,10 @@ public final class ProducerService {
     private final LoadingCache<ProducerCacheKey, Producer<? extends Offset>> producerCache;
 
     /**
-     * The region where messages are produced.
+     * This pod's deployed region. Used only to decide whether this pod is the active produce
+     * target; routing uses {@link VaradhiTopic#resolveActiveRegion(RegionName)} from topic metadata.
      */
-    private final String produceRegion;
+    private final String deployedRegion;
 
     /**
      * Cache for {@link OrgDetails}.
@@ -97,13 +84,13 @@ public final class ProducerService {
      * This constructor uses the default producer options, which include a TTL of 60 minutes
      * for cached producers.
      *
-     * @param produceRegion    the region where messages are produced
+     * @param deployedRegion   this pod's deployed region
      * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      */
     // TODO: fix the generic type parameters. See ProduceBenchmarkTest for the issue.
     public ProducerService(
-        String produceRegion,
+        String deployedRegion,
         ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
@@ -111,7 +98,7 @@ public final class ProducerService {
 
     ) {
         this(
-            produceRegion,
+            deployedRegion,
             producerFactory,
             orgCache,
             projectCache,
@@ -128,13 +115,13 @@ public final class ProducerService {
      * This constructor allows customization of producer options, such as the TTL for
      * cached producers.
      *
-     * @param produceRegion    the region where messages are produced
+     * @param deployedRegion   this pod's deployed region
      * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
-        String produceRegion,
+        String deployedRegion,
         ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
@@ -143,7 +130,7 @@ public final class ProducerService {
         ProducerOptions producerOptions
     ) {
         this(
-            produceRegion,
+            deployedRegion,
             producerFactory,
             orgCache,
             projectCache,
@@ -155,7 +142,7 @@ public final class ProducerService {
     }
 
     public ProducerService(
-        String produceRegion,
+        String deployedRegion,
         ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
@@ -164,11 +151,19 @@ public final class ProducerService {
         ProducerOptions producerOptions,
         ProduceRateLimiter rateLimiter
     ) {
-        this.produceRegion = produceRegion;
+        this.deployedRegion = deployedRegion;
         this.topicCache = topicCache;
         this.projectCache = projectCache;
         this.orgCache = orgCache;
         this.rateLimiter = rateLimiter;
+        this.producerLoadExecutor = Executors.newFixedThreadPool(
+            PRODUCER_LOAD_POOL_SIZE,
+            r -> {
+                Thread t = new Thread(r, "producer-create-cache-load");
+                t.setDaemon(true);
+                return t;
+            }
+        );
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
@@ -242,10 +237,14 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(produceRegion);
+        RegionName podRegion = RegionName.of(deployedRegion);
+
+        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(topic.getActiveRegion().value());
 
         if (internalTopic == null) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
+            throw new ResourceNotFoundException(
+                String.format("Topic not found for region(%s).", topic.getActiveRegion().value())
+            );
         }
 
         TopicState topicState = topic.getTopicState();
@@ -264,7 +263,7 @@ public final class ProducerService {
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(topic.getName(), storageTopic.getId(), produceRegion).thenCompose(
+        return getProducer(topic.getName(), storageTopic.getId(), topic.getActiveRegion().value()).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }
@@ -280,7 +279,7 @@ public final class ProducerService {
      * @param region         the region the producer produces to (part of the cache key)
      * @return a future that completes with the producer
      */
-    public CompletableFuture<Producer<? extends Offset>> getProducer(
+    private CompletableFuture<Producer<? extends Offset>> getProducer(
         String topicFQN,
         int storageTopicId,
         String region
@@ -291,7 +290,7 @@ public final class ProducerService {
             return CompletableFuture.completedFuture(producer);
         }
 
-        return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), PRODUCER_LOAD_EXECUTOR);
+        return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), producerLoadExecutor);
     }
 
     private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {
@@ -321,7 +320,10 @@ public final class ProducerService {
      *         {@link ResourceNotFoundException} if the topic is absent from this pod's cache or
      *         has no produce configuration for {@code region}
      */
-    public CompletableFuture<Producer<? extends Offset>> getProducer(VaradhiTopicName topicName, RegionName region) {
+    public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(
+        VaradhiTopicName topicName,
+        RegionName region
+    ) {
         String topicFQN = topicName.toFqn();
         Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(topicFQN);
         if (topic.isEmpty()) {
@@ -329,46 +331,37 @@ public final class ProducerService {
                 new ResourceNotFoundException("Topic(%s) does not exist.".formatted(topicFQN))
             );
         }
-        SegmentedStorageTopic internalTopic = topic.get().getEntity().getProduceTopicForRegion(region.value());
+        return getProducerForRegion(topic.get().getEntity(), region);
+    }
+
+    private CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
+        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(region.value());
         if (internalTopic == null) {
-            // A transition target the pod cannot serve: surface it so the controller's PREPARE
-            // barrier fails fast rather than silently proceeding to a SWITCH the pod can't honor.
             return CompletableFuture.failedFuture(
                 new ResourceNotFoundException(
-                    "Topic(%s) has no produce configuration for region(%s).".formatted(topicFQN, region.value())
+                    "Topic(%s) has no produce configuration for region(%s).".formatted(topic.getName(), region.value())
                 )
             );
         }
-        return getProducer(topicFQN, internalTopic.getTopicToProduce().getId(), region.value());
+        return getProducer(topic.getName(), internalTopic.getTopicToProduce().getId(), region.value());
     }
 
     /**
-     * Returns (creating if needed) the producer for {@code storageTopicId} in this pod's produce
+     * Returns (creating if needed) the producer for {@code storageTopicId} in this pod's deployed
      * region. Used by storage-migration PREPARE to pre-warm the destination storage topic.
-     *
-     * @param topicName      the Varadhi topic whose producer is requested
-     * @param storageTopicId the destination storage-topic id to warm
-     * @return a future completing with the producer
      */
-    public CompletableFuture<Producer<? extends Offset>> getProducer(VaradhiTopicName topicName, int storageTopicId) {
-        return getProducer(topicName.toFqn(), storageTopicId, produceRegion);
+    public CompletableFuture<Producer<? extends Offset>> getProducerForStorageTopic(
+        VaradhiTopicName topicName,
+        int storageTopicId
+    ) {
+        return getProducer(topicName.toFqn(), storageTopicId, deployedRegion);
     }
 
     /**
      * Whether this pod currently holds a cached producer for {@code topicName} (in any region).
-     * Used to decide PREPARE participation during a topic transition: only pods already producing
-     * the topic pre-warm the target producer; others stay uninvolved and avoid creating producers
-     * they would otherwise never use.
-     *
-     * <p>This is a <em>cache-presence</em> heuristic, not live traffic detection: a pod that
-     * recently evicted the producer from Caffeine may still be actively serving produce requests
-     * and will report {@code false}, skipping PREPARE pre-warm (first post-switch produce pays a
-     * cold-start cost).
-     *
-     * @param topicName the Varadhi topic to check
-     * @return {@code true} if a producer for the topic is present in this pod's cache
+     * Used to decide PREPARE participation during a topic transition.
      */
-    public boolean isProducingTopic(VaradhiTopicName topicName) {
+    public boolean hasCachedProducer(VaradhiTopicName topicName) {
         String topicFQN = topicName.toFqn();
         return producerCache.asMap().keySet().stream().anyMatch(key -> key.varadhiTopicFQN().equals(topicFQN));
     }

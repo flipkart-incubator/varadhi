@@ -14,7 +14,7 @@ import lombok.experimental.UtilityClass;
  *   <li><b>Forward leg (controller → all pods):</b> the controller publishes a
  *       {@code TransitionEvent} to
  *       {@code ROUTE_TOPIC_TRANSITION + "." + EVENT_PUBLISH_API + ".publish"}; every pod
- *       registers a {@code registerPublishHandler} there.</li>
+ *       registers a {@code registerPublishReceiveHandler} there.</li>
  *   <li><b>Back leg (pod → controller):</b> a pod sends a {@code TransitionAck} to
  *       {@code <controllerRoute>." + TRANSITION_EVENT_ACK_API + ".send"} (the controller route is
  *       {@code ControllerApi.ROUTE_CONTROLLER}).</li>

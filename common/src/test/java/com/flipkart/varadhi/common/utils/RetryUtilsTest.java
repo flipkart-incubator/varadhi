@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RetryUtilsTest {
@@ -59,5 +60,55 @@ class RetryUtilsTest {
             assertTrue(RetryUtils.isRetriesExceeded(e));
         }
         assertEquals(3, attempts.get());
+    }
+
+    @Test
+    void getAsync_failsFastOnProbeException() throws Exception {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        AtomicInteger attempts = new AtomicInteger();
+
+        CompletableFuture<Optional<Long>> future = RetryUtils.getAsync(
+            scheduler,
+            5,
+            5L,
+            Optional::isEmpty,
+            () -> {
+                attempts.getAndIncrement();
+                throw new IllegalStateException("cache read failed");
+            }
+        );
+
+        try {
+            future.get(2, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.ExecutionException e) {
+            assertFalse(RetryUtils.isRetriesExceeded(e));
+            assertTrue(e.getCause() instanceof IllegalStateException);
+        }
+        assertEquals(1, attempts.get());
+    }
+
+    @Test
+    void getAsync_reusesExecutorAcrossProbes() throws Exception {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        var executor = RetryUtils.<Optional<Long>>newResultPollingExecutor(
+            scheduler,
+            5,
+            5L,
+            Optional::isEmpty
+        );
+        AtomicInteger attempts = new AtomicInteger();
+
+        CompletableFuture<Optional<Long>> first = RetryUtils.getAsync(
+            executor,
+            () -> attempts.incrementAndGet() >= 2 ? Optional.of(1L) : Optional.empty()
+        );
+        assertEquals(Optional.of(1L), first.get(2, TimeUnit.SECONDS));
+
+        CompletableFuture<Optional<Long>> second = RetryUtils.getAsync(
+            executor,
+            () -> attempts.incrementAndGet() >= 4 ? Optional.of(2L) : Optional.empty()
+        );
+        assertEquals(Optional.of(2L), second.get(2, TimeUnit.SECONDS));
+        assertTrue(attempts.get() >= 4);
     }
 }

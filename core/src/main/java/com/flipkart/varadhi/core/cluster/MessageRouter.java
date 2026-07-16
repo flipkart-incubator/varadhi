@@ -97,7 +97,7 @@ public class MessageRouter {
      * Event Bus docs on publish/subscribe semantics. Publish is fire-and-forget, so unlike
      * {@link #sendHandler} and {@link #requestHandler} no reply is sent back to the publisher.
      */
-    public void registerPublishHandler(String routeName, String apiName, MsgHandler handler) {
+    public void registerPublishReceiveHandler(String routeName, String apiName, MsgHandler handler) {
         String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
         vertxEventBus.consumer(apiPath, message -> {
             ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
