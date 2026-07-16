@@ -354,7 +354,7 @@ class ProducerServiceTests {
     }
 
     @Test
-    void produceRejectsWhenPodRegionIsNotActiveRegion() {
+    void produceRoutesToActiveRegionRegardlessOfPodRegion() throws InterruptedException {
         String activeRegion = "region-b";
         VaradhiTopic entity = VaradhiTopic.of(
             project.getName(),
@@ -371,8 +371,11 @@ class ProducerServiceTests {
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
 
         Message msg = getMessage(0, 1, null, 10);
-        Assertions.assertThrows(ResourceNotFoundException.class, () -> service.produceToTopic(msg, vt.getName()));
-        verify(producerFactory, never()).newProducer(any(), any());
+        ResultCapture rc = getResult(service.produceToTopic(msg, vt.getName()));
+
+        Assertions.assertNotNull(rc.produceResult);
+        Assertions.assertNull(rc.throwable);
+        verify(producer, times(1)).produceAsync(eq(msg));
     }
 
     @Test

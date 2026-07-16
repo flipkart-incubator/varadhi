@@ -56,8 +56,9 @@ public final class ProducerService {
     private final LoadingCache<ProducerCacheKey, Producer<? extends Offset>> producerCache;
 
     /**
-     * This pod's deployed region. Used only to decide whether this pod is the active produce
-     * target; routing uses {@link VaradhiTopic#resolveActiveRegion(RegionName)} from topic metadata.
+     * This pod's deployed region (pod identity). Produce routing uses
+     * {@link VaradhiTopic#getActiveRegion()} from topic metadata, which may differ
+     * from this pod's region after failover (cross-region produce).
      */
     private final String deployedRegion;
 
@@ -237,11 +238,18 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(topic.getActiveRegion().value());
+        RegionName activeRegion = topic.getActiveRegion();
+        if (activeRegion == null) {
+            throw new ResourceNotFoundException(
+                "Topic(%s) has no active produce region.".formatted(topic.getName())
+            );
+        }
+
+        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(activeRegion.value());
 
         if (internalTopic == null) {
             throw new ResourceNotFoundException(
-                String.format("Topic not found for region(%s).", topic.getActiveRegion().value())
+                String.format("Topic not found for region(%s).", activeRegion.value())
             );
         }
 
@@ -261,7 +269,7 @@ public final class ProducerService {
         }
 
         StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(topic.getName(), storageTopic.getId(), topic.getActiveRegion().value()).thenCompose(
+        return getProducer(topic.getName(), storageTopic.getId(), activeRegion.value()).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }
