@@ -332,7 +332,7 @@ public final class ProducerService {
         return getProducerForRegion(topic.get().getEntity(), region);
     }
 
-    private CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
+    public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
         SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(region.value());
         if (internalTopic == null) {
             return CompletableFuture.failedFuture(
