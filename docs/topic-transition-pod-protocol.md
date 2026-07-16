@@ -67,14 +67,18 @@ Version-gated stages (PREPARE, SWITCH) poll TopicCache on a dedicated scheduler 
 
 **Pod** (`TransitionMetrics`):
 
-- Counters (low cardinality): `topic.transition.stage.received`, `topic.transition.stage.acked`, `topic.transition.participation`, `topic.transition.ack.send.failed` — tags `type`, `stage`, `success`, `participation` as applicable. **No topic tag.**
-- Gauge: `topic.transition.version_waits.in_flight` (concurrent waits, not cumulative).
+- Counters (tagged `type`, `stage`, `topic`, plus `success` / `participation` where applicable):
+  - `topic.transition.stage.received`
+  - `topic.transition.stage.acked`
+  - `topic.transition.ack.send.failed`
+- Settable gauge (oncall `varadhi_failover_pod_node_status` style): `topic.transition.participation` — tags `type`, `topic`, `participation`; set to `1` at PREPARE, cleared to `0` on COMPLETED/ABORTED so alerts auto-resolve when the op ends.
+- Gauges: `topic.transition.version_waits.in_flight` — untagged global plus per-`topic` series for concurrent waits on this pod.
 
 **Controller** (`TopicTransitionMetrics`):
 
 - Gauge: `topic.transition.ack.processing.failed` — tags `type`, `stage`.
 
-Topic identity: logs and `TransitionAck` only (full ack object logged on delivery/processing failure).
+Topic identity is tagged as `topic` (topic FQN) on pod metrics; full `TransitionAck` is still logged on delivery/processing failure.
 
 ## Delivery failure
 

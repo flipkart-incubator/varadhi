@@ -86,7 +86,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     @Override
     public void handle(ClusterMessage message) {
         TransitionEvent event = message.getData(TransitionEvent.class);
-        metrics.stageReceived(event.transitionType(), event.stage());
+        metrics.stageReceived(event.transitionType(), event.stage(), event.topicFqn().toFqn());
         // Non-version-gated stages ack immediately on receipt.
         if (!event.awaitVersion()) {
             ackOk(event);
@@ -97,12 +97,12 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         // versionWaitExecutor so the event bus is never stalled and the retry policy is not
         // rebuilt per event. Polling uses a fixed interval (not exponential backoff): cache
         // convergence within a deadline, not failure retry.
-        metrics.versionWaitStarted();
         String topicFqn = event.topicFqn().toFqn();
+        metrics.versionWaitStarted(topicFqn);
         long targetVersion = event.topicVersionToAwait();
         RetryUtils.getAsync(versionWaitExecutor, () -> probeVersion(topicFqn, targetVersion))
                   .whenComplete((outcome, t) -> {
-                      metrics.versionWaitFinished();
+                      metrics.versionWaitFinished(topicFqn);
                       if (t != null) {
                           if (RetryUtils.isRetriesExceeded(t)) {
                               ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
@@ -230,7 +230,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void recordParticipation(TransitionEvent event, TransitionParticipation participation) {
         participationByOpId.put(event.opId(), participation);
-        metrics.participation(event.transitionType(), participation);
+        metrics.setParticipation(event.transitionType(), event.topicFqn().toFqn(), participation);
     }
 
     /**
@@ -250,6 +250,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private void clearParticipationIfTerminal(TransitionEvent event) {
         if (event.stage() == TransitionStage.COMPLETED || event.stage() == TransitionStage.ABORTED) {
             participationByOpId.remove(event.opId());
+            metrics.clearParticipation(event.transitionType(), event.topicFqn().toFqn());
         }
     }
 
@@ -258,7 +259,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackOk(TransitionEvent event, TransitionParticipation participation) {
-        metrics.stageAcked(event.transitionType(), event.stage(), true);
+        metrics.stageAcked(event.transitionType(), event.stage(), true, event.topicFqn().toFqn());
         sendAck(
             TransitionAck.success(
                 event.opId(),
@@ -277,7 +278,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackFail(TransitionEvent event, TransitionParticipation participation, String errorMsg) {
-        metrics.stageAcked(event.transitionType(), event.stage(), false);
+        metrics.stageAcked(event.transitionType(), event.stage(), false, event.topicFqn().toFqn());
         String msg = (errorMsg == null || errorMsg.isBlank()) ? "transition stage failed" : errorMsg;
         sendAck(
             TransitionAck.failure(
@@ -296,7 +297,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private void sendAck(TransitionAck ack) {
         // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
         controllerClient.ackTopicTransition(ack).exceptionally(t -> {
-            metrics.ackSendFailed(ack.transitionType(), ack.stage());
+            metrics.ackSendFailed(ack.transitionType(), ack.stage(), ack.topicFqn().toFqn());
             log.warn("Failed to deliver transition ack ack={}", ack, t);
             return null;
         });
