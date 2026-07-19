@@ -355,6 +355,7 @@ class ProducerServiceTests {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         entity.markCreated();
+<<<<<<< HEAD
         entity = entity.addInternalTopic(
             region,
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a"))
@@ -363,6 +364,10 @@ class ProducerServiceTests {
             activeRegion,
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b"))
         );
+=======
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")));
+        entity.addInternalTopic(activeRegion, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b")));
+>>>>>>> de7413df (added regionConfig in varadhiTopic)
         entity.getRegionConfigs().get(region).setProduceAllowed(false);
         entity.getRegionConfigs().get(activeRegion).setProduceAllowed(true);
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
@@ -394,6 +399,7 @@ class ProducerServiceTests {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         entity.markCreated();
+<<<<<<< HEAD
         entity = entity.addInternalTopic(
             region,
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a"))
@@ -402,6 +408,10 @@ class ProducerServiceTests {
             activeRegion,
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b"))
         );
+=======
+        entity.addInternalTopic(region, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")));
+        entity.addInternalTopic(activeRegion, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b")));
+>>>>>>> de7413df (added regionConfig in varadhiTopic)
         entity.getRegionConfigs().get(region).setProduceAllowed(false);
         entity.getRegionConfigs().get(activeRegion).setProduceAllowed(true);
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);

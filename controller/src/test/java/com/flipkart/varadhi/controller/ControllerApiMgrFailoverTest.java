@@ -153,7 +153,7 @@ class ControllerApiMgrFailoverTest {
             () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(TARGET, SOURCE, false, "t")).get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
-        assertTrue(ex.getCause().getMessage().contains("activeRegion"));
+        assertTrue(ex.getCause().getMessage().contains("producing region"));
     }
 
     @Test

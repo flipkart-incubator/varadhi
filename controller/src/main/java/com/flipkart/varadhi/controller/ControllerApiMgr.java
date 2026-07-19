@@ -26,6 +26,7 @@ import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.TopicRegionConfigs;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -90,6 +91,29 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         this.messageExchange = messageExchange;
         this.stageAwaiter = stageAwaiter;
         this.failoverConfig = failoverConfig;
+        this.operationMgr.setTopicFailoverTerminalFailureHandler(this::cleanupFailedTopicFailover);
+    }
+
+    private void cleanupFailedTopicFailover(TopicFailoverOperation op) {
+        String topicFqn = op.getTopicFqn();
+        if (!transitionStore.exists(topicFqn)) {
+            return;
+        }
+        TransitionObject transition = transitionStore.get(topicFqn);
+        log.warn("Cleaning up failed topic failover op {} for {} (error={})", op.getId(), topicFqn, op.getErrorMsg());
+        broadcastTransition(
+            TransitionEvent.of(
+                transition.getOperationId(),
+                VaradhiTopicName.parse(topicFqn),
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.ABORTED,
+                false,
+                0L,
+                null
+            )
+        );
+        stageAwaiter.abort(transition.getOperationId(), op.getErrorMsg());
+        transitionStore.delete(topicFqn);
     }
 
     @Override
@@ -379,7 +403,17 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
 
     /** Routes a pod ack to the matching stage barrier. Invoked from the controller ack send-handler. */
     public void recordFailoverAck(TransitionAck ack) {
+<<<<<<< HEAD
         log.debug("Failover ack op={} host={} stage={} ok={}", ack.opId(), ack.hostname(), ack.stage(), ack.success());
+=======
+        log.debug(
+            "Failover ack op={} host={} stage={} ok={}",
+            ack.opId(),
+            ack.hostname(),
+            ack.stage(),
+            ack.isSuccess()
+        );
+>>>>>>> de7413df (added regionConfig in varadhiTopic)
         stageAwaiter.recordAck(ack);
     }
 
@@ -432,15 +466,15 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
-        RegionName active = topic.getActiveRegion();
-        if (active != null) {
-            if (!source.equals(active)) {
+        RegionName producing = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
+        if (producing != null) {
+            if (!source.equals(producing)) {
                 throw new IllegalArgumentException(
-                    "sourceRegion must match the topic activeRegion (" + active.value() + ")."
+                    "sourceRegion must match the topic producing region (" + producing.value() + ")."
                 );
             }
-            if (target.equals(active)) {
-                throw new IllegalArgumentException("targetRegion is already the active produce region.");
+            if (target.equals(producing)) {
+                throw new IllegalArgumentException("targetRegion is already the producing region.");
             }
         }
     }

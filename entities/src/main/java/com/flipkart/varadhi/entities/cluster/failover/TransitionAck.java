@@ -24,7 +24,7 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
  * @param stage          the stage being acknowledged
  * @param errorMsg       {@code null} (or blank) on success; a non-blank failure reason otherwise
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties (ignoreUnknown = true)
 public record TransitionAck(
     String opId,
     VaradhiTopicName topicFqn,

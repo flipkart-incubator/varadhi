@@ -26,6 +26,8 @@ producerOptions:
   # ZK watch → TopicCache can lag a few seconds under load; 1s default fails SWITCH flaky.
   transitionVersionWaitMs: 30000
   transitionPollIntervalMs: 50
+  # Test-only: delay SWITCH ack to controller so produce stays Blocked longer (0 = off).
+  transitionAckReportDelayMs: 5000
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
@@ -107,6 +109,7 @@ tracesEnabled: true
 operationsConfig:
   maxConcurrentOps: 2
   maxRetryAllowed: 3
+  topicFailoverMaxRetryAllowed: 0
   retryIntervalInSeconds: 10
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60

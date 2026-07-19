@@ -173,6 +173,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private RetryPolicy createRetryPolicy() {
         return new RetryPolicy(
             operationsConfig.getMaxRetryAllowed(),
+            operationsConfig.getTopicFailoverMaxRetryAllowed(),
             operationsConfig.getRetryIntervalInSeconds(),
             operationsConfig.getRetryMinBackoffInSeconds(),
             operationsConfig.getRetryMaxBackOffInSeconds()
@@ -208,7 +209,10 @@ public class ControllerVerticle extends AbstractVerticle {
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
-                                 log.error("Failed to initialize consumer nodes during leader election: {}", e.getMessage());
+                                 log.error(
+                                     "Failed to initialize consumer nodes during leader election: {}",
+                                     e.getMessage()
+                                 );
                                  abortLeadership();
                              });
     }

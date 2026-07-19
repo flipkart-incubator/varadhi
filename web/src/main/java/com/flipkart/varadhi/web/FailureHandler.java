@@ -63,25 +63,18 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private String getErrorFromFailure(Throwable t, int statusCode) {
-        if (t instanceof HttpException he) {
-            return he.getPayload();
-        } else {
-            StringBuilder sb = new StringBuilder();
-            if (null != t) {
-                sb.append(t.getMessage());
-                // include second level exception details when available and outermost exception is of not known type
-                // i.e. it doesn't extend from VaradhiException.
-                if (!(t instanceof VaradhiException)) {
-                    if (null != t.getCause()) {
-                        sb.append("Internal error : ");
-                        sb.append(t.getCause().getMessage());
-                    }
-                }
-            } else {
-                sb.append(getDefaultErrorMessageFromStatusCode(statusCode));
-            }
-            return sb.toString();
+        HttpException httpException = findCause(t, HttpException.class);
+        if (httpException != null) {
+            return httpException.getPayload();
         }
+        VaradhiException varadhiException = findCause(t, VaradhiException.class);
+        if (varadhiException != null) {
+            return varadhiException.getMessage();
+        }
+        if (null != t) {
+            return t.getMessage() != null ? t.getMessage() : getDefaultErrorMessageFromStatusCode(statusCode);
+        }
+        return getDefaultErrorMessageFromStatusCode(statusCode);
     }
 
     private String getDefaultErrorMessageFromStatusCode(int statusCode) {
@@ -92,24 +85,39 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
-        //TODO:: review produceStatus code headerMapping for correctness.
-        Class tClazz = t.getClass();
-        if (t instanceof HttpException he) {
-            return he.getStatusCode();
-        } else if (DuplicateResourceException.class == tClazz) {
+        HttpException httpException = findCause(t, HttpException.class);
+        if (httpException != null) {
+            return httpException.getStatusCode();
+        }
+        if (findCause(t, DuplicateResourceException.class) != null) {
             return HTTP_CONFLICT;
-        } else if (ServerNotAvailableException.class == tClazz) {
+        }
+        if (findCause(t, ServerNotAvailableException.class) != null) {
             return HTTP_UNAVAILABLE;
-        } else if (IllegalArgumentException.class == tClazz) {
+        }
+        if (findCause(t, IllegalArgumentException.class) != null) {
             return HTTP_BAD_REQUEST;
-        } else if (ResourceNotFoundException.class == tClazz) {
+        }
+        if (findCause(t, ResourceNotFoundException.class) != null) {
             return HTTP_NOT_FOUND;
-        } else if (InvalidOperationForResourceException.class == tClazz) {
+        }
+        if (findCause(t, InvalidOperationForResourceException.class) != null) {
             return HTTP_CONFLICT;
-        } else if (UnsupportedOperationException.class == tClazz) {
+        }
+        if (findCause(t, UnsupportedOperationException.class) != null) {
             return HTTP_NOT_IMPLEMENTED;
         }
         return HTTP_INTERNAL_ERROR;
+    }
+
+    private static <T extends Throwable> T findCause(Throwable t, Class<T> type) {
+        while (t != null) {
+            if (type.isInstance(t)) {
+                return type.cast(t);
+            }
+            t = t.getCause();
+        }
+        return null;
     }
 
 }

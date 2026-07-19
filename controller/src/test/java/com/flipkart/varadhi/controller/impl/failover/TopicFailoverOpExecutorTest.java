@@ -9,6 +9,7 @@ import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
+import com.flipkart.varadhi.entities.TopicRegionConfigs;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicState;
@@ -30,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -129,10 +132,12 @@ class TopicFailoverOpExecutorTest {
 
         ArgumentCaptor<VaradhiTopic> updated = ArgumentCaptor.forClass(VaradhiTopic.class);
         verify(topicStore, times(2)).update(updated.capture());
-        assertEquals(TopicState.Blocked, updated.getAllValues().get(0).getTopicState());
-        assertEquals(TARGET, updated.getAllValues().get(0).getActiveRegion());
+        assertEquals(TopicState.Fenced, updated.getAllValues().get(0).getTopicState());
+        assertEquals(TARGET, TopicRegionConfigs.findProducingRegion(updated.getAllValues().get(0)).orElseThrow());
+        assertFalse(updated.getAllValues().get(0).getRegionConfig(SOURCE).isProduceAllowed());
+        assertTrue(updated.getAllValues().get(0).getRegionConfig(TARGET).isProduceAllowed());
         assertEquals(TopicState.Producing, updated.getAllValues().get(1).getTopicState());
-        assertEquals(TARGET, updated.getAllValues().get(1).getActiveRegion());
+        assertEquals(TARGET, TopicRegionConfigs.findProducingRegion(updated.getAllValues().get(1)).orElseThrow());
         assertEquals(TransitionStage.COMPLETED, transition.getCurrentStage());
         verify(transitionStore).delete(FQN);
 

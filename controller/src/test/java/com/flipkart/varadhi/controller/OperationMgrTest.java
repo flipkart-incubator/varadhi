@@ -36,7 +36,7 @@ public class OperationMgrTest {
     public void setup() {
         MockitoAnnotations.openMocks(this);
         doReturn(MAX_CONCURRENT_OPS).when(config).getMaxConcurrentOps();
-        operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20));
+        operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 0, 4, 5, 20));
         executor = Executors.newCachedThreadPool();
     }
 
@@ -501,7 +501,7 @@ public class OperationMgrTest {
 
     @Test
     public void failedOperationShouldBeRetried() {
-        RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
+        RetryPolicy retryPolicy = new RetryPolicy(1, 0, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
         VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
                                                         .build("project1.sub1", "project1", "project1.topic1");
@@ -529,7 +529,7 @@ public class OperationMgrTest {
 
     @Test
     public void failedOperationIsNotRetriedIfSubAlreadyHasPendingOp() {
-        RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
+        RetryPolicy retryPolicy = new RetryPolicy(1, 0, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
         VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
                                                         .build("project1.sub1", "project1", "project1.topic1");
@@ -549,7 +549,7 @@ public class OperationMgrTest {
 
     @Test
     public void subsequentOperationShouldClearPendingRetriesIfAny() {
-        RetryPolicy retryPolicy = new RetryPolicy(1, 1, 1, 1);
+        RetryPolicy retryPolicy = new RetryPolicy(1, 0, 1, 1, 1);
         operationMgr = new OperationMgr(config.getMaxConcurrentOps(), opStore, retryPolicy);
         VaradhiSubscription sub1 = SubscriptionTestUtils.builder()
                                                         .build("project1.sub1", "project1", "project1.topic1");

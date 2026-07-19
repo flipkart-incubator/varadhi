@@ -21,7 +21,11 @@ class VaradhiTopicSerializationTest {
                 new TopicCapacityPolicy(100, 400, 2, 2),
                 LifecycleStatus.ActionCode.SYSTEM_ACTION
             ).withAutoFailover(true),
+<<<<<<< HEAD
             Map.of("CH", RegionConfig.producing(), "HYD", new RegionConfig(false, RegionName.of("CH")))
+=======
+            Map.of("CH", new RegionConfig(true, true, null), "HYD", new RegionConfig(true, false, RegionName.of("CH")))
+>>>>>>> de7413df (added regionConfig in varadhiTopic)
         );
 
         VaradhiTopic restored = JsonMapper.jsonDeserialize(JsonMapper.jsonSerialize(original), VaradhiTopic.class);

@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Minimal pod-side handler for topic-transition stage broadcasts (topic failover and
@@ -58,6 +59,8 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private final PodToControllerApi controllerClient;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
+    private final PodTransitionConfig config;
+    private final ScheduledExecutorService scheduler;
     private final RetryUtils.ResultPollingExecutor<Optional<Long>> versionWaitExecutor;
     private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
 
@@ -75,6 +78,8 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         this.controllerClient = controllerClient;
         this.producerService = producerService;
         this.metrics = metrics;
+        this.config = config;
+        this.scheduler = scheduler;
         this.versionWaitExecutor = RetryUtils.newResultPollingExecutor(
             scheduler,
             config.versionWaitMaxAttempts(),
@@ -295,11 +300,25 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void sendAck(TransitionAck ack) {
-        // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
-        controllerClient.ackTopicTransition(ack).exceptionally(t -> {
-            metrics.ackSendFailed(ack.transitionType(), ack.stage(), ack.topicFqn().toFqn());
-            log.warn("Failed to deliver transition ack ack={}", ack, t);
-            return null;
-        });
+        Runnable deliver = () -> {
+            // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
+            controllerClient.ackTopicTransition(ack).exceptionally(t -> {
+                metrics.ackSendFailed(ack.transitionType(), ack.stage(), ack.topicFqn().toFqn());
+                log.warn("Failed to deliver transition ack ack={}", ack, t);
+                return null;
+            });
+        };
+        long delayMs = ack.stage() == TransitionStage.SWITCH ? config.ackReportDelayMs() : 0L;
+        if (delayMs > 0L) {
+            log.info(
+                "Delaying SWITCH ack report by {}ms for op={} topic={}",
+                delayMs,
+                ack.opId(),
+                ack.topicFqn().toFqn()
+            );
+            scheduler.schedule(deliver, delayMs, TimeUnit.MILLISECONDS);
+            return;
+        }
+        deliver.run();
     }
 }

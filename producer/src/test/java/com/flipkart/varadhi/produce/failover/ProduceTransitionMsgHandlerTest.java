@@ -346,7 +346,7 @@ class ProduceTransitionMsgHandlerTest {
 
     @Test
     void prepareAcksFailureWhenStaleOrUnreachable() throws Exception {
-        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
+        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L, 0L));
 
         h.handle(
             ClusterMessage.of(
@@ -399,7 +399,7 @@ class ProduceTransitionMsgHandlerTest {
 
     @Test
     void switchAcksOkWhenVersionArrivesLater() throws Exception {
-        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
+        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L, 0L));
         scheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
 
         h.handle(
@@ -422,7 +422,7 @@ class ProduceTransitionMsgHandlerTest {
 
     @Test
     void switchAcksFailureOnTimeout() throws Exception {
-        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
+        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L, 0L));
 
         h.handle(
             ClusterMessage.of(

@@ -30,6 +30,14 @@ public class ProducerOptions {
     @Builder.Default
     private long transitionPollIntervalMs = 25;
 
+    /**
+     * Test-only delay (ms) before a pod reports a SWITCH-stage {@code TransitionAck} to the
+     * controller. Extends the produce-blocked window while the stage barrier is open. {@code 0}
+     * disables the delay.
+     */
+    @Builder.Default
+    private long transitionAckReportDelayMs = 0;
+
     public static ProducerOptions defaultOptions() {
         return ProducerOptions.builder().build();
     }

@@ -25,6 +25,7 @@ public class OperationMgr {
     private final Map<String, RetryOpTask> retryOpTasks;
     private final Map<String, Deque<OpTask>> opTasks;
     private final RetryPolicy retryPolicy;
+    private volatile Consumer<TopicFailoverOperation> topicFailoverTerminalFailureHandler;
 
     public OperationMgr(int maxConcurrentOps, OpStore opStore, RetryPolicy retryPolicy) {
         this.opStore = opStore;
@@ -37,6 +38,18 @@ public class OperationMgr {
             new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
         );
         this.delayedScheduler = Executors.newSingleThreadScheduledExecutor();
+    }
+
+    /** Invoked when a topic-failover op has failed and will not be retried. */
+    public void setTopicFailoverTerminalFailureHandler(Consumer<TopicFailoverOperation> handler) {
+        this.topicFailoverTerminalFailureHandler = handler;
+    }
+
+    private void notifyTopicFailoverTerminalFailure(TopicFailoverOperation operation) {
+        Consumer<TopicFailoverOperation> handler = topicFailoverTerminalFailureHandler;
+        if (handler != null) {
+            handler.accept(operation);
+        }
     }
 
     /**
@@ -388,6 +401,9 @@ public class OperationMgr {
                 }
             } else {
                 log.error("Operation {} has failed but further retry is not allowed.", operation);
+                if (operation instanceof TopicFailoverOperation topicFailoverOperation) {
+                    notifyTopicFailoverTerminalFailure(topicFailoverOperation);
+                }
             }
         }
 

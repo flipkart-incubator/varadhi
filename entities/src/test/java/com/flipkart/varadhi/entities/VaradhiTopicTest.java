@@ -195,6 +195,7 @@ class VaradhiTopicTest {
 
         assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(varadhiTopic).orElseThrow());
         assertTrue(varadhiTopic.getRegionConfig(RegionName.of("r1")).isProduceAllowed());
+<<<<<<< HEAD
     }
 
     @Test
@@ -211,6 +212,8 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
         assertEquals(RegionName.of("r1"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
+=======
+>>>>>>> de7413df (added regionConfig in varadhiTopic)
     }
 
     @Test

@@ -8,6 +8,9 @@ import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.RegionConfig;
+import com.flipkart.varadhi.entities.TopicRegionConfigs;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
@@ -23,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
@@ -110,17 +115,28 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
 
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        boolean needsActiveRegionUpdate = !Objects.equals(op.getTargetRegion(), topic.getActiveRegion());
-        boolean needsBlock = topic.getTopicState().isProduceAllowed();
-        if (needsActiveRegionUpdate || needsBlock) {
-            VaradhiTopic next = needsActiveRegionUpdate ? topic.withActiveRegion(op.getTargetRegion()) : topic;
-            if (needsBlock) {
-                next = next.withTopicState(TopicState.Blocked);
+        RegionName producing = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
+        boolean needsSwitch = producing == null || !Objects.equals(op.getTargetRegion(), producing);
+        boolean needsFence = topic.getTopicState().isProduceAllowed();
+        if (needsSwitch || needsFence) {
+            VaradhiTopic next = topic;
+            if (needsSwitch) {
+                next = TopicRegionConfigs.withRegionConfigs(
+                    topic,
+                    switchProduceAllowed(
+                        topic.getRegionConfigs(),
+                        Objects.requireNonNullElse(producing, op.getSourceRegion()),
+                        op.getTargetRegion()
+                    )
+                );
+            }
+            if (needsFence) {
+                next = next.withTopicState(TopicState.Fenced);
             }
             topicStore.update(next);
             topic = topicStore.get(op.getTopicFqn());
             log.info(
-                "Failover op {}: switched activeRegion to {} and blocked produce for {}, topic now v{}",
+                "Failover op {}: switched producing region to {} and fenced produce for {}, topic now v{}",
                 op.getId(),
                 op.getTargetRegion().value(),
                 op.getTopicFqn(),
@@ -218,5 +234,32 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         } catch (CompletionException e) {
             throw new FailoverAbortedException("failed to resolve cluster members: " + e.getMessage());
         }
+    }
+
+    private static Map<String, RegionConfig> switchProduceAllowed(
+        Map<String, RegionConfig> configs,
+        RegionName source,
+        RegionName target
+    ) {
+        Map<String, RegionConfig> updated = new HashMap<>(configs);
+        RegionConfig sourceConfig = updated.get(source.value());
+        RegionConfig targetConfig = updated.get(target.value());
+        updated.put(
+            source.value(),
+            new RegionConfig(
+                sourceConfig != null ? sourceConfig.isReplicated() : true,
+                false,
+                sourceConfig != null ? sourceConfig.getFailOverRegion() : null
+            )
+        );
+        updated.put(
+            target.value(),
+            new RegionConfig(
+                targetConfig != null ? targetConfig.isReplicated() : true,
+                true,
+                targetConfig != null ? targetConfig.getFailOverRegion() : null
+            )
+        );
+        return updated;
     }
 }
