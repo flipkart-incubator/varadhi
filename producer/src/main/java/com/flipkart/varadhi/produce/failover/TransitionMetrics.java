@@ -38,8 +38,7 @@ public final class TransitionMetrics {
 
     /** A stage broadcast was received by this pod. */
     public void stageReceived(TransitionType type, TransitionStage stage, String topicFqn) {
-        registry.counter(STAGE_RECEIVED, "type", type.name(), "stage", stage.name(), "topic", topicFqn)
-                .increment();
+        registry.counter(STAGE_RECEIVED, "type", type.name(), "stage", stage.name(), "topic", topicFqn).increment();
     }
 
     /** This pod acked a stage; {@code success} is the ack outcome. */
@@ -79,23 +78,13 @@ public final class TransitionMetrics {
     /** Clears participation gauges for {@code topicFqn} when the op reaches a terminal stage. */
     public void clearParticipation(TransitionType type, String topicFqn) {
         for (TransitionParticipation value : TransitionParticipation.values()) {
-            setGauge(
-                PARTICIPATION,
-                0,
-                "type",
-                type.name(),
-                "topic",
-                topicFqn,
-                "participation",
-                value.name()
-            );
+            setGauge(PARTICIPATION, 0, "type", type.name(), "topic", topicFqn, "participation", value.name());
         }
     }
 
     /** Failed to deliver a {@code TransitionAck} to the controller. */
     public void ackSendFailed(TransitionType type, TransitionStage stage, String topicFqn) {
-        registry.counter(ACK_SEND_FAILED, "type", type.name(), "stage", stage.name(), "topic", topicFqn)
-                .increment();
+        registry.counter(ACK_SEND_FAILED, "type", type.name(), "stage", stage.name(), "topic", topicFqn).increment();
     }
 
     /** A version-gated wait started on this pod. */
@@ -111,14 +100,11 @@ public final class TransitionMetrics {
     }
 
     private AtomicInteger versionWaitsByTopic(String topicFqn) {
-        return gaugeHolders.computeIfAbsent(
-            VERSION_WAITS_IN_FLIGHT + "|topic|" + topicFqn,
-            ignored -> {
-                AtomicInteger ref = new AtomicInteger();
-                registry.gauge(VERSION_WAITS_IN_FLIGHT, Tags.of("topic", topicFqn), ref, AtomicInteger::get);
-                return ref;
-            }
-        );
+        return gaugeHolders.computeIfAbsent(VERSION_WAITS_IN_FLIGHT + "|topic|" + topicFqn, ignored -> {
+            AtomicInteger ref = new AtomicInteger();
+            registry.gauge(VERSION_WAITS_IN_FLIGHT, Tags.of("topic", topicFqn), ref, AtomicInteger::get);
+            return ref;
+        });
     }
 
     private void setGauge(String name, int value, String... tagKeyValues) {

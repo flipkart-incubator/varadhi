@@ -157,14 +157,11 @@ public final class ProducerService {
         this.projectCache = projectCache;
         this.orgCache = orgCache;
         this.rateLimiter = rateLimiter;
-        this.producerLoadExecutor = Executors.newFixedThreadPool(
-            PRODUCER_LOAD_POOL_SIZE,
-            r -> {
-                Thread t = new Thread(r, "producer-create-cache-load");
-                t.setDaemon(true);
-                return t;
-            }
-        );
+        this.producerLoadExecutor = Executors.newFixedThreadPool(PRODUCER_LOAD_POOL_SIZE, r -> {
+            Thread t = new Thread(r, "producer-create-cache-load");
+            t.setDaemon(true);
+            return t;
+        });
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
@@ -240,17 +237,13 @@ public final class ProducerService {
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
         RegionName activeRegion = topic.getActiveRegion();
         if (activeRegion == null) {
-            throw new ResourceNotFoundException(
-                "Topic(%s) has no active produce region.".formatted(topic.getName())
-            );
+            throw new ResourceNotFoundException("Topic(%s) has no active produce region.".formatted(topic.getName()));
         }
 
         SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(activeRegion.value());
 
         if (internalTopic == null) {
-            throw new ResourceNotFoundException(
-                String.format("Topic not found for region(%s).", activeRegion.value())
-            );
+            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", activeRegion.value()));
         }
 
         TopicState topicState = topic.getTopicState();
