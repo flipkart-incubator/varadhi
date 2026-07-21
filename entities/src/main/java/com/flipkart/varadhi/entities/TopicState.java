@@ -5,11 +5,10 @@ import lombok.Getter;
 @Getter
 public enum TopicState {
     // TODO:: Storage topic should be only Producing & Replicating
-    // TODO:: Blocked/Throttled are VaradhiTopic state.
-    Producing(true, ProduceStatus.Success), Blocked(false, ProduceStatus.Blocked), Throttled(
+    Producing(true, ProduceStatus.Success), Fenced(false, ProduceStatus.Fenced), Replicating(
         false,
-        ProduceStatus.Throttled
-    ), Replicating(false, ProduceStatus.NotAllowed);
+        ProduceStatus.NotAllowed
+    );
 
     private final ProduceStatus produceStatus;
     private final boolean produceAllowed;

@@ -57,7 +57,7 @@ public final class ProducerService {
 
     /**
      * This pod's deployed region (pod identity). Produce routing uses
-     * {@link VaradhiTopic#getActiveRegion()} from topic metadata, which may differ
+     * {@link TopicRegionConfigs#findProducingRegion(VaradhiTopic)} from topic metadata, which may differ
      * from this pod's region after failover (cross-region produce).
      */
     private final String deployedRegion;
@@ -235,7 +235,7 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        RegionName activeRegion = topic.getActiveRegion();
+        RegionName activeRegion = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
         if (activeRegion == null) {
             throw new ResourceNotFoundException("Topic(%s) has no active produce region.".formatted(topic.getName()));
         }
@@ -288,11 +288,31 @@ public final class ProducerService {
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
+        Producer<? extends Offset> shared = findSharedProducer(topicFQN, storageTopicId);
+        if (shared != null) {
+            producerCache.put(key, shared);
+            return CompletableFuture.completedFuture(shared);
+        }
 
         return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), producerLoadExecutor);
     }
 
+    private Producer<? extends Offset> findSharedProducer(String topicFQN, int storageTopicId) {
+        for (var entry : producerCache.asMap().entrySet()) {
+            ProducerCacheKey cachedKey = entry.getKey();
+            if (cachedKey.varadhiTopicFQN().equals(topicFQN) && cachedKey.storageTopicId() == storageTopicId) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
     private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {
+        Producer<? extends Offset> shared = findSharedProducer(key.varadhiTopicFQN(), key.storageTopicId());
+        if (shared != null) {
+            producerCache.put(key, shared);
+            return shared;
+        }
         try {
             return producerCache.get(key);
         } catch (Exception e) {

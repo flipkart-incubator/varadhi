@@ -2,44 +2,37 @@ package com.flipkart.varadhi.entities;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicSerializationTest {
 
     @Test
-    void jsonDeserialize_OldStoredJsonWithoutNewFields_Succeeds() {
-        String legacyJson = """
-            {
-              "name": "project1.topic1",
-              "version": 1,
-              "entityType": "TOPIC",
-              "grouped": false,
-              "capacity": {
-                "qps": 100,
-                "throughputKBps": 400,
-                "readFanOut": 2,
-                "retentionPeriodInDays": 2
-              },
-              "internalTopics": {},
-              "status": {
-                "state": "CREATED",
-                "actionCode": "SYSTEM_ACTION"
-              },
-              "nfrFilterName": null,
-              "topicCategory": "TOPIC"
-            }
-            """;
+    void jsonRoundTrip_preservesAutoFailoverAndRegionConfigs() {
+        VaradhiTopic original = TopicRegionConfigs.withRegionConfigs(
+            VaradhiTopic.of(
+                "project1",
+                "topic1",
+                false,
+                new TopicCapacityPolicy(100, 400, 2, 2),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
+            ).withAutoFailover(true),
+            Map.of("CH", RegionConfig.producing(), "HYD", new RegionConfig(false, RegionName.of("CH")))
+        );
 
-        VaradhiTopic topic = JsonMapper.jsonDeserialize(legacyJson, VaradhiTopic.class);
+        VaradhiTopic restored = JsonMapper.jsonDeserialize(JsonMapper.jsonSerialize(original), VaradhiTopic.class);
 
         assertAll(
-            () -> assertEquals("project1.topic1", topic.getName()),
-            () -> assertTrue(topic.getPerRegionQuotaWeights().isEmpty()),
-            () -> assertNull(topic.getMessageSizeProfile()),
-            () -> assertNull(topic.getRateLimiterMode())
+            () -> assertTrue(restored.isAutoFailover()),
+            () -> assertEquals(2, restored.getRegionConfigs().size()),
+            () -> assertTrue(restored.getRegionConfig(RegionName.of("CH")).isProduceAllowed()),
+            () -> assertFalse(restored.getRegionConfig(RegionName.of("HYD")).isProduceAllowed()),
+            () -> assertEquals(RegionName.of("CH"), restored.getRegionConfig(RegionName.of("HYD")).getFailOverRegion()),
+            () -> assertEquals(RegionName.of("CH"), TopicRegionConfigs.findProducingRegion(restored).orElseThrow())
         );
     }
 }

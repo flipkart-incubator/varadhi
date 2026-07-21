@@ -44,7 +44,9 @@ class VaradhiTopicTest {
             () -> assertFalse(varadhiTopic.isGrouped(), "Grouped flag mismatch"),
             () -> assertEquals(TOPIC_CAPACITY, varadhiTopic.getCapacity(), "Capacity mismatch"),
             () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch"),
-            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory())
+            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory()),
+            () -> assertFalse(varadhiTopic.isAutoFailover()),
+            () -> assertTrue(varadhiTopic.getRegionConfigs().isEmpty())
         );
     }
 
@@ -74,7 +76,7 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
+        varadhiTopic = varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
 
         assertEquals(
             storageTopic.getName(),
@@ -102,13 +104,13 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
+        VaradhiTopic topic = varadhiTopic.addInternalTopic("region1", SegmentedStorageTopic.of(storageTopic));
 
         assertAll(
-            () -> assertNotNull(varadhiTopic.getProduceTopicForRegion("region1"), "Region topic not found"),
+            () -> assertNotNull(topic.getProduceTopicForRegion("region1"), "Region topic not found"),
             () -> assertEquals(
                 storageTopic.getName(),
-                varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
+                topic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
                 "Region topic name mismatch"
             )
         );
@@ -179,10 +181,20 @@ class VaradhiTopicTest {
     void withTopicState_returnsCopyWithUpdatedState() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        VaradhiTopic updated = varadhiTopic.withTopicState(TopicState.Blocked);
+        VaradhiTopic updated = varadhiTopic.withTopicState(TopicState.Fenced);
 
-        assertEquals(TopicState.Blocked, updated.getTopicState());
+        assertEquals(TopicState.Fenced, updated.getTopicState());
         assertEquals(TopicState.Producing, varadhiTopic.getTopicState(), "original must be unchanged");
+    }
+
+    @Test
+    void addInternalTopic_setsProducingRegionOnFirstRegion() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+
+        varadhiTopic = varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
+
+        assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(varadhiTopic).orElseThrow());
+        assertTrue(varadhiTopic.getRegionConfig(RegionName.of("r1")).isProduceAllowed());
     }
 
     @Test

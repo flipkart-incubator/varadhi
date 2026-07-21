@@ -76,7 +76,7 @@ public final class ProducerMetricsImpl implements ProducerMetrics {
         switch (result.getProduceStatus()) {
             case Success -> successTimer.record(result.getLatencyMs(), TimeUnit.MILLISECONDS);
             case Filtered -> filteredCount.increment();
-            case Throttled, Blocked, NotAllowed -> rejected(messageBytes, false);
+            case Throttled, Fenced, NotAllowed -> rejected(messageBytes, false);
             case Failed -> failureTimer.record(result.getLatencyMs(), TimeUnit.MILLISECONDS);
         }
     }
