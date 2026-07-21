@@ -129,7 +129,7 @@ public class StageAwaiter {
                 );
                 return;
             }
-            if (!ack.success()) {
+            if (!ack.isSuccess()) {
                 fail(
                     new FailoverAbortedException(
                         "stage " + stage + " failed on host " + ack.hostname() + ": " + ack.errorMsg()

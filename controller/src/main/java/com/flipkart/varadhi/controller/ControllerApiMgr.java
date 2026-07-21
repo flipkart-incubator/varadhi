@@ -385,6 +385,7 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
                     VaradhiTopicName.parse(topicFqn),
                     TransitionType.TOPIC_FAILOVER,
                     TransitionStage.ABORTED,
+                    false,
                     0L,
                     null
                 )
@@ -403,9 +404,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
 
     /** Routes a pod ack to the matching stage barrier. Invoked from the controller ack send-handler. */
     public void recordFailoverAck(TransitionAck ack) {
-<<<<<<< HEAD
-        log.debug("Failover ack op={} host={} stage={} ok={}", ack.opId(), ack.hostname(), ack.stage(), ack.success());
-=======
         log.debug(
             "Failover ack op={} host={} stage={} ok={}",
             ack.opId(),
@@ -413,7 +411,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
             ack.stage(),
             ack.isSuccess()
         );
->>>>>>> de7413df (added regionConfig in varadhiTopic)
         stageAwaiter.recordAck(ack);
     }
 

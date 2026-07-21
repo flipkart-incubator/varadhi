@@ -204,10 +204,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
             VaradhiTopicName.parse(op.getTopicFqn()),
             TransitionType.TOPIC_FAILOVER,
             stage,
-<<<<<<< HEAD
-=======
             stage.isVersionGated(),
->>>>>>> 7fa07080 (fix in failover testing)
             topicVersionToAwait,
             target
         );

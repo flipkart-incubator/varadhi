@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TransitionMetricsImplTest {
 
+    private static final String TOPIC = "project.topic";
+
     private SimpleMeterRegistry registry;
     private TransitionMetrics metrics;
 
@@ -22,19 +24,20 @@ class TransitionMetricsImplTest {
 
     @Test
     void stageReceived_incrementsCounterWithTypeAndStageTags() {
-        metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+        metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC);
 
         Counter counter = registry.find("topic.transition.stage.received")
                                   .tag("type", "TOPIC_FAILOVER")
                                   .tag("stage", "PREPARE")
+                                  .tag("topic", TOPIC)
                                   .counter();
         assertEquals(1.0, counter.count());
     }
 
     @Test
     void stageAcked_incrementsCounterWithSuccessTag() {
-        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true);
-        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, false);
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, TOPIC);
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, false, TOPIC);
 
         assertEquals(
             1.0,
@@ -42,6 +45,7 @@ class TransitionMetricsImplTest {
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "SWITCH")
                     .tag("success", "true")
+                    .tag("topic", TOPIC)
                     .counter()
                     .count()
         );
@@ -51,6 +55,7 @@ class TransitionMetricsImplTest {
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "SWITCH")
                     .tag("success", "false")
+                    .tag("topic", TOPIC)
                     .counter()
                     .count()
         );

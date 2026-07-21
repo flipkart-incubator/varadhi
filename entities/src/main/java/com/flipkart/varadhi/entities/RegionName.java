@@ -33,15 +33,7 @@ public record RegionName(@JsonValue String value) {
      * @param value the region name string; must be non-null and non-blank
      * @return a validated {@link RegionName}
      */
-<<<<<<< HEAD
-<<<<<<< HEAD
     @JsonCreator (mode = Mode.DELEGATING)
-=======
-    @JsonCreator(mode = Mode.DELEGATING)
->>>>>>> 7fa07080 (fix in failover testing)
-=======
-    @JsonCreator (mode = Mode.DELEGATING)
->>>>>>> de7413df (added regionConfig in varadhiTopic)
     public static RegionName of(String value) {
         return new RegionName(value);
     }

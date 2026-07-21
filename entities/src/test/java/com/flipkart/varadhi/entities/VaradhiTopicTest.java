@@ -195,25 +195,6 @@ class VaradhiTopicTest {
 
         assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(varadhiTopic).orElseThrow());
         assertTrue(varadhiTopic.getRegionConfig(RegionName.of("r1")).isProduceAllowed());
-<<<<<<< HEAD
-    }
-
-    @Test
-    void resolveActiveRegion_usesExplicitActiveRegionWhenSet() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        varadhiTopic.addInternalTopic("r1", SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")));
-        varadhiTopic = varadhiTopic.withActiveRegion(RegionName.of("r2"));
-
-        assertEquals(RegionName.of("r2"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
-    }
-
-    @Test
-    void resolveActiveRegion_fallsBackToPodRegionWhenUnset() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        assertEquals(RegionName.of("r1"), varadhiTopic.resolveActiveRegion(RegionName.of("r1")));
-=======
->>>>>>> de7413df (added regionConfig in varadhiTopic)
     }
 
     @Test

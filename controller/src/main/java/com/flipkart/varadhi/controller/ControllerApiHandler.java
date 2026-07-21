@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.controller;
 
+import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.cluster.failover.ActiveFailovers;
 import com.flipkart.varadhi.core.cluster.failover.FailoverApiRequest;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
@@ -16,9 +17,11 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class ControllerApiHandler {
     private final ControllerApiMgr controllerMgr;
+    private final TopicTransitionMetrics transitionMetrics;
 
-    public ControllerApiHandler(ControllerApiMgr controllerMgr) {
+    public ControllerApiHandler(ControllerApiMgr controllerMgr, TopicTransitionMetrics transitionMetrics) {
         this.controllerMgr = controllerMgr;
+        this.transitionMetrics = transitionMetrics;
     }
 
     public CompletableFuture<ResponseMessage> start(ClusterMessage message) {
@@ -93,6 +96,11 @@ public class ControllerApiHandler {
 
     public void failoverAck(ClusterMessage message) {
         TransitionAck ack = message.getData(TransitionAck.class);
-        controllerMgr.recordFailoverAck(ack);
+        try {
+            controllerMgr.recordFailoverAck(ack);
+        } catch (Exception e) {
+            transitionMetrics.ackProcessingFailed(ack.transitionType(), ack.stage());
+            log.error("Topic-transition ack processing failed for ack={}", ack, e);
+        }
     }
 }
