@@ -17,17 +17,17 @@ import java.util.Objects;
 @EqualsAndHashCode (callSuper = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
-    private final Map<String, SegmentedStorageTopic> internalTopics;
+    private final SegmentedStorageTopic storageTopic;
     /**
      * Runtime produce state for this topic. Replicated to every pod's {@code TopicCache}; the
-     * produce gate and topic failover read this field.
+     * produce gate and topic failover read this field. Fence coordination uses {@link #getVersion()}
+     * together with {@code TransitionEvent.topicVersionToAwait}.
      */
     private final TopicState topicState;
-    /**
-     * Region that currently receives produce traffic for this topic. Updated atomically with
-     * {@link #topicState} during topic failover SWITCH.
-     */
-    private RegionName activeRegion;
+    /** When true, controller may automatically fail over this topic on region degradation. */
+    private final boolean autoFailover;
+    /** Per-region produce / standby policy; keyed by region name. */
+    private final Map<String, RegionConfig> regionConfigs;
     private final boolean grouped;
 
     private final String nfrFilterName;
@@ -49,33 +49,15 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TOPIC, QUEUE
     }
 
-    /**
-     * Constructs a new VaradhiTopic instance.
-     *
-     * @param name           the name of the topic
-     * @param version        the version of the topic
-     * @param grouped        whether the topic is grouped
-     * @param capacity       the capacity policy of the topic
-     * @param internalTopics the internal topics associated with this topic
-     * @param topicState     runtime produce state; defaults to {@link TopicState#Producing} when
-     *                       {@code null}
-     * @param activeRegion   region receiving produce; set on first {@link #addInternalTopic} when
-     *                       {@code null}
-     * @param status         the status of the topic
-     * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
-     * @param topicCategory  topic vs queue classification; must not be {@code null}
-     * @param perRegionQuotaWeights per-region fraction of global produce quota; nullable until defaulted
-     * @param messageSizeProfile observed message size profile; nullable until defaulted
-     * @param rateLimiterMode per-topic rate limiter rollout mode; nullable until defaulted
-     */
     private VaradhiTopic(
         String name,
         int version,
         boolean grouped,
         TopicCapacityPolicy capacity,
-        Map<String, SegmentedStorageTopic> internalTopics,
+        SegmentedStorageTopic storageTopic,
         TopicState topicState,
-        RegionName activeRegion,
+        boolean autoFailover,
+        Map<String, RegionConfig> regionConfigs,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory,
@@ -86,9 +68,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.internalTopics = internalTopics != null ? new HashMap<>(internalTopics) : new HashMap<>();
+        this.storageTopic = storageTopic;
         this.topicState = topicState != null ? topicState : TopicState.Producing;
-        this.activeRegion = activeRegion;
+        this.autoFailover = autoFailover;
+        this.regionConfigs = regionConfigs != null ? new HashMap<>(regionConfigs) : new HashMap<>();
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
@@ -99,16 +82,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.status = status;
     }
 
-    /**
-     * Creates a new VaradhiTopic instance.
-     *
-     * @param project   the project associated with the topic
-     * @param name      the name of the topic
-     * @param grouped   whether the topic is grouped
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating the reason for the state
-     * @return a new VaradhiTopic instance
-     */
     public static VaradhiTopic of(
         String project,
         String name,
@@ -130,10 +103,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return of(project, name, grouped, capacity, actionCode, nfrStrategy, TopicCategory.TOPIC);
     }
 
-    /**
-     * Same as {@link #of(String, String, boolean, TopicCapacityPolicy, LifecycleStatus.ActionCode, String)} but
-     * sets {@link TopicCategory} (e.g. {@link TopicCategory#QUEUE} for the topic leg of a queue).
-     */
     public static VaradhiTopic of(
         String project,
         String name,
@@ -163,8 +132,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             INITIAL_VERSION,
             grouped,
             capacity,
-            new HashMap<>(),
+            null,
             TopicState.Producing,
+            false,
             null,
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
@@ -175,43 +145,30 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         );
     }
 
-    /**
-     * Builds the topic name from the project name and topic name.
-     *
-     * @param projectName the name of the project
-     * @param topicName   the name of the topic
-     * @return the constructed topic name
-     */
     public static String fqn(String projectName, String topicName) {
         return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
     /**
-     * Adds an internal topic for a specific region.
-     *
-     * @param region        the region for the internal topic
-     * @param internalTopic the internal topic to add
+     * Sets {@link #storageTopic} on the first call and registers each {@code region} in
+     * {@link #regionConfigs}. Additional regions share the same storage topic.
      */
-    public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
-        this.internalTopics.put(region, internalTopic);
-        if (this.activeRegion == null) {
-            this.activeRegion = RegionName.of(region);
-        }
-    }
-
-    /**
-     * Returns a copy of this topic with an updated {@link #activeRegion}. Used when persisting a new
-     * topic snapshot (e.g. topic failover SWITCH) without mutating the cached instance.
-     */
-    public VaradhiTopic withActiveRegion(RegionName region) {
-        return new VaradhiTopic(
+    public VaradhiTopic addInternalTopic(String region, SegmentedStorageTopic segmentedTopic) {
+        Objects.requireNonNull(region, "region must not be null");
+        Objects.requireNonNull(segmentedTopic, "segmentedTopic must not be null");
+        SegmentedStorageTopic resolvedStorage = storageTopic != null ? storageTopic : segmentedTopic;
+        Map<String, RegionConfig> updatedConfigs = new HashMap<>(regionConfigs);
+        boolean firstRegion = updatedConfigs.isEmpty();
+        updatedConfigs.putIfAbsent(region, firstRegion ? RegionConfig.producing() : new RegionConfig(false, null));
+        VaradhiTopic updated = new VaradhiTopic(
             getName(),
             getVersion(),
             grouped,
             capacity,
-            internalTopics,
+            resolvedStorage,
             topicState,
-            Objects.requireNonNull(region, "activeRegion must not be null"),
+            autoFailover,
+            updatedConfigs,
             getStatus(),
             nfrFilterName,
             topicCategory,
@@ -219,65 +176,60 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             messageSizeProfile,
             rateLimiterMode
         );
+        updated.status = this.status;
+        return updated;
     }
 
-    /**
-     * Returns a copy of this topic with an updated {@link #topicState}. Used when persisting a new
-     * topic snapshot (e.g. topic failover SWITCH/COMPLETE) without mutating the cached instance.
-     */
+    @JsonIgnore
+    public RegionConfig getRegionConfig(RegionName region) {
+        Objects.requireNonNull(region, "region must not be null");
+        return regionConfigs.get(region.value());
+    }
+
     public VaradhiTopic withTopicState(TopicState state) {
-        return new VaradhiTopic(
-            getName(),
-            getVersion(),
-            grouped,
-            capacity,
-            internalTopics,
-            state,
-            activeRegion,
-            getStatus(),
-            nfrFilterName,
-            topicCategory,
-            perRegionQuotaWeights,
-            messageSizeProfile,
-            rateLimiterMode
-        );
+        return copyWith(null, state, null);
     }
 
-    /**
-     * Retrieves the project name from the topic name.
-     *
-     * @return the project name
-     */
+    public VaradhiTopic withAutoFailover(boolean autoFailover) {
+        return copyWith(null, null, autoFailover);
+    }
+
     @JsonIgnore
     public String getProjectName() {
         return VaradhiTopicName.parse(getName()).getProjectName();
     }
 
-    /**
-     * Local topic name (segment after the project prefix in the fully-qualified name).
-     */
     @JsonIgnore
     public String getTopicName() {
         return VaradhiTopicName.parse(getName()).getTopicName();
     }
 
-    /**
-     * Retrieves the produce topic for a specific region.
-     *
-     * @param region the region for which to retrieve the produce topic
-     * @return the produce topic for the specified region
-     */
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
-        return internalTopics.get(region);
+        return regionConfigs.containsKey(region) ? storageTopic : null;
     }
 
-    /**
-     * Whether this topic's {@link #getTopicCategory() category} equals {@code category}.
-     *
-     * @param category the category to compare against; must not be {@code null}
-     * @return {@code true} if the topic's category equals {@code category}
-     */
     public boolean isCategory(TopicCategory category) {
         return this.topicCategory == category;
+    }
+
+    VaradhiTopic copyWith(Map<String, RegionConfig> regionConfigs, TopicState topicState, Boolean autoFailover) {
+        VaradhiTopic copy = new VaradhiTopic(
+            getName(),
+            getVersion(),
+            grouped,
+            capacity,
+            storageTopic,
+            topicState != null ? topicState : this.topicState,
+            autoFailover != null ? autoFailover : this.autoFailover,
+            regionConfigs != null ? regionConfigs : this.regionConfigs,
+            getStatus(),
+            nfrFilterName,
+            topicCategory,
+            perRegionQuotaWeights,
+            messageSizeProfile,
+            rateLimiterMode
+        );
+        copy.status = this.status;
+        return copy;
     }
 }

@@ -104,7 +104,7 @@ public class VaradhiTopicFactory {
         );
 
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(category);
-        planDeployment(project, varadhiTopic);
+        varadhiTopic = planDeployment(project, varadhiTopic);
         return varadhiTopic;
     }
 
@@ -114,7 +114,7 @@ public class VaradhiTopicFactory {
      * @param project      the project associated with the topic
      * @param varadhiTopic the VaradhiTopic instance to be deployed
      */
-    private void planDeployment(Project project, VaradhiTopic varadhiTopic) {
+    private VaradhiTopic planDeployment(Project project, VaradhiTopic varadhiTopic) {
         StorageTopic storageTopic = topicFactory.getTopic(
             0,
             varadhiTopic.getName(),
@@ -123,7 +123,7 @@ public class VaradhiTopicFactory {
             InternalQueueCategory.MAIN
         );
 
-        varadhiTopic.addInternalTopic(deploymentRegion, SegmentedStorageTopic.of(storageTopic));
+        return varadhiTopic.addInternalTopic(deploymentRegion, SegmentedStorageTopic.of(storageTopic));
     }
 
     private static void warnIfCapacityTightForAverageMessageSizes(

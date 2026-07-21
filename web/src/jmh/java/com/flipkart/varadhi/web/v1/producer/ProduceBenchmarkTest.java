@@ -338,7 +338,7 @@ public class ProduceBenchmarkTest {
 
             // Add as internal topic for the deployment region.
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
-            topic.addInternalTopic("default", segmentedTopic);
+            topic = topic.addInternalTopic("default", segmentedTopic);
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));
         }

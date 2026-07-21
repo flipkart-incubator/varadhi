@@ -20,13 +20,11 @@ public class SegmentedStorageTopic {
 
     private final StorageTopic[] storageTopics;
 
-    private final int activeStorageTopicId;
-
-    @JsonIgnore
+    /** Index into {@link #storageTopics} for the active produce segment. */
     private final int produceIndex;
 
     public static SegmentedStorageTopic of(StorageTopic storageTopic) {
-        return new SegmentedStorageTopic(new StorageTopic[] {storageTopic}, storageTopic.getId(), 0);
+        return new SegmentedStorageTopic(new StorageTopic[] {storageTopic}, 0);
     }
 
     @JsonIgnore
