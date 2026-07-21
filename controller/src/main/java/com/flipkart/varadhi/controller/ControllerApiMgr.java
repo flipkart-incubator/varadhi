@@ -456,15 +456,18 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         }
         requireRegisteredRegion(source);
         requireRegisteredRegion(target);
-        if (topic.getProduceTopicForRegion(source.value()) == null) {
+        if (!topic.getRegionConfigs().containsKey(source.value())) {
             throw new IllegalArgumentException(
                 "Topic " + topic.getName() + " is not configured for sourceRegion " + source.value() + "."
             );
         }
-        if (topic.getProduceTopicForRegion(target.value()) == null) {
+        if (!topic.getRegionConfigs().containsKey(target.value())) {
             throw new IllegalArgumentException(
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
+        }
+        if (topic.getStorageTopic() == null) {
+            throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }
         RegionName producing = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
         if (producing != null) {

@@ -27,10 +27,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
 <<<<<<< HEAD
+<<<<<<< HEAD
     /** Per-region produce / standby policy; keyed by region name. */
 =======
     /** Per-region replication / produce / standby policy; keyed by region name. */
 >>>>>>> de7413df (added regionConfig in varadhiTopic)
+=======
+    /** Per-region produce / standby policy; keyed by region name. */
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
     private final Map<String, RegionConfig> regionConfigs;
     private final boolean grouped;
 
@@ -73,10 +77,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
 <<<<<<< HEAD
+<<<<<<< HEAD
         this.storageTopic = storageTopic;
 =======
         this.internalTopics = internalTopics != null ? internalTopics : new HashMap<>();
 >>>>>>> de7413df (added regionConfig in varadhiTopic)
+=======
+        this.storageTopic = storageTopic;
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
         this.topicState = topicState != null ? topicState : TopicState.Producing;
         this.autoFailover = autoFailover;
         this.regionConfigs = regionConfigs != null ? new HashMap<>(regionConfigs) : new HashMap<>();
@@ -158,6 +166,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
     /**
      * Sets {@link #storageTopic} on the first call and registers each {@code region} in
      * {@link #regionConfigs}. Additional regions share the same storage topic.
@@ -184,6 +195,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             perRegionQuotaWeights,
             messageSizeProfile,
             rateLimiterMode
+<<<<<<< HEAD
 =======
     public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
         boolean firstRegion = this.regionConfigs.isEmpty();
@@ -192,6 +204,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             region,
             firstRegion ? RegionConfig.replicatedProducing() : new RegionConfig(true, false, null)
 >>>>>>> de7413df (added regionConfig in varadhiTopic)
+=======
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
         );
         updated.status = this.status;
         return updated;
@@ -240,19 +254,27 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     VaradhiTopic copyWith(Map<String, RegionConfig> regionConfigs, TopicState topicState, Boolean autoFailover) {
 <<<<<<< HEAD
+<<<<<<< HEAD
         VaradhiTopic copy = new VaradhiTopic(
 =======
         return new VaradhiTopic(
 >>>>>>> de7413df (added regionConfig in varadhiTopic)
+=======
+        VaradhiTopic copy = new VaradhiTopic(
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
             getName(),
             getVersion(),
             grouped,
             capacity,
 <<<<<<< HEAD
+<<<<<<< HEAD
             storageTopic,
 =======
             internalTopics,
 >>>>>>> de7413df (added regionConfig in varadhiTopic)
+=======
+            storageTopic,
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
             topicState != null ? topicState : this.topicState,
             autoFailover != null ? autoFailover : this.autoFailover,
             regionConfigs != null ? regionConfigs : this.regionConfigs,
@@ -264,9 +286,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             rateLimiterMode
         );
 <<<<<<< HEAD
+<<<<<<< HEAD
         copy.status = this.status;
         return copy;
 =======
 >>>>>>> de7413df (added regionConfig in varadhiTopic)
+=======
+        copy.status = this.status;
+        return copy;
+>>>>>>> 2fb86390 (fixed classes for varadhiTopic region)
     }
 }

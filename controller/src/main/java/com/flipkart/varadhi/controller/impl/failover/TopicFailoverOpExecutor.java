@@ -246,19 +246,11 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         RegionConfig targetConfig = updated.get(target.value());
         updated.put(
             source.value(),
-            new RegionConfig(
-                sourceConfig != null ? sourceConfig.isReplicated() : true,
-                false,
-                sourceConfig != null ? sourceConfig.getFailOverRegion() : null
-            )
+            new RegionConfig(false, sourceConfig != null ? sourceConfig.getFailOverRegion() : null)
         );
         updated.put(
             target.value(),
-            new RegionConfig(
-                targetConfig != null ? targetConfig.isReplicated() : true,
-                true,
-                targetConfig != null ? targetConfig.getFailOverRegion() : null
-            )
+            new RegionConfig(true, targetConfig != null ? targetConfig.getFailOverRegion() : null)
         );
         return updated;
     }

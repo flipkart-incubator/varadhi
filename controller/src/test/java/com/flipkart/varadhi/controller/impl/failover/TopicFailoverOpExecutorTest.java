@@ -85,11 +85,11 @@ class TopicFailoverOpExecutorTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic.addInternalTopic(
+        topic = topic.addInternalTopic(
             SOURCE.value(),
             SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + SOURCE.value()))
         );
-        topic.addInternalTopic(
+        topic = topic.addInternalTopic(
             TARGET.value(),
             SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + TARGET.value()))
         );
