@@ -69,9 +69,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
         this.storageTopic = storageTopic;
-        this.topicState = topicState != null ? topicState : TopicState.Producing;
+        this.topicState = topicState;
         this.autoFailover = autoFailover;
-        this.regionConfigs = regionConfigs != null ? new HashMap<>(regionConfigs) : new HashMap<>();
+        this.regionConfigs = new HashMap<>(regionConfigs);
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
@@ -135,7 +135,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             null,
             TopicState.Producing,
             false,
-            null,
+            new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory,
@@ -154,8 +154,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * {@link #regionConfigs}. Additional regions share the same storage topic.
      */
     public VaradhiTopic addInternalTopic(String region, SegmentedStorageTopic segmentedTopic) {
-        Objects.requireNonNull(region, "region must not be null");
-        Objects.requireNonNull(segmentedTopic, "segmentedTopic must not be null");
         SegmentedStorageTopic resolvedStorage = storageTopic != null ? storageTopic : segmentedTopic;
         Map<String, RegionConfig> updatedConfigs = new HashMap<>(regionConfigs);
         boolean firstRegion = updatedConfigs.isEmpty();
@@ -182,7 +180,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     @JsonIgnore
     public RegionConfig getRegionConfig(RegionName region) {
-        Objects.requireNonNull(region, "region must not be null");
         return regionConfigs.get(region.value());
     }
 

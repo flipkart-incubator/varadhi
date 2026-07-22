@@ -40,12 +40,6 @@ public record TransitionEvent(
     String target
 ) {
 
-    public TransitionEvent {
-        if (awaitVersion && topicVersionToAwait < 0) {
-            throw new IllegalArgumentException("awaitVersion requires a non-negative topicVersionToAwait");
-        }
-    }
-
     /**
      * Creates a stage broadcast for pods. {@code awaitVersion}, {@code topicVersionToAwait}, and
      * {@code target} are controller-driven wire fields — the controller decides per stage whether

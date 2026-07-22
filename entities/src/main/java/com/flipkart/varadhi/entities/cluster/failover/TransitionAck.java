@@ -63,9 +63,6 @@ public record TransitionAck(
         TransitionStage stage,
         String errorMsg
     ) {
-        if (errorMsg == null || errorMsg.isEmpty()) {
-            throw new IllegalArgumentException("failure ack requires a non-blank errorMsg");
-        }
         return new TransitionAck(opId, topicFqn, transitionType, participation, hostname, stage, errorMsg);
     }
 }

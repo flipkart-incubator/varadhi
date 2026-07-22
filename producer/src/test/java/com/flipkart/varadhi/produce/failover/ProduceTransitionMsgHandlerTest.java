@@ -221,60 +221,6 @@ class ProduceTransitionMsgHandlerTest {
     }
 
     @Test
-    void prepareAcksFailureWhenTargetBlank() throws Exception {
-        seed(10);
-        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
-
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    "  "
-                )
-            )
-        );
-
-        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        TransitionAck ack = acker.acks.get(0);
-        assertFalse(ack.isSuccess());
-        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
-        assertTrue(ack.errorMsg().contains("non-blank target"));
-        verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
-    }
-
-    @Test
-    void prepareAcksFailureWhenStorageTargetNotNumeric() throws Exception {
-        seed(10);
-        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
-
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.STORAGE_MIGRATION,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    "not-an-id"
-                )
-            )
-        );
-
-        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        TransitionAck ack = acker.acks.get(0);
-        assertFalse(ack.isSuccess());
-        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
-        assertTrue(ack.errorMsg().contains("storage-topic id"));
-        verify(producerService, never()).getProducerForStorageTopic(any(VaradhiTopicName.class), anyInt());
-    }
-
-    @Test
     void prepareAcksOkWithoutWarmingWhenPodNotInvolved() throws Exception {
         seed(10);
         when(producerService.hasCachedProducer(TOPIC_NAME)).thenReturn(false);

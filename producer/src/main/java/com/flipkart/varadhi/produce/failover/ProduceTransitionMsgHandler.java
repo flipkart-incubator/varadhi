@@ -206,12 +206,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
      * Parses {@link TransitionEvent#target()} once at the boundary via {@link PrepareTarget}.
      */
     private CompletableFuture<Void> createTarget(TransitionEvent event, VaradhiTopic topic) {
-        final PrepareTarget prepareTarget;
-        try {
-            prepareTarget = PrepareTarget.parse(event.transitionType(), event.target());
-        } catch (IllegalArgumentException e) {
-            return CompletableFuture.failedFuture(e);
-        }
+        PrepareTarget prepareTarget = PrepareTarget.parse(event.transitionType(), event.target());
         return switch (prepareTarget) {
             case PrepareTarget.RegionTarget regionTarget -> producerService.getProducerForRegion(
                 topic,
@@ -279,7 +274,6 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void ackFail(TransitionEvent event, TransitionParticipation participation, String errorMsg) {
         metrics.stageAcked(event.transitionType(), event.stage(), false, event.topicFqn().toFqn());
-        String msg = (errorMsg == null || errorMsg.isBlank()) ? "transition stage failed" : errorMsg;
         sendAck(
             TransitionAck.failure(
                 event.opId(),
@@ -288,7 +282,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                 participation,
                 hostname,
                 event.stage(),
-                msg
+                errorMsg
             )
         );
         clearParticipationIfTerminal(event);

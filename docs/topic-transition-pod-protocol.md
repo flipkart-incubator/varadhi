@@ -37,7 +37,7 @@ Pod client: `ControllerConsumerClient` implements `PodToControllerApi` and sends
 
 ## Wiring
 
-`TopicTransitionPodWiring.install(...)` registers `ProduceTransitionMsgHandler` on the broadcast bus when a cluster manager is present. Returns an `AutoCloseable` wiring handle that owns the version-wait scheduler; the verticle closes it on shutdown.
+`TopicTransitionPodWiring.install(...)` registers `ProduceTransitionMsgHandler` on the cluster broadcast bus. Returns an `AutoCloseable` wiring handle that owns the version-wait scheduler; the verticle closes it on shutdown.
 
 ## Participation rules (producer pods)
 

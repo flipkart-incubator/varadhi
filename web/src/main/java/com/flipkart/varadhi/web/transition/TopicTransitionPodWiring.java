@@ -37,9 +37,9 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
     }
 
     /**
-     * Installs {@link ProduceTransitionMsgHandler} when a cluster manager is configured.
+     * Installs {@link ProduceTransitionMsgHandler} on the cluster broadcast bus.
      *
-     * @return a closeable wiring handle, or {@code null} when installation was skipped
+     * @return a closeable wiring handle that owns the version-wait scheduler
      */
     public static TopicTransitionPodWiring install(
         VaradhiClusterManager clusterManager,
@@ -49,10 +49,6 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
         ProducerOptions producerOptions,
         MeterRegistry meterRegistry
     ) {
-        if (clusterManager == null) {
-            log.info("Skipping topic-transition stage handler: no cluster manager configured (produce-only mode)");
-            return null;
-        }
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(

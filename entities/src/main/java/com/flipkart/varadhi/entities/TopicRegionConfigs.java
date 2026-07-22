@@ -2,7 +2,6 @@ package com.flipkart.varadhi.entities;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 /** Read/update helpers for {@link VaradhiTopic#getRegionConfigs()}. */
@@ -12,7 +11,6 @@ public final class TopicRegionConfigs {
     }
 
     public static Optional<RegionName> findProducingRegion(VaradhiTopic topic) {
-        Objects.requireNonNull(topic, "topic must not be null");
         RegionName producing = null;
         for (Map.Entry<String, RegionConfig> entry : topic.getRegionConfigs().entrySet()) {
             if (entry.getValue().isProduceAllowed()) {
@@ -28,7 +26,6 @@ public final class TopicRegionConfigs {
     }
 
     public static VaradhiTopic withRegionConfigs(VaradhiTopic topic, Map<String, RegionConfig> configs) {
-        Objects.requireNonNull(topic, "topic must not be null");
-        return topic.copyWith(new HashMap<>(Objects.requireNonNull(configs, "configs must not be null")), null, null);
+        return topic.copyWith(new HashMap<>(configs), null, null);
     }
 }
