@@ -3,6 +3,7 @@ package com.flipkart.varadhi.core.cluster;
 import com.flipkart.varadhi.entities.JsonMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -33,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class VaradhiZkClusterManager extends ZookeeperClusterManager implements VaradhiClusterManager {
     private final DeliveryOptions deliveryOptions;
+    private MeterRegistry meterRegistry;
     private final RetryPolicy<NodeInfo> nodeInfoRetryPolicy = RetryPolicy.<NodeInfo>builder()
                                                                          .withMaxAttempts(10)
                                                                          .withDelay(Duration.ofMillis(200))
@@ -45,11 +47,17 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
                                                                          )
                                                                          .build();
 
-    public VaradhiZkClusterManager(CuratorFramework curatorFramework, DeliveryOptions deliveryOptions, String host) {
+    public VaradhiZkClusterManager(
+        CuratorFramework curatorFramework,
+        DeliveryOptions deliveryOptions,
+        String host,
+        MeterRegistry meterRegistry
+    ) {
         super(curatorFramework, host);
         this.deliveryOptions = deliveryOptions == null ?
             new DeliveryOptions().setSendTimeout(1000).setTracingPolicy(TracingPolicy.PROPAGATE) :
             deliveryOptions;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -132,7 +140,7 @@ public class VaradhiZkClusterManager extends ZookeeperClusterManager implements 
 
     @Override
     public MessageRouter getRouter(Vertx vertx) {
-        return new MessageRouter(vertx.eventBus(), deliveryOptions);
+        return new MessageRouter(vertx.eventBus(), deliveryOptions, meterRegistry);
     }
 
     @Override

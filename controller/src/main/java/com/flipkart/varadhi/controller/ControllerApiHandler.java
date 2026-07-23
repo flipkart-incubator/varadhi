@@ -65,10 +65,13 @@ public class ControllerApiHandler {
 
     public void ackTopicTransition(ClusterMessage message) {
         TransitionAck ack = message.getData(TransitionAck.class);
-        controllerMgr.ackTopicTransition(ack).exceptionally(throwable -> {
-            transitionMetrics.ackProcessingFailed(ack.transitionType(), ack.stage());
-            log.error("Topic-transition ack processing failed for ack={}", ack, throwable);
-            return null;
-        });
+        transitionMetrics.ackReceived(ack.transitionType(), ack.stage());
+        controllerMgr.ackTopicTransition(ack)
+                     .thenRun(() -> transitionMetrics.ackProcessed(ack.transitionType(), ack.stage()))
+                     .exceptionally(throwable -> {
+                         transitionMetrics.ackDeliveryFailed(ack.transitionType(), ack.stage());
+                         log.error("Topic-transition ack processing failed for ack={}", ack, throwable);
+                         return null;
+                     });
     }
 }

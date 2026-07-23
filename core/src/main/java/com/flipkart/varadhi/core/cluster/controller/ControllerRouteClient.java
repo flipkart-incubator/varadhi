@@ -9,10 +9,10 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerConsumerClient implements PodToControllerApi {
+public class ControllerRouteClient implements ControllerRouteApi {
     private final MessageExchange exchange;
 
-    public ControllerConsumerClient(MessageExchange exchange) {
+    public ControllerRouteClient(MessageExchange exchange) {
         this.exchange = exchange;
     }
 

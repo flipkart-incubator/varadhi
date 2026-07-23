@@ -8,7 +8,7 @@ import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.controller.PodToControllerApi;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRouteApi;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
 @Slf4j
-public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
+public class ControllerApiMgr implements ControllerApi, ControllerRouteApi {
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;

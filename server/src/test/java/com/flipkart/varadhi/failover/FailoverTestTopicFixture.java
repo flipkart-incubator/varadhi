@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.failover;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -47,7 +48,7 @@ public final class FailoverTestTopicFixture {
         );
         SegmentedStorageTopic segmented = SegmentedStorageTopic.of(new FixtureStorageTopic(topic.getName()));
         for (String region : regions) {
-            topic = topic.addInternalTopic(region, segmented);
+            topic = topic.addInternalTopic(RegionName.of(region), segmented);
         }
         return topic;
     }

@@ -317,7 +317,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 rateLimiter
             )
         );
-        this.topicTransitionWiring = TopicTransitionPodWiring.install(
+        this.topicTransitionWiring = TopicTransitionPodWiring.wire(
             clusterManager,
             vertx,
             cacheRegistry,

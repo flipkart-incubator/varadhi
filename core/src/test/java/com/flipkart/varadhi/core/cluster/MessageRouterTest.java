@@ -5,9 +5,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
-import io.vertx.micrometer.MicrometerMetricsFactory;
-import io.vertx.micrometer.MicrometerMetricsOptions;
-import io.vertx.micrometer.backends.BackendRegistries;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -32,6 +29,7 @@ public class MessageRouterTest {
     private TestingServer zkCuratorTestingServer;
     private CuratorFramework zkCuratorFramework;
     private VaradhiZkClusterManager vZkCm;
+    private SimpleMeterRegistry meterRegistry;
     private final List<Vertx> clusteredVertxInstances = new CopyOnWriteArrayList<>();
 
     // TODO:: Tests needs to be added, so this will go under refactor
@@ -43,7 +41,8 @@ public class MessageRouterTest {
             new ExponentialBackoffRetry(1000, 1)
         );
         zkCuratorFramework.start();
-        vZkCm = new VaradhiZkClusterManager(zkCuratorFramework, new DeliveryOptions(), "localhost");
+        meterRegistry = new SimpleMeterRegistry();
+        vZkCm = new VaradhiZkClusterManager(zkCuratorFramework, new DeliveryOptions(), "localhost", meterRegistry);
     }
 
     @AfterEach
@@ -136,12 +135,6 @@ public class MessageRouterTest {
 
     @Test
     public void testPublishHandlerRecordsFailureMetric(VertxTestContext testContext) throws Exception {
-        SimpleMeterRegistry registry = new SimpleMeterRegistry();
-        MicrometerMetricsOptions metricsOptions = new MicrometerMetricsOptions().setFactory(
-            new MicrometerMetricsFactory(registry)
-        ).setEnabled(true);
-        BackendRegistries.setupBackend(metricsOptions, registry);
-
         Vertx vertx = createClusteredVertx();
         MessageExchange me = vZkCm.getExchange(vertx);
         MessageRouter mr = vZkCm.getRouter(vertx);
@@ -151,11 +144,11 @@ public class MessageRouterTest {
         mr.registerPublishReceiveHandler("route", "api", message -> testContext.verify(() -> {
             Assertions.assertEquals(
                 1.0,
-                registry.find("cluster.message_router.publish.handler.failed")
-                        .tag("route", "route")
-                        .tag("api", "api")
-                        .counter()
-                        .count()
+                meterRegistry.find("cluster.message_router.publish.handler.failed")
+                             .tag("route", "route")
+                             .tag("api", "api")
+                             .counter()
+                             .count()
             );
             testContext.completeNow();
         }));

@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities.cluster.failover;
 
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import org.junit.jupiter.api.Test;
 
@@ -22,13 +23,13 @@ class TransitionEventTest {
             TransitionStage.PREPARE,
             true,
             10L,
-            "region-b"
+            new TransitionEvent.Target.Region(new RegionName("region-b"))
         );
 
         assertEquals(TransitionStage.PREPARE, event.stage());
         assertTrue(event.awaitVersion());
         assertEquals(10L, event.topicVersionToAwait());
-        assertEquals("region-b", event.target());
+        assertEquals(new TransitionEvent.Target.Region(new RegionName("region-b")), event.target());
     }
 
     @Test
@@ -40,13 +41,13 @@ class TransitionEventTest {
             TransitionStage.SWITCH,
             true,
             11L,
-            "ignored-by-handler"
+            new TransitionEvent.Target.Region(new RegionName("ignored-by-handler"))
         );
 
         assertEquals(TransitionStage.SWITCH, event.stage());
         assertTrue(event.awaitVersion());
         assertEquals(11L, event.topicVersionToAwait());
-        assertEquals("ignored-by-handler", event.target());
+        assertEquals(new TransitionEvent.Target.Region(new RegionName("ignored-by-handler")), event.target());
     }
 
     @Test
@@ -58,12 +59,12 @@ class TransitionEventTest {
             TransitionStage.COMPLETED,
             false,
             99L,
-            "ignored"
+            new TransitionEvent.Target.Region(new RegionName("ignored"))
         );
 
         assertFalse(event.awaitVersion());
         assertEquals(99L, event.topicVersionToAwait());
-        assertEquals("ignored", event.target());
+        assertEquals(new TransitionEvent.Target.Region(new RegionName("ignored")), event.target());
     }
 
     @Test
@@ -75,7 +76,7 @@ class TransitionEventTest {
             TransitionStage.PREPARE,
             true,
             0L,
-            "region-b"
+            new TransitionEvent.Target.Region(new RegionName("region-b"))
         );
 
         assertEquals(0L, event.topicVersionToAwait());

@@ -6,9 +6,11 @@ import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Represents a topic in the Varadhi.
@@ -26,8 +28,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final TopicState topicState;
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
-    /** Per-region produce / standby policy; keyed by region name. */
-    private final Map<String, RegionConfig> regionConfigs;
+    /** Per-region produce / standby policy; keyed by region. */
+    private final Map<RegionName, RegionConfig> regionConfigs;
     private final boolean grouped;
 
     private final String nfrFilterName;
@@ -57,7 +59,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         SegmentedStorageTopic storageTopic,
         TopicState topicState,
         boolean autoFailover,
-        Map<String, RegionConfig> regionConfigs,
+        Map<RegionName, RegionConfig> regionConfigs,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory,
@@ -149,13 +151,17 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
+    public Map<RegionName, RegionConfig> getRegionConfigs() {
+        return Collections.unmodifiableMap(regionConfigs);
+    }
+
     /**
      * Sets {@link #storageTopic} on the first call and registers each {@code region} in
      * {@link #regionConfigs}. Additional regions share the same storage topic.
      */
-    public VaradhiTopic addInternalTopic(String region, SegmentedStorageTopic segmentedTopic) {
+    public VaradhiTopic addInternalTopic(RegionName region, SegmentedStorageTopic segmentedTopic) {
         SegmentedStorageTopic resolvedStorage = storageTopic != null ? storageTopic : segmentedTopic;
-        Map<String, RegionConfig> updatedConfigs = new HashMap<>(regionConfigs);
+        Map<RegionName, RegionConfig> updatedConfigs = new HashMap<>(regionConfigs);
         boolean firstRegion = updatedConfigs.isEmpty();
         updatedConfigs.putIfAbsent(region, firstRegion ? RegionConfig.producing() : new RegionConfig(false, null));
         VaradhiTopic updated = new VaradhiTopic(
@@ -179,16 +185,16 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     @JsonIgnore
-    public RegionConfig getRegionConfig(RegionName region) {
-        return regionConfigs.get(region.value());
+    public Optional<RegionConfig> getRegionConfig(RegionName region) {
+        return Optional.ofNullable(regionConfigs.get(region));
     }
 
     public VaradhiTopic withTopicState(TopicState state) {
-        return copyWith(null, state, null);
+        return copyWith(regionConfigs, state, autoFailover);
     }
 
     public VaradhiTopic withAutoFailover(boolean autoFailover) {
-        return copyWith(null, null, autoFailover);
+        return copyWith(regionConfigs, topicState, autoFailover);
     }
 
     @JsonIgnore
@@ -202,6 +208,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
+        return getProduceTopicForRegion(RegionName.of(region));
+    }
+
+    public SegmentedStorageTopic getProduceTopicForRegion(RegionName region) {
         return regionConfigs.containsKey(region) ? storageTopic : null;
     }
 
@@ -209,16 +219,16 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return this.topicCategory == category;
     }
 
-    VaradhiTopic copyWith(Map<String, RegionConfig> regionConfigs, TopicState topicState, Boolean autoFailover) {
+    VaradhiTopic copyWith(Map<RegionName, RegionConfig> regionConfigs, TopicState topicState, boolean autoFailover) {
         VaradhiTopic copy = new VaradhiTopic(
             getName(),
             getVersion(),
             grouped,
             capacity,
             storageTopic,
-            topicState != null ? topicState : this.topicState,
-            autoFailover != null ? autoFailover : this.autoFailover,
-            regionConfigs != null ? regionConfigs : this.regionConfigs,
+            topicState,
+            autoFailover,
+            regionConfigs,
             getStatus(),
             nfrFilterName,
             topicCategory,

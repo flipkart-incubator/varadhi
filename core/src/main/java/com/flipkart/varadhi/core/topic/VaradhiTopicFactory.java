@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.MessageSizeProfile;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.RateLimiterMode;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
@@ -104,8 +105,7 @@ public class VaradhiTopicFactory {
         );
 
         VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(category);
-        varadhiTopic = planDeployment(project, varadhiTopic);
-        return varadhiTopic;
+        return planDeployment(project, varadhiTopic);
     }
 
     /**
@@ -123,7 +123,7 @@ public class VaradhiTopicFactory {
             InternalQueueCategory.MAIN
         );
 
-        return varadhiTopic.addInternalTopic(deploymentRegion, SegmentedStorageTopic.of(storageTopic));
+        return varadhiTopic.addInternalTopic(RegionName.of(deploymentRegion), SegmentedStorageTopic.of(storageTopic));
     }
 
     private static void warnIfCapacityTightForAverageMessageSizes(

@@ -18,8 +18,14 @@ class TopicRegionConfigsTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.addInternalTopic("r1", SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")));
-        topic = topic.addInternalTopic("r2", SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r2")));
+        topic = topic.addInternalTopic(
+            RegionName.of("r1"),
+            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
+        );
+        topic = topic.addInternalTopic(
+            RegionName.of("r2"),
+            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r2"))
+        );
 
         assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(topic).orElseThrow());
     }
@@ -33,16 +39,22 @@ class TopicRegionConfigsTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.addInternalTopic("r1", SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")));
-        topic = topic.addInternalTopic("r2", SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r2")));
+        topic = topic.addInternalTopic(
+            RegionName.of("r1"),
+            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
+        );
+        topic = topic.addInternalTopic(
+            RegionName.of("r2"),
+            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r2"))
+        );
 
-        VaradhiTopic updated = TopicRegionConfigs.withRegionConfigs(
+        VaradhiTopic updated = VaradhiTopicTestUtils.withRegionConfigs(
             topic,
-            Map.of("r1", new RegionConfig(false, null), "r2", RegionConfig.producing())
+            Map.of(RegionName.of("r1"), new RegionConfig(false, null), RegionName.of("r2"), RegionConfig.producing())
         );
 
         assertEquals(RegionName.of("r2"), TopicRegionConfigs.findProducingRegion(updated).orElseThrow());
-        assertFalse(updated.getRegionConfig(RegionName.of("r1")).isProduceAllowed());
+        assertFalse(updated.getRegionConfig(RegionName.of("r1")).orElseThrow().produceAllowed());
         assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(topic).orElseThrow());
     }
 }

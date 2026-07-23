@@ -6,7 +6,7 @@ import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.consumer.impl.ConsumersManagerImpl;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRouteClient;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 
@@ -32,7 +32,7 @@ public class ConsumerVerticle extends AbstractVerticle {
             coreServices.getMessagingStackProvider().getConsumerFactory(),
             coreServices.getMeterRegistry()
         );
-        ControllerConsumerClient controllerClient = new ControllerConsumerClient(messageExchange);
+        ControllerRouteClient controllerClient = new ControllerRouteClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, memberInfo);
         ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);
         setupApiHandlers(messageRouter, handler);

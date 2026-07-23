@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class ProducerService {
 
-    private static final int PRODUCER_LOAD_POOL_SIZE = Math.max(4, Runtime.getRuntime().availableProcessors());
+    private static final int PRODUCER_LOAD_POOL_SIZE = 2;
 
     private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId, String region) {
     }
@@ -235,23 +235,16 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        RegionName activeRegion = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
-        if (activeRegion == null) {
-            throw new ResourceNotFoundException("Topic(%s) has no active produce region.".formatted(topic.getName()));
-        }
-
-        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(activeRegion.value());
-
-        if (internalTopic == null) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", activeRegion.value()));
-        }
-
         TopicState topicState = topic.getTopicState();
         if (!topicState.isProduceAllowed()) {
             return CompletableFuture.completedFuture(
                 ProduceResult.ofNonProducingTopic(message.getMessageId(), topicState)
             );
         }
+
+        RegionName activeRegion = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
+
+        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(activeRegion.value());
 
         if (applyOrgFilter(topic, message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
@@ -288,31 +281,11 @@ public final class ProducerService {
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
-        Producer<? extends Offset> shared = findSharedProducer(topicFQN, storageTopicId);
-        if (shared != null) {
-            producerCache.put(key, shared);
-            return CompletableFuture.completedFuture(shared);
-        }
 
         return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), producerLoadExecutor);
     }
 
-    private Producer<? extends Offset> findSharedProducer(String topicFQN, int storageTopicId) {
-        for (var entry : producerCache.asMap().entrySet()) {
-            ProducerCacheKey cachedKey = entry.getKey();
-            if (cachedKey.varadhiTopicFQN().equals(topicFQN) && cachedKey.storageTopicId() == storageTopicId) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-
     private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {
-        Producer<? extends Offset> shared = findSharedProducer(key.varadhiTopicFQN(), key.storageTopicId());
-        if (shared != null) {
-            producerCache.put(key, shared);
-            return shared;
-        }
         try {
             return producerCache.get(key);
         } catch (Exception e) {
@@ -323,34 +296,6 @@ public final class ProducerService {
             );
             throw new ProduceException(errorMsg, e);
         }
-    }
-
-    /**
-     * Resolves (creating and caching on first use) the producer for {@code topicName} in
-     * {@code region}, asynchronously. This is the producer-object accessor for a given topic
-     * and region; callers decide what to do with it (produce, or pre-warm ahead of a topic
-     * transition's SWITCH). On a cache hit the future completes immediately; on a miss the
-     * producer is created on a dedicated worker thread so callers (including the transition
-     * scheduler) are not blocked.
-     *
-     * @param topicName the Varadhi topic whose producer is requested
-     * @param region    the region the producer produces to
-     * @return a future completing with the producer, or failing with
-     *         {@link ResourceNotFoundException} if the topic is absent from this pod's cache or
-     *         has no produce configuration for {@code region}
-     */
-    public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(
-        VaradhiTopicName topicName,
-        RegionName region
-    ) {
-        String topicFQN = topicName.toFqn();
-        Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(topicFQN);
-        if (topic.isEmpty()) {
-            return CompletableFuture.failedFuture(
-                new ResourceNotFoundException("Topic(%s) does not exist.".formatted(topicFQN))
-            );
-        }
-        return getProducerForRegion(topic.get().getEntity(), region);
     }
 
     public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
@@ -366,23 +311,20 @@ public final class ProducerService {
     }
 
     /**
-     * Returns (creating if needed) the producer for {@code storageTopicId} in this pod's deployed
-     * region. Used by storage-migration PREPARE to pre-warm the destination storage topic.
+     * Pre-warms the producer for {@code storageTopicId} in this pod's deployed region into the
+     * local cache. Used by storage-migration PREPARE.
      */
-    public CompletableFuture<Producer<? extends Offset>> getProducerForStorageTopic(
-        VaradhiTopicName topicName,
-        int storageTopicId
-    ) {
-        return getProducer(topicName.toFqn(), storageTopicId, deployedRegion);
+    public CompletableFuture<Void> loadProducer(VaradhiTopicName topicName, int storageTopicId) {
+        return getProducer(topicName.toFqn(), storageTopicId, deployedRegion).thenRun(() -> {});
     }
 
     /**
-     * Whether this pod currently holds a cached producer for {@code topicName} (in any region).
+     * Whether this pod holds a producer for {@code topicName}'s active produce region.
      * Used to decide PREPARE participation during a topic transition.
      */
-    public boolean hasCachedProducer(VaradhiTopicName topicName) {
+    public boolean hasProducer(VaradhiTopicName topicName) {
         String topicFQN = topicName.toFqn();
-        return producerCache.asMap().keySet().stream().anyMatch(key -> key.varadhiTopicFQN().equals(topicFQN));
+        return topicCache.get(topicFQN).isPresent();
     }
 
     /**

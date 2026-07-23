@@ -19,25 +19,16 @@ public final class RetryUtils {
     private RetryUtils() {
     }
 
-    /**
-     * Reusable executor for result polling. Create once per handler; call {@link #getAsync(Supplier)}
-     * per probe.
-     */
-    public static final class ResultPollingExecutor<T> {
-        private final FailsafeExecutor<T> executor;
-
-        private ResultPollingExecutor(FailsafeExecutor<T> executor) {
-            this.executor = executor;
-        }
-
+    /** Thin handle around a configured {@link FailsafeExecutor} for result polling. */
+    public record ResultPollingExecutor<T>(FailsafeExecutor<T> delegate) {
         public CompletableFuture<T> getAsync(Supplier<T> probe) {
-            return executor.getAsync(probe::get);
+            return delegate.getAsync(probe::get);
         }
     }
 
     /**
      * Builds a reusable executor for result polling: retries only while {@code retryOnResult}
-     * matches; probe exceptions abort immediately.
+     * matches; probe exceptions abort immediately via {@code abortOn(Exception)}.
      */
     public static <T> ResultPollingExecutor<T> newResultPollingExecutor(
         Executor executor,
@@ -69,9 +60,8 @@ public final class RetryUtils {
     }
 
     /**
-     * Returns true when {@code t} (or its cause) is a {@link FailsafeException} from
-     * result-polling exhaustion. Probe exceptions are not retried ({@code abortOn(Exception)}),
-     * so they surface as their original type instead.
+     * True when {@code t} is a polling exhaustion from a {@link #newResultPollingExecutor} policy.
+     * Probe failures use {@code abortOn(Exception)} and surface as their original type instead.
      */
     public static boolean isRetriesExceeded(Throwable t) {
         return ThrowableUtils.unwrap(t) instanceof FailsafeException;

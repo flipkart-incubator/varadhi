@@ -11,8 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TransitionMetricsTest {
 
-    private static final String TOPIC = "proj.topic1";
-
     private SimpleMeterRegistry registry;
     private TransitionMetrics metrics;
 
@@ -23,24 +21,23 @@ class TransitionMetricsTest {
     }
 
     @Test
-    void stageReceived_incrementsCounterWithTopicTag() {
-        metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC);
+    void stageReceived_incrementsCounter() {
+        metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
 
         assertEquals(
             1.0,
             registry.find("topic.transition.stage.received")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
-                    .tag("topic", TOPIC)
                     .counter()
                     .count()
         );
     }
 
     @Test
-    void stageAcked_incrementsCounterWithSuccessAndTopicTags() {
-        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, TOPIC);
-        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, false, TOPIC);
+    void stageAcked_incrementsCounterWithSuccessTags() {
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true);
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, false);
 
         assertEquals(
             1.0,
@@ -48,7 +45,6 @@ class TransitionMetricsTest {
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "SWITCH")
                     .tag("success", "true")
-                    .tag("topic", TOPIC)
                     .counter()
                     .count()
         );
@@ -58,21 +54,19 @@ class TransitionMetricsTest {
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "SWITCH")
                     .tag("success", "false")
-                    .tag("topic", TOPIC)
                     .counter()
                     .count()
         );
     }
 
     @Test
-    void participationGauge_setAndClearPerTopic() {
-        metrics.setParticipation(TransitionType.STORAGE_MIGRATION, TOPIC, TransitionParticipation.INVOLVED);
+    void participationGauge_setAndClear() {
+        metrics.setParticipation(TransitionType.STORAGE_MIGRATION, TransitionParticipation.INVOLVED);
 
         assertEquals(
             1.0,
             registry.find("topic.transition.participation")
                     .tag("type", "STORAGE_MIGRATION")
-                    .tag("topic", TOPIC)
                     .tag("participation", "INVOLVED")
                     .gauge()
                     .value()
@@ -81,19 +75,17 @@ class TransitionMetricsTest {
             0.0,
             registry.find("topic.transition.participation")
                     .tag("type", "STORAGE_MIGRATION")
-                    .tag("topic", TOPIC)
                     .tag("participation", "NOT_INVOLVED")
                     .gauge()
                     .value()
         );
 
-        metrics.clearParticipation(TransitionType.STORAGE_MIGRATION, TOPIC);
+        metrics.clearParticipation(TransitionType.STORAGE_MIGRATION);
 
         assertEquals(
             0.0,
             registry.find("topic.transition.participation")
                     .tag("type", "STORAGE_MIGRATION")
-                    .tag("topic", TOPIC)
                     .tag("participation", "INVOLVED")
                     .gauge()
                     .value()
@@ -101,36 +93,27 @@ class TransitionMetricsTest {
     }
 
     @Test
-    void ackSendFailed_incrementsCounterWithTopicTag() {
-        metrics.ackSendFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC);
+    void ackSendFailed_incrementsCounter() {
+        metrics.ackSendFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
 
         assertEquals(
             1.0,
             registry.find("topic.transition.ack.send.failed")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
-                    .tag("topic", TOPIC)
                     .counter()
                     .count()
         );
     }
 
     @Test
-    void versionWaitGauge_tracksGlobalAndPerTopicInFlight() {
-        metrics.versionWaitStarted(TOPIC);
-        metrics.versionWaitStarted(TOPIC);
+    void versionWaitGauge_tracksGlobalInFlight() {
+        metrics.versionWaitStarted();
+        metrics.versionWaitStarted();
 
         assertEquals(2.0, registry.find("topic.transition.version_waits.in_flight").gauge().value());
-        assertEquals(
-            2.0,
-            registry.find("topic.transition.version_waits.in_flight").tag("topic", TOPIC).gauge().value()
-        );
 
-        metrics.versionWaitFinished(TOPIC);
+        metrics.versionWaitFinished();
         assertEquals(1.0, registry.find("topic.transition.version_waits.in_flight").gauge().value());
-        assertEquals(
-            1.0,
-            registry.find("topic.transition.version_waits.in_flight").tag("topic", TOPIC).gauge().value()
-        );
     }
 }

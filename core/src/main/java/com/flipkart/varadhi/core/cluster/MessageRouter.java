@@ -7,7 +7,6 @@ import com.flipkart.varadhi.entities.JsonMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.micrometer.backends.BackendRegistries;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ExecutionException;
@@ -32,11 +31,12 @@ public class MessageRouter {
 
     private final EventBus vertxEventBus;
     private final DeliveryOptions deliveryOptions;
+    private final MeterRegistry meterRegistry;
 
-
-    public MessageRouter(EventBus vertxEventBus, DeliveryOptions deliveryOptions) {
+    public MessageRouter(EventBus vertxEventBus, DeliveryOptions deliveryOptions, MeterRegistry meterRegistry) {
         this.vertxEventBus = vertxEventBus;
         this.deliveryOptions = deliveryOptions;
+        this.meterRegistry = meterRegistry;
     }
 
     public void sendHandler(String routeName, String apiName, MsgHandler handler) {
@@ -116,11 +116,7 @@ public class MessageRouter {
     }
 
     private void recordPublishHandlerFailure(String routeName, String apiName) {
-        MeterRegistry registry = BackendRegistries.getDefaultNow();
-        if (registry == null) {
-            return;
-        }
-        registry.counter(PUBLISH_HANDLER_FAILED, "route", routeName, "api", apiName).increment();
+        meterRegistry.counter(PUBLISH_HANDLER_FAILED, "route", routeName, "api", apiName).increment();
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {

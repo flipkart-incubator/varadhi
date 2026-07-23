@@ -129,8 +129,7 @@ public class ProduceHandlersTest extends ProduceTestBase {
         }
 
         List<testData> data = List.of(
-            new testData(422, "Topic/Queue is fenced during failover. Retry after failover completes.", Fenced),
-            new testData(422, "Produce is not allowed for replicating Topic/Queue.", Replicating)
+            new testData(422, "Topic/Queue is fenced during failover. Retry after failover completes.", Fenced)
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);

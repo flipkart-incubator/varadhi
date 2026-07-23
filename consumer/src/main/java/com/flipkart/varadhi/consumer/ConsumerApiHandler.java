@@ -5,7 +5,7 @@ import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardDlqMessageRequest;
 import com.flipkart.varadhi.core.subscription.ShardStatusRequest;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRouteClient;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -16,10 +16,10 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 
 @Slf4j
 public class ConsumerApiHandler {
-    private final ControllerConsumerClient controllerClient;
+    private final ControllerRouteClient controllerClient;
     private final ConsumerApiMgr consumerApiMgr;
 
-    public ConsumerApiHandler(ConsumerApiMgr consumerApiMgr, ControllerConsumerClient controllerClient) {
+    public ConsumerApiHandler(ConsumerApiMgr consumerApiMgr, ControllerRouteClient controllerClient) {
         this.consumerApiMgr = consumerApiMgr;
         this.controllerClient = controllerClient;
     }

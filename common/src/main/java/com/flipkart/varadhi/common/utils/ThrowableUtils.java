@@ -8,6 +8,13 @@ import java.util.concurrent.ExecutionException;
  */
 public final class ThrowableUtils {
 
+    private ThrowableUtils() {
+    }
+
+    /**
+     * Unwraps one level of {@link CompletionException} or {@link ExecutionException}.
+     * Other throwables are returned as-is.
+     */
     public static Throwable unwrap(Throwable t) {
         if (t instanceof CompletionException || t instanceof ExecutionException) {
             Throwable cause = t.getCause();
@@ -16,6 +23,9 @@ public final class ThrowableUtils {
         return t;
     }
 
+    /**
+     * Returns {@link Throwable#getMessage()} for the unwrapped throwable, or the simple class name when absent.
+     */
     public static String rootMessage(Throwable t) {
         Throwable cause = unwrap(t);
         return cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();

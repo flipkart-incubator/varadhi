@@ -16,7 +16,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class TopicTransitionMetrics {
 
-    private static final String ACK_PROCESSING_FAILED = "topic.transition.ack.processing.failed";
+    private static final String ACK_RECEIVED = "topic.transition.ack.received";
+    private static final String ACK_PROCESSED = "topic.transition.ack.processed";
+    private static final String ACK_DELIVERY_FAILED = "topic.transition.ack.delivery.failed";
 
     private final MeterRegistry registry;
     private final ConcurrentMap<String, AtomicInteger> gaugeValues = new ConcurrentHashMap<>();
@@ -25,9 +27,19 @@ public final class TopicTransitionMetrics {
         this.registry = registry;
     }
 
-    /** Failed to process a pod {@code TransitionAck} on the controller. */
-    public void ackProcessingFailed(TransitionType type, TransitionStage stage) {
-        incrementGauge(ACK_PROCESSING_FAILED, "type", type.name(), "stage", stage.name());
+    /** A pod {@code TransitionAck} was received on the controller route. */
+    public void ackReceived(TransitionType type, TransitionStage stage) {
+        incrementGauge(ACK_RECEIVED, "type", type.name(), "stage", stage.name());
+    }
+
+    /** A pod {@code TransitionAck} was handled successfully by the controller. */
+    public void ackProcessed(TransitionType type, TransitionStage stage) {
+        incrementGauge(ACK_PROCESSED, "type", type.name(), "stage", stage.name());
+    }
+
+    /** Failed to handle a pod {@code TransitionAck} on the controller. */
+    public void ackDeliveryFailed(TransitionType type, TransitionStage stage) {
+        incrementGauge(ACK_DELIVERY_FAILED, "type", type.name(), "stage", stage.name());
     }
 
     private void incrementGauge(String name, String... tagKeyValues) {

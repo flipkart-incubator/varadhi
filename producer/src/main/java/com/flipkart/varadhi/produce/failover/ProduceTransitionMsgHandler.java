@@ -4,7 +4,7 @@ import com.flipkart.varadhi.common.utils.RetryUtils;
 import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.MsgHandler;
-import com.flipkart.varadhi.core.cluster.controller.PodToControllerApi;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRouteApi;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -55,7 +55,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final PodToControllerApi controllerClient;
+    private final ControllerRouteApi controllerClient;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
     private final RetryUtils.ResultPollingExecutor<Optional<Long>> versionWaitExecutor;
@@ -64,7 +64,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     public ProduceTransitionMsgHandler(
         String hostname,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
-        PodToControllerApi controllerClient,
+        ControllerRouteApi controllerClient,
         ProducerService producerService,
         PodTransitionConfig config,
         ScheduledExecutorService scheduler,
@@ -86,7 +86,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     @Override
     public void handle(ClusterMessage message) {
         TransitionEvent event = message.getData(TransitionEvent.class);
-        metrics.stageReceived(event.transitionType(), event.stage(), event.topicFqn().toFqn());
+        metrics.stageReceived(event.transitionType(), event.stage());
         // Non-version-gated stages ack immediately on receipt.
         if (!event.awaitVersion()) {
             ackOk(event);
@@ -98,11 +98,11 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         // rebuilt per event. Polling uses a fixed interval (not exponential backoff): cache
         // convergence within a deadline, not failure retry.
         String topicFqn = event.topicFqn().toFqn();
-        metrics.versionWaitStarted(topicFqn);
+        metrics.versionWaitStarted();
         long targetVersion = event.topicVersionToAwait();
         RetryUtils.getAsync(versionWaitExecutor, () -> probeVersion(topicFqn, targetVersion))
                   .whenComplete((outcome, t) -> {
-                      metrics.versionWaitFinished(topicFqn);
+                      metrics.versionWaitFinished();
                       if (t != null) {
                           if (RetryUtils.isRetriesExceeded(t)) {
                               ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
@@ -171,7 +171,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             ackOk(event);
             return;
         }
-        if (!producerService.hasCachedProducer(event.topicFqn())) {
+        if (!producerService.hasProducer(event.topicFqn())) {
             TransitionParticipation participation = TransitionParticipation.NOT_INVOLVED;
             recordParticipation(event, participation);
             log.debug(
@@ -203,20 +203,16 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     /**
      * Type-specific PREPARE warm for an {@link TransitionParticipation#INVOLVED} pod.
-     * Parses {@link TransitionEvent#target()} once at the boundary via {@link PrepareTarget}.
      */
     private CompletableFuture<Void> createTarget(TransitionEvent event, VaradhiTopic topic) {
-        PrepareTarget prepareTarget = PrepareTarget.parse(event.transitionType(), event.target());
-        return switch (prepareTarget) {
-            case PrepareTarget.RegionTarget regionTarget -> producerService.getProducerForRegion(
-                topic,
-                regionTarget.region()
-            ).thenAccept(producer -> {});
-            case PrepareTarget.StorageTopicTarget storageTarget -> producerService.getProducerForStorageTopic(
-                event.topicFqn(),
-                storageTarget.storageTopicId()
-            ).thenAccept(producer -> {});
-        };
+        TransitionEvent.Target target = event.target();
+        if (target instanceof TransitionEvent.Target.Region regionTarget) {
+            return producerService.getProducerForRegion(topic, regionTarget.region()).thenAccept(producer -> {});
+        }
+        if (target instanceof TransitionEvent.Target.StorageTopic storageTarget) {
+            return producerService.loadProducer(event.topicFqn(), storageTarget.storageTopicId());
+        }
+        return CompletableFuture.failedFuture(new IllegalStateException("PREPARE target missing"));
     }
 
     private static String describe(Optional<Long> version) {
@@ -225,19 +221,19 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void recordParticipation(TransitionEvent event, TransitionParticipation participation) {
         participationByOpId.put(event.opId(), participation);
-        metrics.setParticipation(event.transitionType(), event.topicFqn().toFqn(), participation);
+        metrics.setParticipation(event.transitionType(), participation);
     }
 
     /**
      * Participation decided at PREPARE and sticky for the op. Late joiners (first event not PREPARE)
-     * derive from {@link ProducerService#hasCachedProducer(VaradhiTopicName)}.
+     * derive from {@link ProducerService#hasProducer(VaradhiTopicName)}.
      */
     private TransitionParticipation resolveParticipation(TransitionEvent event) {
         return participationByOpId.computeIfAbsent(event.opId(), ignored -> deriveParticipation(event.topicFqn()));
     }
 
     private TransitionParticipation deriveParticipation(VaradhiTopicName topicFqn) {
-        return producerService.hasCachedProducer(topicFqn) ?
+        return producerService.hasProducer(topicFqn) ?
             TransitionParticipation.INVOLVED :
             TransitionParticipation.NOT_INVOLVED;
     }
@@ -245,7 +241,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private void clearParticipationIfTerminal(TransitionEvent event) {
         if (event.stage() == TransitionStage.COMPLETED || event.stage() == TransitionStage.ABORTED) {
             participationByOpId.remove(event.opId());
-            metrics.clearParticipation(event.transitionType(), event.topicFqn().toFqn());
+            metrics.clearParticipation(event.transitionType());
         }
     }
 
@@ -254,7 +250,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackOk(TransitionEvent event, TransitionParticipation participation) {
-        metrics.stageAcked(event.transitionType(), event.stage(), true, event.topicFqn().toFqn());
+        metrics.stageAcked(event.transitionType(), event.stage(), true);
         sendAck(
             TransitionAck.success(
                 event.opId(),
@@ -273,7 +269,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackFail(TransitionEvent event, TransitionParticipation participation, String errorMsg) {
-        metrics.stageAcked(event.transitionType(), event.stage(), false, event.topicFqn().toFqn());
+        metrics.stageAcked(event.transitionType(), event.stage(), false);
         sendAck(
             TransitionAck.failure(
                 event.opId(),
@@ -291,7 +287,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private void sendAck(TransitionAck ack) {
         // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
         controllerClient.ackTopicTransition(ack).exceptionally(t -> {
-            metrics.ackSendFailed(ack.transitionType(), ack.stage(), ack.topicFqn().toFqn());
+            metrics.ackSendFailed(ack.transitionType(), ack.stage());
             log.warn("Failed to deliver transition ack ack={}", ack, t);
             return null;
         });

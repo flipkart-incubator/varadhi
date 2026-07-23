@@ -20,13 +20,41 @@ class TopicTransitionMetricsTest {
     }
 
     @Test
-    void ackProcessingFailed_incrementsTaggedGauge() {
-        metrics.ackProcessingFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+    void ackReceived_incrementsTaggedGauge() {
+        metrics.ackReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
 
         assertEquals(
             1.0,
-            registry.find("topic.transition.ack.processing.failed")
+            registry.find("topic.transition.ack.received")
                     .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "PREPARE")
+                    .gauge()
+                    .value()
+        );
+    }
+
+    @Test
+    void ackProcessed_incrementsTaggedGauge() {
+        metrics.ackProcessed(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH);
+
+        assertEquals(
+            1.0,
+            registry.find("topic.transition.ack.processed")
+                    .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "SWITCH")
+                    .gauge()
+                    .value()
+        );
+    }
+
+    @Test
+    void ackDeliveryFailed_incrementsTaggedGauge() {
+        metrics.ackDeliveryFailed(TransitionType.STORAGE_MIGRATION, TransitionStage.PREPARE);
+
+        assertEquals(
+            1.0,
+            registry.find("topic.transition.ack.delivery.failed")
+                    .tag("type", "STORAGE_MIGRATION")
                     .tag("stage", "PREPARE")
                     .gauge()
                     .value()

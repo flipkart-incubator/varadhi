@@ -33,8 +33,8 @@ class ResponseMessageTest {
             new CompletionException(new ResourceNotFoundException("missing")),
             "req-2"
         );
-        assertEquals(ResourceNotFoundException.class.getName(), msg.getFailureType());
-        assertInstanceOf(ResourceNotFoundException.class, msg.getException());
+        assertInstanceOf(CompletionException.class, msg.getException());
+        assertInstanceOf(ResourceNotFoundException.class, msg.getException().getCause());
     }
 
     @Test

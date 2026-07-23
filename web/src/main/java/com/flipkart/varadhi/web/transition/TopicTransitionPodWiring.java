@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRouteClient;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.entities.Resource;
@@ -37,11 +37,11 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
     }
 
     /**
-     * Installs {@link ProduceTransitionMsgHandler} on the cluster broadcast bus.
+     * Wires {@link ProduceTransitionMsgHandler} on the cluster broadcast bus.
      *
      * @return a closeable wiring handle that owns the version-wait scheduler
      */
-    public static TopicTransitionPodWiring install(
+    public static TopicTransitionPodWiring wire(
         VaradhiClusterManager clusterManager,
         Vertx vertx,
         ResourceReadCacheRegistry cacheRegistry,
@@ -60,7 +60,7 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
-            new ControllerConsumerClient(messageExchange),
+            new ControllerRouteClient(messageExchange),
             producerService,
             new PodTransitionConfig(
                 producerOptions.getTransitionVersionWaitMs(),
@@ -74,7 +74,7 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
             TransitionBusAddress.EVENT_PUBLISH_API,
             handler
         );
-        log.info("Installed topic-transition stage handler");
+        log.info("Wired topic-transition stage handler");
         return new TopicTransitionPodWiring(scheduler);
     }
 

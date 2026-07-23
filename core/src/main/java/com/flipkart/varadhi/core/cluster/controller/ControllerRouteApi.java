@@ -7,10 +7,10 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Pod → controller APIs delivered over the controller route via {@code send}
- * (delivery-tracked, no response body). Implemented by {@link ControllerConsumerClient}
+ * (delivery-tracked, no response body). Implemented by {@link ControllerRouteClient}
  * on pods and by the controller-side handler/manager.
  */
-public interface PodToControllerApi {
+public interface ControllerRouteApi {
     String ROUTE_CONTROLLER = "controller";
 
     CompletableFuture<Void> update(String subOpId, String shardOpId, ShardOperation.State state, String errorMsg);
