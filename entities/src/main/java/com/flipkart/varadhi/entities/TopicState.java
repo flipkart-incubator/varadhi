@@ -3,31 +3,33 @@ package com.flipkart.varadhi.entities;
 import lombok.Getter;
 
 /**
- * Topic-level runtime produce gate carried on {@link VaradhiTopic#topicState}. Replicated to every
- * pod's {@code TopicCache}; {@link com.flipkart.varadhi.produce.ProducerService} checks
- * {@link #isProduceAllowed()} before sending to the messaging stack.
+ * Per-region produce gate on {@link ProduceConfig}. Replicated via {@code TopicCache}; each produce
+ * pod checks the entry for its {@code deployedRegion}. Multiple regions may be {@link #Producing}
+ * at once on a global topic.
  *
- * <p>Distinct from {@link VaradhiTopic#getRegionConfigs()} ({@code produceAllowed} per region —
- * which region owns produce authority). {@code TopicState} is the fence/drain signal applied to the
- * topic entity during failover (e.g. SWITCH sets source to {@link #Fenced}).
- *
- * <p>When produce is blocked, {@link #getProduceStatus()} is the {@link ProduceStatus} returned to
- * callers via {@link com.flipkart.varadhi.produce.ProduceResult#ofNonProducingTopic}.
+ * <p>When produce is rejected, {@link #getProduceStatus()} is returned to callers via
+ * {@link com.flipkart.varadhi.produce.ProduceResult#ofNonProducingTopic}.
  */
 @Getter
 public enum TopicState {
 
     /**
-     * Normal steady state — produce is allowed. Successful produces report
-     * {@link ProduceStatus#Success} from the broker path (not from this enum).
+     * This region accepts produce. Successful produces report {@link ProduceStatus#Success} from
+     * the broker path (not from this enum).
      */
     Producing(true, ProduceStatus.Success),
 
     /**
-     * Transition Operations fence — produce blocked while authority is switching. Clients receive
+     * Transient drain during a transition (e.g. failover PREPARE→SWITCH). Clients receive
      * {@link ProduceStatus#Fenced} and should retry after the transition completes.
      */
-    Fenced(false, ProduceStatus.Fenced);
+    Fenced(false, ProduceStatus.Fenced),
+
+    /**
+     * This region does not accept produce in steady state (standby, or drained after failover out).
+     * Other regions may still be {@link #Producing}.
+     */
+    Blocked(false, ProduceStatus.NotAllowed);
 
     private final ProduceStatus produceStatus;
     private final boolean produceAllowed;

@@ -4,7 +4,7 @@ import com.flipkart.varadhi.common.utils.RetryUtils;
 import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.core.cluster.MsgHandler;
-import com.flipkart.varadhi.core.cluster.controller.ControllerRouteApi;
+import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -55,7 +55,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final ControllerRouteApi controllerClient;
+    private final TransitionApi controllerClient;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
     private final RetryUtils.ResultPollingExecutor<Optional<Long>> versionWaitExecutor;
@@ -64,7 +64,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     public ProduceTransitionMsgHandler(
         String hostname,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
-        ControllerRouteApi controllerClient,
+        TransitionApi controllerClient,
         ProducerService producerService,
         PodTransitionConfig config,
         ScheduledExecutorService scheduler,
@@ -286,7 +286,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void sendAck(TransitionAck ack) {
         // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
-        controllerClient.ackTopicTransition(ack).exceptionally(t -> {
+        controllerClient.ack(ack).exceptionally(t -> {
             metrics.ackSendFailed(ack.transitionType(), ack.stage());
             log.warn("Failed to deliver transition ack ack={}", ack, t);
             return null;

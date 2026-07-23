@@ -46,7 +46,7 @@ class VaradhiTopicTest {
             () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch"),
             () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory()),
             () -> assertFalse(varadhiTopic.isAutoFailover()),
-            () -> assertTrue(varadhiTopic.getRegionConfigs().isEmpty())
+            () -> assertTrue(varadhiTopic.getProduceConfigs().isEmpty())
         );
     }
 
@@ -181,33 +181,74 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void withTopicState_returnsCopyWithUpdatedState() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+    void getProduceTopic_emptyWhenBlocked() {
+        VaradhiTopic topic = createDefaultVaradhiTopic(false).addInternalTopic(
+            RegionName.of("r1"),
+            SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
+        );
+        topic = topic.withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked());
 
-        VaradhiTopic updated = varadhiTopic.withTopicState(TopicState.Fenced);
-
-        assertEquals(TopicState.Fenced, updated.getTopicState());
-        assertEquals(TopicState.Producing, varadhiTopic.getTopicState(), "original must be unchanged");
+        assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
     }
 
     @Test
-    void addInternalTopic_setsProducingRegionOnFirstRegion() {
+    void getProduceTopic_usesFailOverRegionAsProduceKey() {
+        VaradhiTopic topic = createDefaultVaradhiTopic(false);
+        topic = topic.addInternalTopic(RegionName.of("r1"), SegmentedStorageTopic.of(new DummyStorageTopic("t")));
+        topic = topic.addInternalTopic(RegionName.of("r2"), SegmentedStorageTopic.of(new DummyStorageTopic("t")));
+        topic = topic.withProduceConfig(
+            RegionName.of("r1"),
+            new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
+        );
+
+        ProduceTarget target = topic.getProduceTopic(RegionName.of("r1")).orElseThrow();
+
+        assertEquals(RegionName.of("r2"), target.produceRegion());
+        assertEquals("t", target.storageTopic().getName());
+    }
+
+    @Test
+    void withProduceConfig_returnsCopyWithUpdatedRegionState() {
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false).addInternalTopic(
+            RegionName.of("r1"),
+            SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
+        );
+
+        VaradhiTopic updated = varadhiTopic.withProduceConfig(
+            RegionName.of("r1"),
+            new ProduceConfig(TopicState.Fenced, null)
+        );
+
+        assertEquals(TopicState.Fenced, updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
+        assertEquals(
+            TopicState.Producing,
+            varadhiTopic.getProduceConfig(RegionName.of("r1")).orElseThrow().state(),
+            "original must be unchanged"
+        );
+    }
+
+    @Test
+    void addInternalTopic_setsProducingOnFirstRegionAndBlockedOnNext() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
         varadhiTopic = varadhiTopic.addInternalTopic(
             RegionName.of("r1"),
             SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
         );
+        varadhiTopic = varadhiTopic.addInternalTopic(
+            RegionName.of("r2"),
+            SegmentedStorageTopic.of(new DummyStorageTopic("t.r2"))
+        );
 
-        assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(varadhiTopic).orElseThrow());
-        assertTrue(varadhiTopic.getRegionConfig(RegionName.of("r1")).orElseThrow().produceAllowed());
+        assertEquals(TopicState.Producing, varadhiTopic.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
+        assertEquals(TopicState.Blocked, varadhiTopic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
     }
 
     @Test
-    void topicState_defaultsToProducing() {
+    void produceConfigs_emptyUntilInternalTopicAdded() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        assertEquals(TopicState.Producing, varadhiTopic.getTopicState());
+        assertTrue(varadhiTopic.getProduceConfigs().isEmpty());
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.produce.failover;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.core.cluster.controller.ControllerRouteApi;
+import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
 import com.flipkart.varadhi.core.cluster.events.EventType;
 import com.flipkart.varadhi.core.cluster.events.ResourceEvent;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
@@ -12,7 +12,6 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
@@ -514,7 +513,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(ack.isSuccess());
     }
 
-    private static final class CapturingControllerClient implements ControllerRouteApi {
+    private static final class CapturingControllerClient implements TransitionApi {
         private final CopyOnWriteArrayList<TransitionAck> acks = new CopyOnWriteArrayList<>();
         private final CountDownLatch latch;
 
@@ -523,17 +522,12 @@ class ProduceTransitionMsgHandlerTest {
         }
 
         @Override
-        public CompletableFuture<Void> update(
-            String subOpId,
-            String shardOpId,
-            ShardOperation.State state,
-            String errorMsg
-        ) {
-            return CompletableFuture.completedFuture(null);
+        public CompletableFuture<Void> sendEvent(TransitionEvent event) {
+            throw new UnsupportedOperationException("sendEvent is controller-local");
         }
 
         @Override
-        public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
+        public CompletableFuture<Void> ack(TransitionAck ack) {
             acks.add(ack);
             latch.countDown();
             return CompletableFuture.completedFuture(null);

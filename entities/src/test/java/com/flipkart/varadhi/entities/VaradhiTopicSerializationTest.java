@@ -6,14 +6,13 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicSerializationTest {
 
     @Test
-    void jsonRoundTrip_preservesAutoFailoverAndRegionConfigs() {
-        VaradhiTopic original = VaradhiTopicTestUtils.withRegionConfigs(
+    void jsonRoundTrip_preservesAutoFailoverAndProduceConfigs() {
+        VaradhiTopic original = VaradhiTopicTestUtils.withProduceConfigs(
             VaradhiTopic.of(
                 "project1",
                 "topic1",
@@ -23,9 +22,11 @@ class VaradhiTopicSerializationTest {
             ).withAutoFailover(true),
             Map.of(
                 RegionName.of("CH"),
-                RegionConfig.producing(),
+                ProduceConfig.producing(),
                 RegionName.of("HYD"),
-                new RegionConfig(false, RegionName.of("CH"))
+                new ProduceConfig(TopicState.Blocked, RegionName.of("CH")),
+                RegionName.of("SIN"),
+                ProduceConfig.producing()
             )
         );
 
@@ -33,14 +34,58 @@ class VaradhiTopicSerializationTest {
 
         assertAll(
             () -> assertTrue(restored.isAutoFailover()),
-            () -> assertEquals(2, restored.getRegionConfigs().size()),
-            () -> assertTrue(restored.getRegionConfig(RegionName.of("CH")).orElseThrow().produceAllowed()),
-            () -> assertFalse(restored.getRegionConfig(RegionName.of("HYD")).orElseThrow().produceAllowed()),
+            () -> assertEquals(3, restored.getProduceConfigs().size()),
+            () -> assertEquals(
+                TopicState.Producing,
+                restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state()
+            ),
+            () -> assertEquals(
+                TopicState.Blocked,
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state()
+            ),
+            () -> assertEquals(
+                TopicState.Producing,
+                restored.getProduceConfig(RegionName.of("SIN")).orElseThrow().state()
+            ),
             () -> assertEquals(
                 RegionName.of("CH"),
-                restored.getRegionConfig(RegionName.of("HYD")).orElseThrow().failOverRegion()
-            ),
-            () -> assertEquals(RegionName.of("CH"), TopicRegionConfigs.findProducingRegion(restored).orElseThrow())
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion()
+            )
+        );
+    }
+
+    @Test
+    void jsonDeserialize_legacyRegionConfigsAndProduceAllowed() {
+        String legacy = """
+            {
+              "name": "project1.topic1",
+              "version": 0,
+              "entityType": "TOPIC",
+              "grouped": false,
+              "capacity": {"qps":100,"throughputKBps":400,"readFanOut":2,"retentionPeriodInDays":2},
+              "autoFailover": false,
+              "topicState": "Producing",
+              "regionConfigs": {
+                "CH": {"produceAllowed": true, "failOverRegion": null},
+                "HYD": {"produceAllowed": false, "failOverRegion": "CH"}
+              },
+              "topicCategory": "TOPIC",
+              "status": {"state":"CREATING","actionCode":"SYSTEM_ACTION"},
+              "perRegionQuotaWeights": {},
+              "nfrFilterName": null,
+              "messageSizeProfile": null,
+              "rateLimiterMode": null,
+              "storageTopic": null
+            }
+            """;
+
+        VaradhiTopic restored = JsonMapper.jsonDeserialize(legacy, VaradhiTopic.class);
+
+        assertEquals(TopicState.Producing, restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state());
+        assertEquals(TopicState.Blocked, restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state());
+        assertEquals(
+            RegionName.of("CH"),
+            restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion()
         );
     }
 }

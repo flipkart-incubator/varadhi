@@ -56,9 +56,9 @@ public final class ProducerService {
     private final LoadingCache<ProducerCacheKey, Producer<? extends Offset>> producerCache;
 
     /**
-     * This pod's deployed region (pod identity). Produce routing uses
-     * {@link TopicRegionConfigs#findProducingRegion(VaradhiTopic)} from topic metadata, which may differ
-     * from this pod's region after failover (cross-region produce).
+     * This pod's deployed region (pod identity). Produce resolves
+     * {@link VaradhiTopic#getProduceTopic(String)} for this region — gate + optional
+     * {@link ProduceConfig#failOverRegion()} for the producer cache key.
      */
     private final String deployedRegion;
 
@@ -235,16 +235,20 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        TopicState topicState = topic.getTopicState();
-        if (!topicState.isProduceAllowed()) {
-            return CompletableFuture.completedFuture(
-                ProduceResult.ofNonProducingTopic(message.getMessageId(), topicState)
-            );
+        Optional<ProduceTarget> produceTopic = topic.getProduceTopic(deployedRegion);
+        if (produceTopic.isEmpty()) {
+            return topic.getProduceConfig(RegionName.of(deployedRegion))
+                        .map(
+                            config -> CompletableFuture.completedFuture(
+                                ProduceResult.ofNonProducingTopic(message.getMessageId(), config.state())
+                            )
+                        )
+                        .orElseThrow(
+                            () -> new ResourceNotFoundException(
+                                "Topic(%s) is not available in region(%s)".formatted(topic.getName(), deployedRegion)
+                            )
+                        );
         }
-
-        RegionName activeRegion = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
-
-        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(activeRegion.value());
 
         if (applyOrgFilter(topic, message)) {
             return CompletableFuture.completedFuture(ProduceResult.ofFilteredMessage(message.getMessageId()));
@@ -254,8 +258,9 @@ public final class ProducerService {
             return CompletableFuture.completedFuture(ProduceResult.ofThrottled(message.getMessageId()));
         }
 
-        StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(topic.getName(), storageTopic.getId(), activeRegion.value()).thenCompose(
+        ProduceTarget target = produceTopic.get();
+        StorageTopic storageTopic = target.storageTopic();
+        return getProducer(topic.getName(), storageTopic.getId(), target.produceRegion().value()).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }

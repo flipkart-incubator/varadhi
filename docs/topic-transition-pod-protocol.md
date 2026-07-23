@@ -9,9 +9,11 @@ Pod-side contract for topic failover and storage-topic migration. Controller orc
 | Controller → pods | `topic.transition` / `event.publish` | publish | `TransitionEvent` |
 | Pod → controller | `controller` / `topic.transition.event.ack` | send | `TransitionAck` |
 
-Constants: `TransitionBusAddress`, `ControllerRouteApi.ROUTE_CONTROLLER` (same value as `ControllerApi.ROUTE_CONTROLLER`).
+Constants: `TransitionBusAddress`, `ControllerApi.ROUTE_CONTROLLER`.
 
-Pod client: `ControllerRouteClient` implements `ControllerRouteApi` and sends over the controller route. Controller handler: `ControllerApiHandler.ackTopicTransition` → `ControllerApiMgr.ackTopicTransition`.
+Pod client: `ControllerRemoteClient` implements `ControllerApi` / `TransitionApi.ack` over the controller route.
+`TransitionApi.sendEvent` is controller-local (`TransitionService`); the remote client throws `UnsupportedOperationException`.
+Controller handler: `ControllerHandler.ack` → `TransitionService.ack`.
 
 ## `TransitionEvent`
 
@@ -76,7 +78,7 @@ Version-gated stages (PREPARE, SWITCH) poll TopicCache on a dedicated scheduler 
 
 **Controller** (`TopicTransitionMetrics`):
 
-- Gauges (tags `type`, `stage`):
+- Counters (tags `type`, `stage`):
   - `topic.transition.ack.received`
   - `topic.transition.ack.processed`
   - `topic.transition.ack.delivery.failed`

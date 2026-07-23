@@ -29,6 +29,7 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
  *       ahead of the switch. {@code null} for stages that do not pre-warm.</li>
  * </ul>
  */
+//explore 2 class
 public record TransitionEvent(
     String opId,
     VaradhiTopicName topicFqn,
@@ -36,7 +37,7 @@ public record TransitionEvent(
     TransitionStage stage,
     boolean awaitVersion,
     long topicVersionToAwait,
-    Target target
+    Target target // make generic avoid type http util (line no. ) // see if jackson is doing it
 ) {
 
     /**

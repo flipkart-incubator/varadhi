@@ -319,8 +319,37 @@ class ProducerServiceTests {
     }
 
     @Test
-    void produceRoutesToActiveRegionRegardlessOfPodRegion() throws InterruptedException {
-        String activeRegion = "region-b";
+    void produceUsesFailOverRegionAsProducerKey() throws InterruptedException {
+        String failOver = "region-b";
+        VaradhiTopic entity = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        );
+        entity.markCreated();
+        entity = entity.addInternalTopic(regionName, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName())));
+        entity = entity.addInternalTopic(
+            RegionName.of(failOver),
+            SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName()))
+        );
+        entity = entity.withProduceConfig(regionName, new ProduceConfig(TopicState.Producing, RegionName.of(failOver)));
+        Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
+        when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
+
+        Message msg = getMessage(0, 1, null, 10);
+        ResultCapture rc = getResult(service.produceToTopic(msg, vt.getName()));
+
+        Assertions.assertNotNull(rc.produceResult);
+        Assertions.assertNull(rc.throwable);
+        Assertions.assertEquals(ProduceStatus.Success, rc.produceResult.getProduceStatus());
+        verify(producer, times(1)).produceAsync(eq(msg));
+    }
+
+    @Test
+    void produceRejectsWhenDeployedRegionBlocked() throws InterruptedException {
+        String otherRegion = "region-b";
         VaradhiTopic entity = VaradhiTopic.of(
             project.getName(),
             topic,
@@ -334,16 +363,16 @@ class ProducerServiceTests {
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a"))
         );
         entity = entity.addInternalTopic(
-            RegionName.of(activeRegion),
+            RegionName.of(otherRegion),
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b"))
         );
-        entity = VaradhiTopicTestUtils.withRegionConfigs(
+        entity = VaradhiTopicTestUtils.withProduceConfigs(
             entity,
             Map.of(
                 RegionName.of(region),
-                new RegionConfig(false, null),
-                RegionName.of(activeRegion),
-                RegionConfig.producing()
+                ProduceConfig.blocked(),
+                RegionName.of(otherRegion),
+                ProduceConfig.producing()
             )
         );
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
@@ -354,14 +383,15 @@ class ProducerServiceTests {
 
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
-        verify(producer, times(1)).produceAsync(eq(msg));
+        Assertions.assertEquals(ProduceStatus.NotAllowed, rc.produceResult.getProduceStatus());
+        verify(producer, never()).produceAsync(any());
     }
 
     @Test
-    void produceSucceedsWhenPodRegionMatchesActiveRegion() throws InterruptedException {
-        String activeRegion = "region-b";
+    void produceSucceedsWhenDeployedRegionProducing() throws InterruptedException {
+        String otherRegion = "region-b";
         ProducerService regionalService = new ProducerService(
-            activeRegion,
+            otherRegion,
             producerFactory::newProducer,
             orgCache,
             projectCache,
@@ -380,16 +410,16 @@ class ProducerServiceTests {
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a"))
         );
         entity = entity.addInternalTopic(
-            RegionName.of(activeRegion),
+            RegionName.of(otherRegion),
             SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b"))
         );
-        entity = VaradhiTopicTestUtils.withRegionConfigs(
+        entity = VaradhiTopicTestUtils.withProduceConfigs(
             entity,
             Map.of(
                 RegionName.of(region),
-                new RegionConfig(false, null),
-                RegionName.of(activeRegion),
-                RegionConfig.producing()
+                ProduceConfig.producing(),
+                RegionName.of(otherRegion),
+                ProduceConfig.producing()
             )
         );
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
@@ -445,7 +475,7 @@ class ProducerServiceTests {
         StorageTopic st = new DummyStorageTopic(topic.getName());
         topic = topic.addInternalTopic(regionName, SegmentedStorageTopic.of(st));
         if (state != TopicState.Producing) {
-            topic = topic.withTopicState(state);
+            topic = topic.withProduceConfig(regionName, new ProduceConfig(state, null));
         }
         return topic;
     }

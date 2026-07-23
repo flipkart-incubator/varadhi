@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.cluster.controller.ControllerRouteClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRemoteClient;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.entities.Resource;
@@ -60,7 +60,7 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
-            new ControllerRouteClient(messageExchange),
+            new ControllerRemoteClient(messageExchange),
             producerService,
             new PodTransitionConfig(
                 producerOptions.getTransitionVersionWaitMs(),
