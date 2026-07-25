@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProduceConfigTest {
 
     @Test
-    void addInternalTopic_firstProducingThenBlocked() {
+    void withProduceRegion_firstProducingThenBlocked() {
         VaradhiTopic topic = VaradhiTopic.of(
             "project1",
             "topic1",
@@ -18,14 +18,9 @@ class ProduceConfigTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.addInternalTopic(
-            RegionName.of("r1"),
-            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
-        );
-        topic = topic.addInternalTopic(
-            RegionName.of("r2"),
-            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r2"))
-        );
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")))
+                     .withProduceRegion(RegionName.of("r1"))
+                     .withProduceRegion(RegionName.of("r2"));
 
         assertEquals(TopicState.Producing, topic.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
         assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
@@ -40,14 +35,9 @@ class ProduceConfigTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.addInternalTopic(
-            RegionName.of("r1"),
-            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
-        );
-        topic = topic.addInternalTopic(
-            RegionName.of("r2"),
-            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r2"))
-        );
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")))
+                     .withProduceRegion(RegionName.of("r1"))
+                     .withProduceRegion(RegionName.of("r2"));
 
         VaradhiTopic updated = VaradhiTopicTestUtils.withProduceConfigs(
             topic,

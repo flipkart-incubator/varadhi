@@ -9,6 +9,8 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
@@ -38,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -56,6 +59,7 @@ class ProduceTransitionMsgHandlerTest {
     private static final String TOPIC = "topic1";
     private static final String FQN = PROJECT + "." + TOPIC;
     private static final VaradhiTopicName TOPIC_NAME = VaradhiTopicName.of(PROJECT, TOPIC);
+    private static final String DEPLOYED_REGION = "region-a";
     private static final RegionName TARGET_REGION = new RegionName("region-b");
     private static final int TARGET_STORAGE_TOPIC_ID = 7;
 
@@ -75,7 +79,8 @@ class ProduceTransitionMsgHandlerTest {
             vertx
         ).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
         producerService = mock(ProducerService.class);
-        when(producerService.hasProducer(any())).thenReturn(true);
+        when(producerService.deployedRegion()).thenReturn(DEPLOYED_REGION);
+        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(true);
         when(producerService.getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class))).thenReturn(
             CompletableFuture.completedFuture(mock(Producer.class))
         );
@@ -117,6 +122,8 @@ class ProduceTransitionMsgHandlerTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {}))
+                     .withProduceRegion(RegionName.of(DEPLOYED_REGION));
         topic.setVersion(version);
         topicCache.onChange(
             new ResourceEvent<>(
@@ -222,7 +229,7 @@ class ProduceTransitionMsgHandlerTest {
     @Test
     void prepareAcksOkWithoutWarmingWhenPodNotInvolved() throws Exception {
         seed(10);
-        when(producerService.hasProducer(TOPIC_NAME)).thenReturn(false);
+        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
@@ -251,7 +258,7 @@ class ProduceTransitionMsgHandlerTest {
     @Test
     void switchEchoesParticipationDecidedAtPrepare() throws Exception {
         seed(10);
-        when(producerService.hasProducer(TOPIC_NAME)).thenReturn(false);
+        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig(), 2);
 
         h.handle(

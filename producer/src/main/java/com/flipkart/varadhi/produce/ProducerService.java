@@ -315,6 +315,11 @@ public final class ProducerService {
         return getProducer(topic.getName(), internalTopic.getTopicToProduce().getId(), region.value());
     }
 
+    /** This pod's deployed region — produce target resolution key. */
+    public String deployedRegion() {
+        return deployedRegion;
+    }
+
     /**
      * Pre-warms the producer for {@code storageTopicId} in this pod's deployed region into the
      * local cache. Used by storage-migration PREPARE.
@@ -324,12 +329,11 @@ public final class ProducerService {
     }
 
     /**
-     * Whether this pod holds a producer for {@code topicName}'s active produce region.
-     * Used to decide PREPARE participation during a topic transition.
+     * Whether the producer cache already holds {@code (topicFQN, storageTopicId, region)}.
+     * Callers resolve the active produce target and pass the key parts.
      */
-    public boolean hasProducer(VaradhiTopicName topicName) {
-        String topicFQN = topicName.toFqn();
-        return topicCache.get(topicFQN).isPresent();
+    public boolean hasProducer(String topicFQN, int storageTopicId, String region) {
+        return producerCache.getIfPresent(new ProducerCacheKey(topicFQN, storageTopicId, region)) != null;
     }
 
     /**

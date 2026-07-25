@@ -58,7 +58,7 @@ Barrier completion: `(opId, stage)` identifies the barrier; `hostname` dedupes p
 
 ## Version wait
 
-Version-gated stages (PREPARE, SWITCH) poll TopicCache on a dedicated scheduler via `RetryUtils.getAsync`:
+Version-gated stages (PREPARE, SWITCH) poll TopicCache on a dedicated scheduler via a reusable Failsafe executor:
 
 - **Fixed** poll interval up to `podVersionWaitMs` (not exponential backoff): cache convergence within a deadline.
 - Config source: `ProducerOptions.transitionVersionWaitMs` / `transitionPollIntervalMs` → `PodTransitionConfig.podVersionWaitMs` / `podPollIntervalMs`.

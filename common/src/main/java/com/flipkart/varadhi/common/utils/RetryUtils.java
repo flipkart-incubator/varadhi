@@ -1,36 +1,30 @@
 package com.flipkart.varadhi.common.utils;
 
 import dev.failsafe.Failsafe;
-import dev.failsafe.FailsafeException;
 import dev.failsafe.FailsafeExecutor;
+import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
- * Minimal retry helpers for result-based async polling (e.g. TopicCache version convergence).
+ * Failsafe helpers. Same shape as oncall {@code RetryUtils}: factory methods return a configured
+ * {@link FailsafeExecutor}; callers invoke {@code getAsync}/{@code getStageAsync} on it.
  */
 public final class RetryUtils {
 
     private RetryUtils() {
     }
 
-    /** Thin handle around a configured {@link FailsafeExecutor} for result polling. */
-    public record ResultPollingExecutor<T>(FailsafeExecutor<T> delegate) {
-        public CompletableFuture<T> getAsync(Supplier<T> probe) {
-            return delegate.getAsync(probe::get);
-        }
-    }
-
     /**
-     * Builds a reusable executor for result polling: retries only while {@code retryOnResult}
-     * matches; probe exceptions abort immediately via {@code abortOn(Exception)}.
+     * Result-polling executor: retries while {@code retryOnResult} matches; probe exceptions abort
+     * immediately via {@code abortOn(Exception)}. Exhausted result retries complete exceptionally
+     * (not with the last matching result). Pair with {@link FailsafeExecutor#getAsync}.
      */
-    public static <T> ResultPollingExecutor<T> newResultPollingExecutor(
+    public static <T> FailsafeExecutor<T> newResultPollingExecutor(
         Executor executor,
         int maxAttempts,
         long delayInMs,
@@ -42,28 +36,15 @@ public final class RetryUtils {
                                            .handleResultIf(retryOnResult::test)
                                            .abortOn(Exception.class)
                                            .build();
-        return new ResultPollingExecutor<>(Failsafe.with(policy).with(executor));
-    }
-
-    public static <T> CompletableFuture<T> getAsync(ResultPollingExecutor<T> executor, Supplier<T> probe) {
-        return executor.getAsync(probe);
-    }
-
-    public static <T> CompletableFuture<T> getAsync(
-        Executor executor,
-        int maxAttempts,
-        long delayInMs,
-        Predicate<T> retryOnResult,
-        Supplier<T> probe
-    ) {
-        return getAsync(newResultPollingExecutor(executor, maxAttempts, delayInMs, retryOnResult), probe);
-    }
-
-    /**
-     * True when {@code t} is a polling exhaustion from a {@link #newResultPollingExecutor} policy.
-     * Probe failures use {@code abortOn(Exception)} and surface as their original type instead.
-     */
-    public static boolean isRetriesExceeded(Throwable t) {
-        return ThrowableUtils.unwrap(t) instanceof FailsafeException;
+        // RetryPolicy alone returns the last matching result when attempts are exhausted; wrap with
+        // a Fallback so callers always see exhaustion as a failure (same path as probe errors).
+        Fallback<T> exhaustion = Fallback.<T>builderOfException(
+                                             e -> new TimeoutException(
+                                                 "timeout: result polling exhausted after " + maxAttempts + " attempts"
+                                             )
+                                         )
+                                         .handleResultIf(retryOnResult::test)
+                                         .build();
+        return Failsafe.with(exhaustion).compose(policy).with(executor);
     }
 }

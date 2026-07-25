@@ -14,6 +14,7 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.produce.ProducerService;
+import dev.failsafe.FailsafeExecutor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
@@ -58,7 +59,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private final TransitionApi controllerClient;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
-    private final RetryUtils.ResultPollingExecutor<Optional<Long>> versionWaitExecutor;
+    private final FailsafeExecutor<Optional<Long>> versionWaitExecutor;
     private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
 
     public ProduceTransitionMsgHandler(
@@ -94,35 +95,21 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         }
         // handle() runs on the event-bus thread that delivered this publish. The version wait (and
         // the PREPARE pre-warm it triggers) runs on the transition scheduler via a reusable
-        // versionWaitExecutor so the event bus is never stalled and the retry policy is not
-        // rebuilt per event. Polling uses a fixed interval (not exponential backoff): cache
+        // FailsafeExecutor from RetryUtils so the event bus is never stalled and the retry policy
+        // is not rebuilt per event. Polling uses a fixed interval (not exponential backoff): cache
         // convergence within a deadline, not failure retry.
         String topicFqn = event.topicFqn().toFqn();
         metrics.versionWaitStarted();
         long targetVersion = event.topicVersionToAwait();
-        RetryUtils.getAsync(versionWaitExecutor, () -> probeVersion(topicFqn, targetVersion))
-                  .whenComplete((outcome, t) -> {
-                      metrics.versionWaitFinished();
-                      if (t != null) {
-                          if (RetryUtils.isRetriesExceeded(t)) {
-                              ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
-                              return;
-                          }
-                          log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
-                          ackFail(event, "transition poll error: " + ThrowableUtils.rootMessage(t));
-                          return;
-                      }
-                      if (outcome.isEmpty()) {
-                          ackFail(event, versionWaitTimeoutMessage(targetVersion, topicFqn));
-                          return;
-                      }
-                      onVersionResolved(event, outcome.get());
-                  });
-    }
-
-    private String versionWaitTimeoutMessage(long targetVersion, String topicFqn) {
-        return "timeout awaiting topic version " + targetVersion + " (current " + describe(currentVersion(topicFqn))
-               + ")";
+        versionWaitExecutor.getAsync(() -> probeVersion(topicFqn, targetVersion)).whenComplete((outcome, t) -> {
+            metrics.versionWaitFinished();
+            if (t != null) {
+                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
+                ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
+                return;
+            }
+            onVersionResolved(event, outcome.get());
+        });
     }
 
     /**
@@ -171,7 +158,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             ackOk(event);
             return;
         }
-        if (!producerService.hasProducer(event.topicFqn())) {
+        if (!hasActiveProducer(topic)) {
             TransitionParticipation participation = TransitionParticipation.NOT_INVOLVED;
             recordParticipation(event, participation);
             log.debug(
@@ -215,10 +202,6 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
         return CompletableFuture.failedFuture(new IllegalStateException("PREPARE target missing"));
     }
 
-    private static String describe(Optional<Long> version) {
-        return version.map(Object::toString).orElse("absent from cache");
-    }
-
     private void recordParticipation(TransitionEvent event, TransitionParticipation participation) {
         participationByOpId.put(event.opId(), participation);
         metrics.setParticipation(event.transitionType(), participation);
@@ -226,16 +209,31 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     /**
      * Participation decided at PREPARE and sticky for the op. Late joiners (first event not PREPARE)
-     * derive from {@link ProducerService#hasProducer(VaradhiTopicName)}.
+     * derive from whether this pod already has a producer for the topic's active produce target.
      */
     private TransitionParticipation resolveParticipation(TransitionEvent event) {
         return participationByOpId.computeIfAbsent(event.opId(), ignored -> deriveParticipation(event.topicFqn()));
     }
 
     private TransitionParticipation deriveParticipation(VaradhiTopicName topicFqn) {
-        return producerService.hasProducer(topicFqn) ?
-            TransitionParticipation.INVOLVED :
-            TransitionParticipation.NOT_INVOLVED;
+        return topicCache.get(topicFqn.toFqn())
+                         .map(Resource.EntityResource::getEntity)
+                         .filter(this::hasActiveProducer)
+                         .map(ignored -> TransitionParticipation.INVOLVED)
+                         .orElse(TransitionParticipation.NOT_INVOLVED);
+    }
+
+    /** True when the producer cache holds the active produce key for this pod's deployed region. */
+    private boolean hasActiveProducer(VaradhiTopic topic) {
+        return topic.getProduceTopic(producerService.deployedRegion())
+                    .map(
+                        target -> producerService.hasProducer(
+                            topic.getName(),
+                            target.storageTopic().getId(),
+                            target.produceRegion().value()
+                        )
+                    )
+                    .orElse(false);
     }
 
     private void clearParticipationIfTerminal(TransitionEvent event) {

@@ -31,15 +31,17 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class TopicTransitionPodWiring implements AutoCloseable {
 
     private final ScheduledExecutorService scheduler;
+    private final TransitionMetrics metrics;
 
-    private TopicTransitionPodWiring(ScheduledExecutorService scheduler) {
+    private TopicTransitionPodWiring(ScheduledExecutorService scheduler, TransitionMetrics metrics) {
         this.scheduler = scheduler;
+        this.metrics = metrics;
     }
 
     /**
      * Wires {@link ProduceTransitionMsgHandler} on the cluster broadcast bus.
      *
-     * @return a closeable wiring handle that owns the version-wait scheduler
+     * @return a closeable wiring handle that owns the version-wait scheduler and metrics
      */
     public static TopicTransitionPodWiring wire(
         VaradhiClusterManager clusterManager,
@@ -57,6 +59,7 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "topic-transition-version-wait")
         );
+        TransitionMetrics metrics = new TransitionMetrics(meterRegistry);
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
@@ -67,7 +70,7 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
                 producerOptions.getTransitionPollIntervalMs()
             ),
             scheduler,
-            new TransitionMetrics(meterRegistry)
+            metrics
         );
         messageRouter.registerPublishReceiveHandler(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
@@ -75,11 +78,12 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
             handler
         );
         log.info("Wired topic-transition stage handler");
-        return new TopicTransitionPodWiring(scheduler);
+        return new TopicTransitionPodWiring(scheduler, metrics);
     }
 
     @Override
     public void close() {
         scheduler.shutdownNow();
+        metrics.close();
     }
 }

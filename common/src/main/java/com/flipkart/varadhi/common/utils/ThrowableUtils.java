@@ -8,9 +8,6 @@ import java.util.concurrent.ExecutionException;
  */
 public final class ThrowableUtils {
 
-    private ThrowableUtils() {
-    }
-
     /**
      * Unwraps one level of {@link CompletionException} or {@link ExecutionException}.
      * Other throwables are returned as-is.

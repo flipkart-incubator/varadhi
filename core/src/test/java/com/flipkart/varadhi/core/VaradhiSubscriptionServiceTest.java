@@ -212,7 +212,7 @@ class VaradhiSubscriptionServiceTest {
             capacity,
             InternalQueueCategory.MAIN
         );
-        topic = topic.addInternalTopic(RegionName.of(region), SegmentedStorageTopic.of(storageTopic));
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(storageTopic)).withProduceRegion(RegionName.of(region));
 
         SubscriptionResource subscriptionResource = SubscriptionResource.of(
             "SubscriptionResource",

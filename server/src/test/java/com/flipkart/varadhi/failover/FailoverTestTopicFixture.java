@@ -47,8 +47,9 @@ public final class FailoverTestTopicFixture {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         SegmentedStorageTopic segmented = SegmentedStorageTopic.of(new FixtureStorageTopic(topic.getName()));
+        topic = topic.withStorageTopic(segmented);
         for (String region : regions) {
-            topic = topic.addInternalTopic(RegionName.of(region), segmented);
+            topic = topic.withProduceRegion(RegionName.of(region));
         }
         return topic;
     }

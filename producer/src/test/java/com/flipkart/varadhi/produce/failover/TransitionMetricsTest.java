@@ -116,4 +116,17 @@ class TransitionMetricsTest {
         metrics.versionWaitFinished();
         assertEquals(1.0, registry.find("topic.transition.version_waits.in_flight").gauge().value());
     }
+
+    @Test
+    void close_removesRegisteredMeters() {
+        metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+        metrics.versionWaitStarted();
+        metrics.setParticipation(TransitionType.TOPIC_FAILOVER, TransitionParticipation.INVOLVED);
+
+        metrics.close();
+
+        assertEquals(0, registry.find("topic.transition.stage.received").counters().size());
+        assertEquals(0, registry.find("topic.transition.version_waits.in_flight").gauges().size());
+        assertEquals(0, registry.find("topic.transition.participation").gauges().size());
+    }
 }

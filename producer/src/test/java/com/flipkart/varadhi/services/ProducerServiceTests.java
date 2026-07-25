@@ -309,13 +309,18 @@ class ProducerServiceTests {
     @Test
     void hasProducerReflectsActiveRegionProducerPresence() {
         VaradhiTopicName topicName = VaradhiTopicName.of(project.getName(), topic);
-        assertFalse(service.hasProducer(topicName));
-
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
+        ProduceTarget target = vt.getEntity().getProduceTopic(region).orElseThrow();
+        String topicFQN = topicName.toFqn();
+        int storageId = target.storageTopic().getId();
+        String produceRegion = target.produceRegion().value();
+
+        assertFalse(service.hasProducer(topicFQN, storageId, produceRegion));
+
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
         service.getProducerForRegion(vt.getEntity(), regionName).join();
 
-        assertTrue(service.hasProducer(topicName));
+        assertTrue(service.hasProducer(topicFQN, storageId, produceRegion));
     }
 
     @Test
@@ -329,11 +334,9 @@ class ProducerServiceTests {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         entity.markCreated();
-        entity = entity.addInternalTopic(regionName, SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName())));
-        entity = entity.addInternalTopic(
-            RegionName.of(failOver),
-            SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName()))
-        );
+        entity = entity.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName())))
+                       .withProduceRegion(regionName)
+                       .withProduceRegion(RegionName.of(failOver));
         entity = entity.withProduceConfig(regionName, new ProduceConfig(TopicState.Producing, RegionName.of(failOver)));
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
@@ -358,14 +361,9 @@ class ProducerServiceTests {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         entity.markCreated();
-        entity = entity.addInternalTopic(
-            regionName,
-            SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a"))
-        );
-        entity = entity.addInternalTopic(
-            RegionName.of(otherRegion),
-            SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b"))
-        );
+        entity = entity.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")))
+                       .withProduceRegion(regionName)
+                       .withProduceRegion(RegionName.of(otherRegion));
         entity = VaradhiTopicTestUtils.withProduceConfigs(
             entity,
             Map.of(
@@ -405,14 +403,9 @@ class ProducerServiceTests {
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
         entity.markCreated();
-        entity = entity.addInternalTopic(
-            regionName,
-            SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a"))
-        );
-        entity = entity.addInternalTopic(
-            RegionName.of(otherRegion),
-            SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".b"))
-        );
+        entity = entity.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName() + ".a")))
+                       .withProduceRegion(regionName)
+                       .withProduceRegion(RegionName.of(otherRegion));
         entity = VaradhiTopicTestUtils.withProduceConfigs(
             entity,
             Map.of(
@@ -445,8 +438,7 @@ class ProducerServiceTests {
         );
         entity.markCreated();
         SegmentedStorageTopic segmented = SegmentedStorageTopic.of(new DummyStorageTopic(entity.getName()));
-        entity = entity.addInternalTopic(regionName, segmented);
-        entity = entity.addInternalTopic(regionB, segmented);
+        entity = entity.withStorageTopic(segmented).withProduceRegion(regionName).withProduceRegion(regionB);
         Resource.EntityResource<VaradhiTopic> vt = Resource.of(entity, ResourceType.TOPIC);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
 
@@ -473,7 +465,7 @@ class ProducerServiceTests {
         topic.markCreated();
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
-        topic = topic.addInternalTopic(regionName, SegmentedStorageTopic.of(st));
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(st)).withProduceRegion(regionName);
         if (state != TopicState.Producing) {
             topic = topic.withProduceConfig(regionName, new ProduceConfig(state, null));
         }

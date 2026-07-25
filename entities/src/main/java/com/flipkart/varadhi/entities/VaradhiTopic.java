@@ -20,7 +20,6 @@ import java.util.Optional;
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
-@JsonIgnoreProperties (ignoreUnknown = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final SegmentedStorageTopic storageTopic;
@@ -157,32 +156,22 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
-     * Sets {@link #storageTopic} on the first call and registers each {@code region} in
-     * {@link #produceConfigs}. Additional regions share the same storage topic; first region
-     * starts {@link TopicState#Producing}, further regions {@link TopicState#Blocked}.
+     * Sets the shared {@link #storageTopic}. Replaces any previous value.
      */
-    public VaradhiTopic addInternalTopic(RegionName region, SegmentedStorageTopic segmentedTopic) {
-        SegmentedStorageTopic resolvedStorage = storageTopic != null ? storageTopic : segmentedTopic;
+    public VaradhiTopic withStorageTopic(SegmentedStorageTopic storageTopic) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
+    }
+
+    /**
+     * Registers {@code region} in {@link #produceConfigs}. First region starts
+     * {@link TopicState#Producing}; further regions {@link TopicState#Blocked}.
+     * Does not change {@link #storageTopic} — call {@link #withStorageTopic} separately.
+     */
+    public VaradhiTopic withProduceRegion(RegionName region) {
         Map<RegionName, ProduceConfig> updatedConfigs = new HashMap<>(produceConfigs);
         boolean firstRegion = updatedConfigs.isEmpty();
         updatedConfigs.putIfAbsent(region, firstRegion ? ProduceConfig.producing() : ProduceConfig.blocked());
-        VaradhiTopic updated = new VaradhiTopic(
-            getName(),
-            getVersion(),
-            grouped,
-            capacity,
-            resolvedStorage,
-            autoFailover,
-            updatedConfigs,
-            getStatus(),
-            nfrFilterName,
-            topicCategory,
-            perRegionQuotaWeights,
-            messageSizeProfile,
-            rateLimiterMode
-        );
-        updated.status = this.status;
-        return updated;
+        return copyWith(storageTopic, updatedConfigs, autoFailover);
     }
 
     @JsonIgnore
@@ -248,6 +237,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     VaradhiTopic copyWith(Map<RegionName, ProduceConfig> produceConfigs, boolean autoFailover) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
+    }
+
+    private VaradhiTopic copyWith(
+        SegmentedStorageTopic storageTopic,
+        Map<RegionName, ProduceConfig> produceConfigs,
+        boolean autoFailover
+    ) {
         VaradhiTopic copy = new VaradhiTopic(
             getName(),
             getVersion(),

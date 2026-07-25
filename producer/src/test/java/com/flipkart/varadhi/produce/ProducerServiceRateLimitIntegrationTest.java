@@ -252,7 +252,7 @@ class ProducerServiceRateLimitIntegrationTest {
         topic.markCreated();
         StorageTopic storageTopic = new DummyStorageTopic(topic.getName());
         SegmentedStorageTopic internal = SegmentedStorageTopic.of(storageTopic);
-        topic = topic.addInternalTopic(RegionName.of(REGION), internal);
+        topic = topic.withStorageTopic(internal).withProduceRegion(RegionName.of(REGION));
         return topic;
     }
 
