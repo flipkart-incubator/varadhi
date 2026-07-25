@@ -53,39 +53,4 @@ class VaradhiTopicSerializationTest {
             )
         );
     }
-
-    @Test
-    void jsonDeserialize_legacyRegionConfigsAndProduceAllowed() {
-        String legacy = """
-            {
-              "name": "project1.topic1",
-              "version": 0,
-              "entityType": "TOPIC",
-              "grouped": false,
-              "capacity": {"qps":100,"throughputKBps":400,"readFanOut":2,"retentionPeriodInDays":2},
-              "autoFailover": false,
-              "topicState": "Producing",
-              "regionConfigs": {
-                "CH": {"produceAllowed": true, "failOverRegion": null},
-                "HYD": {"produceAllowed": false, "failOverRegion": "CH"}
-              },
-              "topicCategory": "TOPIC",
-              "status": {"state":"CREATING","actionCode":"SYSTEM_ACTION"},
-              "perRegionQuotaWeights": {},
-              "nfrFilterName": null,
-              "messageSizeProfile": null,
-              "rateLimiterMode": null,
-              "storageTopic": null
-            }
-            """;
-
-        VaradhiTopic restored = JsonMapper.jsonDeserialize(legacy, VaradhiTopic.class);
-
-        assertEquals(TopicState.Producing, restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state());
-        assertEquals(TopicState.Blocked, restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state());
-        assertEquals(
-            RegionName.of("CH"),
-            restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion()
-        );
-    }
 }

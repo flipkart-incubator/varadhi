@@ -186,6 +186,23 @@ class VaradhiTopicTest {
     }
 
     @Test
+    void resolveProduceTarget_stillResolvesWhenFenced() {
+        VaradhiTopic topic = createDefaultVaradhiTopic(false)
+            .withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t")))
+            .withProduceRegion(RegionName.of("r1"))
+            .withProduceRegion(RegionName.of("r2"));
+        topic = topic.withProduceConfig(
+            RegionName.of("r1"),
+            new ProduceConfig(TopicState.Fenced, RegionName.of("r2"))
+        );
+
+        assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
+        ProduceTarget target = topic.resolveProduceTarget(RegionName.of("r1")).orElseThrow();
+        assertEquals(RegionName.of("r2"), target.produceRegion());
+        assertEquals("t", target.storageTopic().getName());
+    }
+
+    @Test
     void getProduceTopic_usesFailOverRegionAsProduceKey() {
         VaradhiTopic topic = createDefaultVaradhiTopic(false);
         topic = topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t")))

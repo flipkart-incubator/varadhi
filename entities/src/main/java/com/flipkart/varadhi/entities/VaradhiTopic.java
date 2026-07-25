@@ -2,7 +2,6 @@ package com.flipkart.varadhi.entities;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.annotation.Nullable;
@@ -180,6 +179,32 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
+     * Resolves the producer cache key for {@code region}: storage topic + produce region
+     * ({@code failOverRegion} if set, otherwise {@code region}).
+     *
+     * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()} — use this when you need the
+     * key for an already-cached producer (e.g. PREPARE participation while the region is
+     * {@link TopicState#Fenced}). For the produce HTTP path use {@link #getProduceTopic}.
+     */
+    @JsonIgnore
+    public Optional<ProduceTarget> resolveProduceTarget(String region) {
+        return resolveProduceTarget(RegionName.of(region));
+    }
+
+    @JsonIgnore
+    public Optional<ProduceTarget> resolveProduceTarget(RegionName region) {
+        ProduceConfig config = produceConfigs.get(region);
+        if (config == null || storageTopic == null) {
+            return Optional.empty();
+        }
+        RegionName produceRegion = config.failOverRegion() != null ? config.failOverRegion() : region;
+        if (!produceConfigs.containsKey(produceRegion)) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProduceTarget(storageTopic.getTopicToProduce(), produceRegion));
+    }
+
+    /**
      * Resolves where produce for {@code region} should go.
      *
      * <p>Empty when this region has no produce config, produce is not allowed ({@link TopicState}),
@@ -194,14 +219,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     @JsonIgnore
     public Optional<ProduceTarget> getProduceTopic(RegionName region) {
         ProduceConfig config = produceConfigs.get(region);
-        if (config == null || !config.state().isProduceAllowed() || storageTopic == null) {
+        if (config == null || !config.state().isProduceAllowed()) {
             return Optional.empty();
         }
-        RegionName produceRegion = config.failOverRegion() != null ? config.failOverRegion() : region;
-        if (!produceConfigs.containsKey(produceRegion)) {
-            return Optional.empty();
-        }
-        return Optional.of(new ProduceTarget(storageTopic.getTopicToProduce(), produceRegion));
+        return resolveProduceTarget(region);
     }
 
     public VaradhiTopic withProduceConfig(RegionName region, ProduceConfig config) {

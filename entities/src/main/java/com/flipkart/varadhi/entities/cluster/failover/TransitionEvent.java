@@ -37,7 +37,7 @@ public record TransitionEvent(
     TransitionStage stage,
     boolean awaitVersion,
     long topicVersionToAwait,
-    Target target // make generic avoid type http util (line no. ) // see if jackson is doing it
+    Target target
 ) {
 
     /**

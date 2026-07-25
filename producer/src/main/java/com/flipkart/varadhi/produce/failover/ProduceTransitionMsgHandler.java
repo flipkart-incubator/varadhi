@@ -225,7 +225,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     /** True when the producer cache holds the active produce key for this pod's deployed region. */
     private boolean hasActiveProducer(VaradhiTopic topic) {
-        return topic.getProduceTopic(producerService.deployedRegion())
+        return topic.resolveProduceTarget(producerService.deployedRegion())
                     .map(
                         target -> producerService.hasProducer(
                             topic.getName(),
