@@ -121,6 +121,8 @@ class MultiPodProduceClusterIT {
 
             for (String alias : cluster.podAliases()) {
                 try (ClusterHttpClient http = new ClusterHttpClient(cluster.podBaseUri(alias))) {
+                    // Each pod has its own cache; wait until ZK-backed entities are readable here.
+                    http.awaitProduceReady(project, topic);
                     Map<String, String> headers = Map.of(HDR_MESSAGE_ID, "direct-" + alias);
                     try (Response response = http.produce(project, topic, "ping".getBytes(), headers)) {
                         assertEquals(

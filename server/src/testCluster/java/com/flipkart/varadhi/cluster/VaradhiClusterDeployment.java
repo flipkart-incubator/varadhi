@@ -19,6 +19,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * Programmatic multi-pod Varadhi cluster for Docker-backed e2e (Viesti {@code PulsarDeployment}-shaped).
@@ -259,7 +261,26 @@ public final class VaradhiClusterDeployment implements AutoCloseable {
             toxiproxy = null;
         }
         network.close();
+        deleteDirQuietly(configDir);
+        deleteDirQuietly(nginxConfDir);
         started = false;
+    }
+
+    private static void deleteDirQuietly(Path dir) {
+        if (dir == null || !Files.exists(dir)) {
+            return;
+        }
+        try (Stream<Path> walk = Files.walk(dir)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException e) {
+                    log.warn("Failed deleting {}", p, e);
+                }
+            });
+        } catch (IOException e) {
+            log.warn("Failed cleaning {}", dir, e);
+        }
     }
 
     private void startToxiproxy() {
