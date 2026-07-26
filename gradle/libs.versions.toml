@@ -29,6 +29,8 @@ jakarta_annotation = "3.0.0"
 jakarta_ws_rs = "4.0.0"
 hibernate_validator = "9.1.0.Final"
 jacoco = "0.8.15"
+testcontainers = "1.20.6"
+byteman = "4.0.25"
 
 [libraries]
 #core
@@ -104,3 +106,8 @@ jersey-media-json-jackson = { group = "org.glassfish.jersey.media", name = "jers
 vertx-junit5 = { group = "io.vertx", name = "vertx-junit5", version.ref = "vertx" }
 vertx-web-client = { group = "io.vertx", name = "vertx-web-client", version.ref = "vertx" }
 curator-test = { group = "org.apache.curator", name = "curator-test", version.ref = "curator_framework" }
+testcontainers = { group = "org.testcontainers", name = "testcontainers", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { group = "org.testcontainers", name = "junit-jupiter", version.ref = "testcontainers" }
+testcontainers-toxiproxy = { group = "org.testcontainers", name = "toxiproxy", version.ref = "testcontainers" }
+byteman-agent = { group = "org.jboss.byteman", name = "byteman", version.ref = "byteman" }
+byteman-submit = { group = "org.jboss.byteman", name = "byteman-submit", version.ref = "byteman" }

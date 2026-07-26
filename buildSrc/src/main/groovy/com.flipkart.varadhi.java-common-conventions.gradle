@@ -61,12 +61,22 @@ sourceSets {
         compileClasspath += main.output + test.output
         runtimeClasspath += main.output + test.output
     }
+    testCluster {
+        java.srcDir "$projectDir/src/testCluster/java"
+        resources.srcDir "$projectDir/src/testCluster/resources"
+        compileClasspath += main.output + test.output
+        runtimeClasspath += main.output + test.output
+    }
 }
 
 configurations {
     testE2EImplementation.extendsFrom testImplementation
     testE2ERuntimeOnly.extendsFrom testRuntimeOnly
     testE2ERuntime.extendsFrom testRuntime
+
+    testClusterImplementation.extendsFrom testImplementation
+    testClusterRuntimeOnly.extendsFrom testRuntimeOnly
+    testClusterRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -93,6 +103,10 @@ dependencies {
     testE2EImplementation(libs.junit.jupiter)
     testE2ERuntimeOnly(libs.junit.platform.engine)
     testE2ERuntimeOnly(libs.junit.platform.launcher)
+
+    testClusterImplementation(libs.junit.jupiter)
+    testClusterRuntimeOnly(libs.junit.platform.engine)
+    testClusterRuntimeOnly(libs.junit.platform.launcher)
 }
 
 java {
@@ -130,6 +144,29 @@ tasks.register('testE2E', Test) {
     testClassesDirs = sourceSets.testE2E.output.classesDirs
     classpath = sourceSets.testE2E.runtimeClasspath
     outputs.upToDateWhen { false } //this will force testE2E to execute always on target invocation.
+}
+
+tasks.register('testCluster', Test) {
+    testClassesDirs = sourceSets.testCluster.output.classesDirs
+    classpath = sourceSets.testCluster.runtimeClasspath
+    outputs.upToDateWhen { false }
+    // Docker-backed ITs are gated with @EnabledIfSystemProperty(varadhi.cluster.tests=true).
+    // Config unit tests in this source set always run.
+    systemProperty 'varadhi.repo.root', rootDir.absolutePath
+    systemProperty 'varadhi.cluster.image',
+            project.findProperty('varadhi.cluster.image') ?: 'varadhi.docker.registry/varadhi:latest'
+    systemProperty 'varadhi.cluster.tests', project.findProperty('varadhi.cluster.tests') ?: 'false'
+
+    // Rancher Desktop / non-default sockets: Testcontainers often probes ~/.docker/run/docker.sock first.
+    if (System.getenv('DOCKER_HOST') == null) {
+        def rdSock = file("${System.getProperty('user.home')}/.rd/docker.sock")
+        if (rdSock.exists()) {
+            environment 'DOCKER_HOST', "unix://${rdSock.absolutePath}"
+        }
+    }
+    // Ryuk is flaky on some desktop Docker setups (e.g. Rancher); tests close() their own resources.
+    environment 'TESTCONTAINERS_RYUK_DISABLED',
+            System.getenv('TESTCONTAINERS_RYUK_DISABLED') ?: 'true'
 }
 
 tasks.register('copyDependencies', Copy) {
