@@ -157,9 +157,7 @@ public class VaradhiTopicService {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
         TopicCapacityPolicy capacity = varadhiTopic.getCapacity();
         SegmentedStorageTopic storageTopic = varadhiTopic.getStorageTopic();
-        if (storageTopic != null) {
-            storageTopic.getActiveTopics().forEach(st -> storageTopicService.create(project, st, capacity));
-        }
+        storageTopic.getActiveTopics().forEach(st -> storageTopicService.create(project, st, capacity));
     }
 
     /**
@@ -219,9 +217,9 @@ public class VaradhiTopicService {
             varadhiTopic.markDeleting(actionRequest.actionCode(), "Starting Topic Deletion");
             topicStore.update(varadhiTopic);
 
-            SegmentedStorageTopic storageTopic = varadhiTopic.getStorageTopic();
-            if (storageTopic != null) {
-                storageTopic.getActiveTopics().forEach(st -> storageTopicService.delete(project, st.getName()));
+            SegmentedStorageTopic storageSegment = varadhiTopic.getStorageTopic();
+            if (storageSegment != null) {
+                storageSegment.getActiveTopics().forEach(st -> storageTopicService.delete(project, st.getName()));
             }
             topicStore.delete(varadhiTopic.getName());
         } catch (Exception e) {

@@ -1,11 +1,10 @@
 package com.flipkart.varadhi.entities;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Read/update helpers for {@link VaradhiTopic#getRegionConfigs()}. */
+/** Read helpers for {@link VaradhiTopic#getProduceConfigs()}. */
 public final class TopicRegionConfigs {
 
     private TopicRegionConfigs() {
@@ -14,21 +13,16 @@ public final class TopicRegionConfigs {
     public static Optional<RegionName> findProducingRegion(VaradhiTopic topic) {
         Objects.requireNonNull(topic, "topic must not be null");
         RegionName producing = null;
-        for (Map.Entry<String, RegionConfig> entry : topic.getRegionConfigs().entrySet()) {
-            if (entry.getValue().isProduceAllowed()) {
+        for (Map.Entry<RegionName, ProduceConfig> entry : topic.getProduceConfigs().entrySet()) {
+            if (entry.getValue().state().isProduceAllowed()) {
                 if (producing != null) {
                     throw new IllegalStateException(
-                        "multiple regions allow produce: " + producing.value() + " and " + entry.getKey()
+                        "multiple regions allow produce: " + producing.value() + " and " + entry.getKey().value()
                     );
                 }
-                producing = RegionName.of(entry.getKey());
+                producing = entry.getKey();
             }
         }
         return Optional.ofNullable(producing);
-    }
-
-    public static VaradhiTopic withRegionConfigs(VaradhiTopic topic, Map<String, RegionConfig> configs) {
-        Objects.requireNonNull(topic, "topic must not be null");
-        return topic.copyWith(new HashMap<>(Objects.requireNonNull(configs, "configs must not be null")), null, null);
     }
 }

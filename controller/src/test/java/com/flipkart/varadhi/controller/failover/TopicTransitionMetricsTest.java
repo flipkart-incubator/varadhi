@@ -20,16 +20,45 @@ class TopicTransitionMetricsTest {
     }
 
     @Test
-    void ackProcessingFailed_incrementsTaggedGauge() {
-        metrics.ackProcessingFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+    void ackReceived_incrementsTaggedCounter() {
+        metrics.ackReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+        metrics.ackReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+
+        assertEquals(
+            2.0,
+            registry.find("topic.transition.ack.received")
+                    .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "PREPARE")
+                    .counter()
+                    .count()
+        );
+    }
+
+    @Test
+    void ackProcessed_incrementsTaggedCounter() {
+        metrics.ackProcessed(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH);
 
         assertEquals(
             1.0,
-            registry.find("topic.transition.ack.processing.failed")
+            registry.find("topic.transition.ack.processed")
                     .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "SWITCH")
+                    .counter()
+                    .count()
+        );
+    }
+
+    @Test
+    void ackDeliveryFailed_incrementsTaggedCounter() {
+        metrics.ackDeliveryFailed(TransitionType.STORAGE_MIGRATION, TransitionStage.PREPARE);
+
+        assertEquals(
+            1.0,
+            registry.find("topic.transition.ack.delivery.failed")
+                    .tag("type", "STORAGE_MIGRATION")
                     .tag("stage", "PREPARE")
-                    .gauge()
-                    .value()
+                    .counter()
+                    .count()
         );
     }
 }

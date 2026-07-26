@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class ProducerService {
 
-    private static final int PRODUCER_LOAD_POOL_SIZE = Math.max(4, Runtime.getRuntime().availableProcessors());
+    private static final int PRODUCER_LOAD_POOL_SIZE = 2;
 
     private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId, String region) {
     }
@@ -56,9 +56,9 @@ public final class ProducerService {
     private final LoadingCache<ProducerCacheKey, Producer<? extends Offset>> producerCache;
 
     /**
-     * This pod's deployed region (pod identity). Produce routing uses
-     * {@link TopicRegionConfigs#findProducingRegion(VaradhiTopic)} from topic metadata, which may differ
-     * from this pod's region after failover (cross-region produce).
+     * This pod's deployed region (pod identity). Produce resolves
+     * {@link VaradhiTopic#getProduceTopic(String)} for this region — gate + optional
+     * {@link ProduceConfig#failOverRegion()} for the producer cache key.
      */
     private final String deployedRegion;
 
@@ -235,22 +235,19 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        RegionName activeRegion = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
-        if (activeRegion == null) {
-            throw new ResourceNotFoundException("Topic(%s) has no active produce region.".formatted(topic.getName()));
-        }
-
-        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(activeRegion.value());
-
-        if (internalTopic == null) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", activeRegion.value()));
-        }
-
-        TopicState topicState = topic.getTopicState();
-        if (!topicState.isProduceAllowed()) {
-            return CompletableFuture.completedFuture(
-                ProduceResult.ofNonProducingTopic(message.getMessageId(), topicState)
-            );
+        Optional<ProduceTarget> produceTopic = topic.getProduceTopic(deployedRegion);
+        if (produceTopic.isEmpty()) {
+            return topic.getProduceConfig(RegionName.of(deployedRegion))
+                        .map(
+                            config -> CompletableFuture.completedFuture(
+                                ProduceResult.ofNonProducingTopic(message.getMessageId(), config.state())
+                            )
+                        )
+                        .orElseThrow(
+                            () -> new ResourceNotFoundException(
+                                "Topic(%s) is not available in region(%s)".formatted(topic.getName(), deployedRegion)
+                            )
+                        );
         }
 
         if (applyOrgFilter(topic, message)) {
@@ -261,8 +258,9 @@ public final class ProducerService {
             return CompletableFuture.completedFuture(ProduceResult.ofThrottled(message.getMessageId()));
         }
 
-        StorageTopic storageTopic = internalTopic.getTopicToProduce();
-        return getProducer(topic.getName(), storageTopic.getId(), activeRegion.value()).thenCompose(
+        ProduceTarget target = produceTopic.get();
+        StorageTopic storageTopic = target.storageTopic();
+        return getProducer(topic.getName(), storageTopic.getId(), target.produceRegion().value()).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );
     }
@@ -288,7 +286,10 @@ public final class ProducerService {
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
-        Producer<? extends Offset> shared = findSharedProducer(topicFQN, storageTopicId);
+        // Same Pulsar topic + host producer name across region keys (single-pod multi-region
+        // and PREPARE warm of target while source is already producing). Reuse instead of
+        // opening a second connection that Pulsar rejects as ProducerBusy.
+        Producer<? extends Offset> shared = findCachedProducer(topicFQN, storageTopicId);
         if (shared != null) {
             producerCache.put(key, shared);
             return CompletableFuture.completedFuture(shared);
@@ -297,10 +298,10 @@ public final class ProducerService {
         return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), producerLoadExecutor);
     }
 
-    private Producer<? extends Offset> findSharedProducer(String topicFQN, int storageTopicId) {
+    private Producer<? extends Offset> findCachedProducer(String topicFQN, int storageTopicId) {
         for (var entry : producerCache.asMap().entrySet()) {
-            ProducerCacheKey cachedKey = entry.getKey();
-            if (cachedKey.varadhiTopicFQN().equals(topicFQN) && cachedKey.storageTopicId() == storageTopicId) {
+            ProducerCacheKey k = entry.getKey();
+            if (k.varadhiTopicFQN().equals(topicFQN) && k.storageTopicId() == storageTopicId) {
                 return entry.getValue();
             }
         }
@@ -308,11 +309,6 @@ public final class ProducerService {
     }
 
     private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {
-        Producer<? extends Offset> shared = findSharedProducer(key.varadhiTopicFQN(), key.storageTopicId());
-        if (shared != null) {
-            producerCache.put(key, shared);
-            return shared;
-        }
         try {
             return producerCache.get(key);
         } catch (Exception e) {
@@ -323,34 +319,6 @@ public final class ProducerService {
             );
             throw new ProduceException(errorMsg, e);
         }
-    }
-
-    /**
-     * Resolves (creating and caching on first use) the producer for {@code topicName} in
-     * {@code region}, asynchronously. This is the producer-object accessor for a given topic
-     * and region; callers decide what to do with it (produce, or pre-warm ahead of a topic
-     * transition's SWITCH). On a cache hit the future completes immediately; on a miss the
-     * producer is created on a dedicated worker thread so callers (including the transition
-     * scheduler) are not blocked.
-     *
-     * @param topicName the Varadhi topic whose producer is requested
-     * @param region    the region the producer produces to
-     * @return a future completing with the producer, or failing with
-     *         {@link ResourceNotFoundException} if the topic is absent from this pod's cache or
-     *         has no produce configuration for {@code region}
-     */
-    public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(
-        VaradhiTopicName topicName,
-        RegionName region
-    ) {
-        String topicFQN = topicName.toFqn();
-        Optional<Resource.EntityResource<VaradhiTopic>> topic = topicCache.get(topicFQN);
-        if (topic.isEmpty()) {
-            return CompletableFuture.failedFuture(
-                new ResourceNotFoundException("Topic(%s) does not exist.".formatted(topicFQN))
-            );
-        }
-        return getProducerForRegion(topic.get().getEntity(), region);
     }
 
     public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
@@ -365,24 +333,25 @@ public final class ProducerService {
         return getProducer(topic.getName(), internalTopic.getTopicToProduce().getId(), region.value());
     }
 
-    /**
-     * Returns (creating if needed) the producer for {@code storageTopicId} in this pod's deployed
-     * region. Used by storage-migration PREPARE to pre-warm the destination storage topic.
-     */
-    public CompletableFuture<Producer<? extends Offset>> getProducerForStorageTopic(
-        VaradhiTopicName topicName,
-        int storageTopicId
-    ) {
-        return getProducer(topicName.toFqn(), storageTopicId, deployedRegion);
+    /** This pod's deployed region — produce target resolution key. */
+    public String deployedRegion() {
+        return deployedRegion;
     }
 
     /**
-     * Whether this pod currently holds a cached producer for {@code topicName} (in any region).
-     * Used to decide PREPARE participation during a topic transition.
+     * Pre-warms the producer for {@code storageTopicId} in this pod's deployed region into the
+     * local cache. Used by storage-migration PREPARE.
      */
-    public boolean hasCachedProducer(VaradhiTopicName topicName) {
-        String topicFQN = topicName.toFqn();
-        return producerCache.asMap().keySet().stream().anyMatch(key -> key.varadhiTopicFQN().equals(topicFQN));
+    public CompletableFuture<Void> loadProducer(VaradhiTopicName topicName, int storageTopicId) {
+        return getProducer(topicName.toFqn(), storageTopicId, deployedRegion).thenRun(() -> {});
+    }
+
+    /**
+     * Whether the producer cache already holds {@code (topicFQN, storageTopicId, region)}.
+     * Callers resolve the active produce target and pass the key parts.
+     */
+    public boolean hasProducer(String topicFQN, int storageTopicId, String region) {
+        return producerCache.getIfPresent(new ProducerCacheKey(topicFQN, storageTopicId, region)) != null;
     }
 
     /**

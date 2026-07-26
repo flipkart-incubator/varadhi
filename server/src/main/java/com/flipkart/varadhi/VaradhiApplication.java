@@ -95,7 +95,11 @@ public class VaradhiApplication {
         MemberInfo memberInfo = getMemberInfo(config.base.getMember(), config.base.getDeployedRegion());
         validateMemberRegion(memberInfo, services.getMetaStoreProvider().getMetaStore().regions().getAll());
 
-        VaradhiZkClusterManager clusterManager = getClusterManager(config.base, memberInfo.hostname());
+        VaradhiZkClusterManager clusterManager = getClusterManager(
+            config.base,
+            memberInfo.hostname(),
+            services.getMeterRegistry()
+        );
 
         Future<Pair<Vertx, Map<ComponentKind, Verticle>>> initFuture = createClusteredVertx(
             config.base,
@@ -158,13 +162,17 @@ public class VaradhiApplication {
      * @param host   the hostname
      * @return initialized cluster manager
      */
-    private static VaradhiZkClusterManager getClusterManager(AppConfiguration config, String host) {
+    private static VaradhiZkClusterManager getClusterManager(
+        AppConfiguration config,
+        String host,
+        MeterRegistry meterRegistry
+    ) {
         CuratorFramework curatorFramework = CuratorFrameworkCreator.create(config.getVertxZookeeperOptions());
         DeliveryOptions deliveryOptions = new DeliveryOptions().setTracingPolicy(
             config.getDeliveryOptions().getTracingPolicy()
         ).setSendTimeout(config.getDeliveryOptions().getTimeoutMs());
 
-        return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, host);
+        return new VaradhiZkClusterManager(curatorFramework, deliveryOptions, host, meterRegistry);
     }
 
     /**

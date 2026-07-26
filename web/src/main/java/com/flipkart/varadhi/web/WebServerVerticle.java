@@ -45,7 +45,7 @@ import com.flipkart.varadhi.core.subscription.ShardProvisioner;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRemoteClient;
 
 import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -274,7 +274,7 @@ public class WebServerVerticle extends AbstractVerticle {
         );
 
         // Initialize controller client and related services
-        ControllerApi controllerClient = new ControllerRestClient(messageExchange);
+        ControllerApi controllerClient = new ControllerRemoteClient(messageExchange);
         serviceRegistry.registerIfAbsent(ControllerApi.class, () -> controllerClient);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
@@ -321,7 +321,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 rateLimiter
             )
         );
-        this.topicTransitionWiring = TopicTransitionPodWiring.install(
+        this.topicTransitionWiring = TopicTransitionPodWiring.wire(
             clusterManager,
             vertx,
             cacheRegistry,

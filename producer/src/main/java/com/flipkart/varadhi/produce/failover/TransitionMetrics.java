@@ -3,10 +3,14 @@ package com.flipkart.varadhi.produce.failover;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,11 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Micrometer metrics for the pod-side topic-transition handler.
  *
- * <p>Stage events use counters tagged by {@code type}, {@code stage}, {@code success}, and
- * {@code topic} (topic FQN). Per-topic participation is a settable gauge (oncall
- * {@code varadhi_failover_pod_node_status} style): set at PREPARE, cleared on COMPLETED/ABORTED
- * so alerts auto-resolve when the op finishes. In-flight version waits expose a global gauge and
- * a per-topic gauge.
+ * <p>Low-cardinality tags only ({@code type}, {@code stage}, {@code success}, {@code participation}).
+ * Topic identity stays in logs.
  */
 public final class TransitionMetrics {
 
@@ -29,58 +30,57 @@ public final class TransitionMetrics {
     private static final String VERSION_WAITS_IN_FLIGHT = "topic.transition.version_waits.in_flight";
 
     private final MeterRegistry registry;
+    private final Set<Meter> registeredMeters = ConcurrentHashMap.newKeySet();
     private final AtomicInteger versionWaitsInFlight = new AtomicInteger();
-    private final ConcurrentMap<String, AtomicInteger> gaugeHolders = new ConcurrentHashMap<>();
+    private final ConcurrentMap<TransitionType, TransitionParticipation> participationByType =
+        new ConcurrentHashMap<>();
 
     public TransitionMetrics(MeterRegistry registry) {
         this.registry = registry;
-        registry.gauge(VERSION_WAITS_IN_FLIGHT, versionWaitsInFlight);
+        track(
+            Gauge.builder(VERSION_WAITS_IN_FLIGHT, versionWaitsInFlight, AtomicInteger::get).register(registry)
+        );
+        for (TransitionType type : TransitionType.values()) {
+            for (TransitionParticipation participation : TransitionParticipation.values()) {
+                TransitionType transitionType = type;
+                TransitionParticipation participationValue = participation;
+                track(
+                    Gauge.builder(
+                            PARTICIPATION,
+                            participationByType,
+                            map -> map.get(transitionType) == participationValue ? 1.0 : 0.0
+                        )
+                        .tags(Tags.of("type", transitionType.name(), "participation", participationValue.name()))
+                        .register(registry)
+                );
+            }
+        }
     }
 
     /** A stage broadcast was received by this pod. */
-    public void stageReceived(TransitionType type, TransitionStage stage, String topicFqn) {
-        registry.counter(STAGE_RECEIVED, "type", type.name(), "stage", stage.name(), "topic", topicFqn).increment();
+    public void stageReceived(TransitionType type, TransitionStage stage) {
+        counter(STAGE_RECEIVED, Tags.of("type", type.name(), "stage", stage.name())).increment();
     }
 
     /** This pod acked a stage; {@code success} is the ack outcome. */
-    public void stageAcked(TransitionType type, TransitionStage stage, boolean success, String topicFqn) {
-        registry.counter(
+    public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
+        counter(
             STAGE_ACKED,
-            "type",
-            type.name(),
-            "stage",
-            stage.name(),
-            "success",
-            Boolean.toString(success),
-            "topic",
-            topicFqn
+            Tags.of("type", type.name(), "stage", stage.name(), "success", Boolean.toString(success))
         ).increment();
     }
 
     /**
      * Records this pod's participation for an in-flight op ({@code 1} on the active value,
-     * {@code 0} on the other). Cleared via {@link #clearParticipation(TransitionType, String)}.
+     * {@code 0} on the other). Cleared via {@link #clearParticipation(TransitionType)}.
      */
-    public void setParticipation(TransitionType type, String topicFqn, TransitionParticipation participation) {
-        for (TransitionParticipation value : TransitionParticipation.values()) {
-            setGauge(
-                PARTICIPATION,
-                value == participation ? 1 : 0,
-                "type",
-                type.name(),
-                "topic",
-                topicFqn,
-                "participation",
-                value.name()
-            );
-        }
+    public void setParticipation(TransitionType type, TransitionParticipation participation) {
+        participationByType.put(type, participation);
     }
 
-    /** Clears participation gauges for {@code topicFqn} when the op reaches a terminal stage. */
-    public void clearParticipation(TransitionType type, String topicFqn) {
-        for (TransitionParticipation value : TransitionParticipation.values()) {
-            setGauge(PARTICIPATION, 0, "type", type.name(), "topic", topicFqn, "participation", value.name());
-        }
+    /** Clears participation gauges when the op reaches a terminal stage. */
+    public void clearParticipation(TransitionType type) {
+        participationByType.remove(type);
     }
 
     /** A PREPARE resolved to NOT_INVOLVED on this pod. */
@@ -89,39 +89,35 @@ public final class TransitionMetrics {
     }
 
     /** Failed to deliver a {@code TransitionAck} to the controller. */
-    public void ackSendFailed(TransitionType type, TransitionStage stage, String topicFqn) {
-        registry.counter(ACK_SEND_FAILED, "type", type.name(), "stage", stage.name(), "topic", topicFqn).increment();
+    public void ackSendFailed(TransitionType type, TransitionStage stage) {
+        counter(ACK_SEND_FAILED, Tags.of("type", type.name(), "stage", stage.name())).increment();
     }
 
     /** A version-gated wait started on this pod. */
-    public void versionWaitStarted(String topicFqn) {
+    public void versionWaitStarted() {
         versionWaitsInFlight.incrementAndGet();
-        versionWaitsByTopic(topicFqn).incrementAndGet();
     }
 
     /** A version-gated wait finished (success, failure, or timeout). */
-    public void versionWaitFinished(String topicFqn) {
+    public void versionWaitFinished() {
         versionWaitsInFlight.decrementAndGet();
-        versionWaitsByTopic(topicFqn).decrementAndGet();
     }
 
-    private AtomicInteger versionWaitsByTopic(String topicFqn) {
-        return gaugeHolders.computeIfAbsent(VERSION_WAITS_IN_FLIGHT + "|topic|" + topicFqn, ignored -> {
-            AtomicInteger ref = new AtomicInteger();
-            registry.gauge(VERSION_WAITS_IN_FLIGHT, Tags.of("topic", topicFqn), ref, AtomicInteger::get);
-            return ref;
-        });
+    /** Removes all meters this instance registered from the {@link MeterRegistry}. */
+    public void close() {
+        registeredMeters.forEach(registry::remove);
+        registeredMeters.clear();
+        participationByType.clear();
+        versionWaitsInFlight.set(0);
     }
 
-    private void setGauge(String name, int value, String... tagKeyValues) {
-        Tags tags = Tags.of(tagKeyValues);
-        String cacheKey = name + tags;
-        AtomicInteger holder = gaugeHolders.computeIfAbsent(cacheKey, ignored -> {
-            AtomicInteger ref = new AtomicInteger();
-            registry.gauge(name, tags, ref, AtomicInteger::get);
-            return ref;
-        });
-        holder.set(value);
+    private Counter counter(String name, Tags tags) {
+        return track(Counter.builder(name).tags(tags).register(registry));
+    }
+
+    private <T extends Meter> T track(T meter) {
+        registeredMeters.add(meter);
+        return meter;
     }
 
     /** No-op instance for use in tests. */

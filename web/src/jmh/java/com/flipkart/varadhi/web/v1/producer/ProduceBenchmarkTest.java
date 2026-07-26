@@ -12,6 +12,7 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.OrgDetails;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
@@ -307,7 +308,7 @@ public class ProduceBenchmarkTest {
 
     private List<Resource.EntityResource<VaradhiTopic>> createTestTopics(
         Project project,
-        MessagingStackProvider.Base messagingStackProvider
+        MessagingStackProvider messagingStackProvider
     ) {
         List<Resource.EntityResource<VaradhiTopic>> topics = new ArrayList<>();
         TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1, 2);
@@ -338,7 +339,7 @@ public class ProduceBenchmarkTest {
 
             // Add as internal topic for the deployment region.
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
-            topic = topic.addInternalTopic("default", segmentedTopic);
+            topic = topic.withStorageTopic(segmentedTopic).withProduceRegion(RegionName.BOOTSTRAP_REGION);
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));
         }

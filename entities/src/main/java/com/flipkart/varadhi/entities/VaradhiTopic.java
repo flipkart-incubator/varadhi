@@ -1,14 +1,18 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Represents a topic in the Varadhi.
@@ -18,16 +22,16 @@ import java.util.Objects;
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     private final SegmentedStorageTopic storageTopic;
-    /**
-     * Runtime produce state for this topic. Replicated to every pod's {@code TopicCache}; the
-     * produce gate and topic failover read this field. Fence coordination uses {@link #getVersion()}
-     * together with {@code TransitionEvent.topicVersionToAwait}.
-     */
-    private final TopicState topicState;
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
-    /** Per-region produce / standby policy; keyed by region name. */
-    private final Map<String, RegionConfig> regionConfigs;
+    /**
+     * Per-region produce policy; keyed by region. Multiple regions may be
+     * {@link TopicState#Producing} on a global topic. Legacy JSON used {@code regionConfigs}.
+     */
+    @JsonProperty ("produceConfigs")
+    @JsonAlias ("regionConfigs")
+    @Getter (lombok.AccessLevel.NONE)
+    private final Map<RegionName, ProduceConfig> produceConfigs;
     private final boolean grouped;
 
     private final String nfrFilterName;
@@ -55,9 +59,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         boolean grouped,
         TopicCapacityPolicy capacity,
         SegmentedStorageTopic storageTopic,
-        TopicState topicState,
         boolean autoFailover,
-        Map<String, RegionConfig> regionConfigs,
+        Map<RegionName, ProduceConfig> produceConfigs,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory,
@@ -69,9 +72,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.grouped = grouped;
         this.capacity = capacity;
         this.storageTopic = storageTopic;
-        this.topicState = topicState != null ? topicState : TopicState.Producing;
         this.autoFailover = autoFailover;
-        this.regionConfigs = regionConfigs != null ? new HashMap<>(regionConfigs) : new HashMap<>();
+        this.produceConfigs = new HashMap<>(produceConfigs);
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
@@ -133,9 +135,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             grouped,
             capacity,
             null,
-            TopicState.Producing,
             false,
-            null,
+            new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory,
@@ -149,49 +150,89 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
+    public Map<RegionName, ProduceConfig> getProduceConfigs() {
+        return Collections.unmodifiableMap(produceConfigs);
+    }
+
     /**
-     * Sets {@link #storageTopic} on the first call and registers each {@code region} in
-     * {@link #regionConfigs}. Additional regions share the same storage topic.
+     * Sets the shared {@link #storageTopic}. Replaces any previous value.
      */
-    public VaradhiTopic addInternalTopic(String region, SegmentedStorageTopic segmentedTopic) {
-        Objects.requireNonNull(region, "region must not be null");
-        Objects.requireNonNull(segmentedTopic, "segmentedTopic must not be null");
-        SegmentedStorageTopic resolvedStorage = storageTopic != null ? storageTopic : segmentedTopic;
-        Map<String, RegionConfig> updatedConfigs = new HashMap<>(regionConfigs);
+    public VaradhiTopic withStorageTopic(SegmentedStorageTopic storageTopic) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
+    }
+
+    /**
+     * Registers {@code region} in {@link #produceConfigs}. First region starts
+     * {@link TopicState#Producing}; further regions {@link TopicState#Blocked}.
+     * Does not change {@link #storageTopic} — call {@link #withStorageTopic} separately.
+     */
+    public VaradhiTopic withProduceRegion(RegionName region) {
+        Map<RegionName, ProduceConfig> updatedConfigs = new HashMap<>(produceConfigs);
         boolean firstRegion = updatedConfigs.isEmpty();
-        updatedConfigs.putIfAbsent(region, firstRegion ? RegionConfig.producing() : new RegionConfig(false, null));
-        VaradhiTopic updated = new VaradhiTopic(
-            getName(),
-            getVersion(),
-            grouped,
-            capacity,
-            resolvedStorage,
-            topicState,
-            autoFailover,
-            updatedConfigs,
-            getStatus(),
-            nfrFilterName,
-            topicCategory,
-            perRegionQuotaWeights,
-            messageSizeProfile,
-            rateLimiterMode
-        );
-        updated.status = this.status;
-        return updated;
+        updatedConfigs.putIfAbsent(region, firstRegion ? ProduceConfig.producing() : ProduceConfig.blocked());
+        return copyWith(storageTopic, updatedConfigs, autoFailover);
     }
 
     @JsonIgnore
-    public RegionConfig getRegionConfig(RegionName region) {
-        Objects.requireNonNull(region, "region must not be null");
-        return regionConfigs.get(region.value());
+    public Optional<ProduceConfig> getProduceConfig(RegionName region) {
+        return Optional.ofNullable(produceConfigs.get(region));
     }
 
-    public VaradhiTopic withTopicState(TopicState state) {
-        return copyWith(null, state, null);
+    /**
+     * Resolves the producer cache key for {@code region}: storage topic + produce region
+     * ({@code failOverRegion} if set, otherwise {@code region}).
+     *
+     * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()} — use this when you need the
+     * key for an already-cached producer (e.g. PREPARE participation while the region is
+     * {@link TopicState#Fenced}). For the produce HTTP path use {@link #getProduceTopic}.
+     */
+    @JsonIgnore
+    public Optional<ProduceTarget> resolveProduceTarget(String region) {
+        return resolveProduceTarget(RegionName.of(region));
+    }
+
+    @JsonIgnore
+    public Optional<ProduceTarget> resolveProduceTarget(RegionName region) {
+        ProduceConfig config = produceConfigs.get(region);
+        if (config == null || storageTopic == null) {
+            return Optional.empty();
+        }
+        RegionName produceRegion = config.failOverRegion() != null ? config.failOverRegion() : region;
+        if (!produceConfigs.containsKey(produceRegion)) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProduceTarget(storageTopic.getTopicToProduce(), produceRegion));
+    }
+
+    /**
+     * Resolves where produce for {@code region} should go.
+     *
+     * <p>Empty when this region has no produce config, produce is not allowed ({@link TopicState}),
+     * or storage is not provisioned. When present, {@link ProduceTarget#produceRegion()} is
+     * {@code failOverRegion} if set, otherwise {@code region}.
+     */
+    @JsonIgnore
+    public Optional<ProduceTarget> getProduceTopic(String region) {
+        return getProduceTopic(RegionName.of(region));
+    }
+
+    @JsonIgnore
+    public Optional<ProduceTarget> getProduceTopic(RegionName region) {
+        ProduceConfig config = produceConfigs.get(region);
+        if (config == null || !config.state().isProduceAllowed()) {
+            return Optional.empty();
+        }
+        return resolveProduceTarget(region);
+    }
+
+    public VaradhiTopic withProduceConfig(RegionName region, ProduceConfig config) {
+        Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
+        updated.put(region, config);
+        return copyWith(updated, autoFailover);
     }
 
     public VaradhiTopic withAutoFailover(boolean autoFailover) {
-        return copyWith(null, null, autoFailover);
+        return copyWith(produceConfigs, autoFailover);
     }
 
     @JsonIgnore
@@ -205,23 +246,34 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
-        return regionConfigs.containsKey(region) ? storageTopic : null;
+        return getProduceTopicForRegion(RegionName.of(region));
+    }
+
+    public SegmentedStorageTopic getProduceTopicForRegion(RegionName region) {
+        return produceConfigs.containsKey(region) ? storageTopic : null;
     }
 
     public boolean isCategory(TopicCategory category) {
         return this.topicCategory == category;
     }
 
-    VaradhiTopic copyWith(Map<String, RegionConfig> regionConfigs, TopicState topicState, Boolean autoFailover) {
+    VaradhiTopic copyWith(Map<RegionName, ProduceConfig> produceConfigs, boolean autoFailover) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
+    }
+
+    private VaradhiTopic copyWith(
+        SegmentedStorageTopic storageTopic,
+        Map<RegionName, ProduceConfig> produceConfigs,
+        boolean autoFailover
+    ) {
         VaradhiTopic copy = new VaradhiTopic(
             getName(),
             getVersion(),
             grouped,
             capacity,
             storageTopic,
-            topicState != null ? topicState : this.topicState,
-            autoFailover != null ? autoFailover : this.autoFailover,
-            regionConfigs != null ? regionConfigs : this.regionConfigs,
+            autoFailover,
+            produceConfigs,
             getStatus(),
             nfrFilterName,
             topicCategory,

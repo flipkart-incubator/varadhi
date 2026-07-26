@@ -37,7 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class ControllerApiMgrFailoverTest {
+class SubscriptionServiceFailoverTest {
 
     private static final String FQN = "proj.topic";
     private static final RegionName SOURCE = RegionName.of("r1");
@@ -54,7 +54,7 @@ class ControllerApiMgrFailoverTest {
     private TopicStore topicStore;
     private RegionStore regionStore;
     private OperationMgr operationMgr;
-    private ControllerApiMgr apiMgr;
+    private SubscriptionService subscriptionService;
 
     @BeforeEach
     void setup() {
@@ -65,7 +65,7 @@ class ControllerApiMgrFailoverTest {
         when(regionStore.exists(SOURCE.value())).thenReturn(true);
         when(regionStore.exists(TARGET.value())).thenReturn(true);
         when(regionStore.exists("nope")).thenReturn(false);
-        apiMgr = new ControllerApiMgr(
+        subscriptionService = new SubscriptionService(
             operationMgr,
             mock(AssignmentManager.class),
             mock(SubscriptionStore.class),
@@ -88,15 +88,9 @@ class ControllerApiMgrFailoverTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.addInternalTopic(
-            SOURCE.value(),
-            SegmentedStorageTopic.of(new DummyStorageTopic(FQN + SOURCE.value()))
-        );
-        topic = topic.addInternalTopic(
-            TARGET.value(),
-            SegmentedStorageTopic.of(new DummyStorageTopic(FQN + TARGET.value()))
-        );
-        return topic;
+        return topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(FQN)))
+                    .withProduceRegion(SOURCE)
+                    .withProduceRegion(TARGET);
     }
 
     @Test
@@ -105,7 +99,7 @@ class ControllerApiMgrFailoverTest {
         when(transitionStore.exists(FQN)).thenReturn(false);
 
         TopicFailoverRequest request = new TopicFailoverRequest(SOURCE, TARGET, false, "tester");
-        TopicFailoverOperation op = apiMgr.createTopicFailover(FQN, request).get();
+        TopicFailoverOperation op = subscriptionService.createTopicFailover(FQN, request).get();
 
         assertEquals(FQN, op.getTopicFqn());
         assertEquals(SOURCE, op.getSourceRegion());
@@ -121,7 +115,8 @@ class ControllerApiMgrFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, TARGET, false, "t")).get()
+            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, TARGET, false, "t"))
+                                     .get()
         );
         assertInstanceOf(InvalidOperationForResourceException.class, ex.getCause());
     }
@@ -132,8 +127,10 @@ class ControllerApiMgrFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, RegionName.of("nope"), false, "t"))
-                        .get()
+            () -> subscriptionService.createTopicFailover(
+                FQN,
+                new TopicFailoverRequest(SOURCE, RegionName.of("nope"), false, "t")
+            ).get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
         assertTrue(ex.getCause().getMessage().contains("not registered"));
@@ -145,7 +142,8 @@ class ControllerApiMgrFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, SOURCE, false, "t")).get()
+            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, SOURCE, false, "t"))
+                                     .get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
     }
@@ -156,7 +154,8 @@ class ControllerApiMgrFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> apiMgr.createTopicFailover(FQN, new TopicFailoverRequest(TARGET, SOURCE, false, "t")).get()
+            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(TARGET, SOURCE, false, "t"))
+                                     .get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
         assertTrue(ex.getCause().getMessage().contains("producing region"));
@@ -168,7 +167,7 @@ class ControllerApiMgrFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> apiMgr.abortTopicFailover(FQN, "tester").get()
+            () -> subscriptionService.abortTopicFailover(FQN, "tester").get()
         );
         assertInstanceOf(ResourceNotFoundException.class, ex.getCause());
     }
@@ -182,7 +181,7 @@ class ControllerApiMgrFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> apiMgr.abortTopicFailover(FQN, "tester").get()
+            () -> subscriptionService.abortTopicFailover(FQN, "tester").get()
         );
         assertInstanceOf(InvalidOperationForResourceException.class, ex.getCause());
     }
@@ -194,7 +193,7 @@ class ControllerApiMgrFailoverTest {
         when(transitionStore.exists(FQN)).thenReturn(true);
         when(transitionStore.get(FQN)).thenReturn(transition);
 
-        apiMgr.abortTopicFailover(FQN, "tester").get();
+        subscriptionService.abortTopicFailover(FQN, "tester").get();
 
         verify(transitionStore).delete(FQN);
     }

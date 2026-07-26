@@ -27,7 +27,7 @@ producerOptions:
   transitionVersionWaitMs: 30000
   transitionPollIntervalMs: 50
   # Test-only: delay SWITCH ack to controller so produce stays Blocked longer (0 = off).
-  transitionAckReportDelayMs: 5000
+  transitionAckReportDelayMs: 0
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"

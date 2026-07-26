@@ -8,8 +8,8 @@ import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.RegionConfig;
 import com.flipkart.varadhi.entities.TopicRegionConfigs;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -26,8 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 import java.util.Set;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
@@ -109,37 +107,44 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
             transition.advanceTo(TransitionStage.PREPARE, currentVersion);
             transitionStore.update(transition);
         }
-        TransitionEvent event = stageEvent(op, TransitionStage.PREPARE, currentVersion, op.getTargetRegion().value());
+        TransitionEvent event = stageEvent(
+            op,
+            TransitionStage.PREPARE,
+            currentVersion,
+            new TransitionEvent.Target.Region(op.getTargetRegion())
+        );
         return runStageBarrier(op, TransitionStage.PREPARE, event, config.prepareTimeoutMs());
     }
 
+    /**
+     * Fences both source and target regions during the switch window: neither accepts produce until
+     * {@link #complete} settles the target as {@link TopicState#Producing}. This collapses the old
+     * two-part gate (global topicState + per-region produceAllowed flag) into a single per-region
+     * {@link ProduceConfig#state()}.
+     */
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
         RegionName producing = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
-        boolean needsSwitch = producing == null || !Objects.equals(op.getTargetRegion(), producing);
-        boolean needsFence = topic.getTopicState().isProduceAllowed();
-        if (needsSwitch || needsFence) {
+        RegionName source = Objects.requireNonNullElse(producing, op.getSourceRegion());
+        RegionName target = op.getTargetRegion();
+        boolean sourceFenced = isState(topic, source, TopicState.Fenced);
+        boolean targetFenced = isState(topic, target, TopicState.Fenced);
+        if (!sourceFenced || !targetFenced) {
             VaradhiTopic next = topic;
-            if (needsSwitch) {
-                next = TopicRegionConfigs.withRegionConfigs(
-                    topic,
-                    switchProduceAllowed(
-                        topic.getRegionConfigs(),
-                        Objects.requireNonNullElse(producing, op.getSourceRegion()),
-                        op.getTargetRegion()
-                    )
-                );
+            if (!sourceFenced) {
+                next = next.withProduceConfig(source, new ProduceConfig(TopicState.Fenced, target));
             }
-            if (needsFence) {
-                next = next.withTopicState(TopicState.Fenced);
+            if (!targetFenced) {
+                next = next.withProduceConfig(target, new ProduceConfig(TopicState.Fenced, null));
             }
             topicStore.update(next);
             topic = topicStore.get(op.getTopicFqn());
             log.info(
-                "Failover op {}: switched producing region to {} and fenced produce for {}, topic now v{}",
+                "Failover op {}: fenced produce for {} ({} -> {}), topic now v{}",
                 op.getId(),
-                op.getTargetRegion().value(),
                 op.getTopicFqn(),
+                source.value(),
+                target.value(),
                 topic.getVersion()
             );
         }
@@ -164,8 +169,13 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
 
     private CompletableFuture<Void> complete(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        if (!topic.getTopicState().isProduceAllowed()) {
-            topicStore.update(topic.withTopicState(TopicState.Producing));
+        RegionName target = op.getTargetRegion();
+        RegionName source = op.getSourceRegion();
+        if (!isState(topic, target, TopicState.Producing) || !isState(topic, source, TopicState.Blocked)) {
+            topicStore.update(
+                topic.withProduceConfig(target, ProduceConfig.producing())
+                     .withProduceConfig(source, ProduceConfig.blocked())
+            );
         }
         TransitionObject transition = transitionStore.get(op.getTopicFqn());
         transition.advanceTo(TransitionStage.COMPLETED, 0L);
@@ -197,7 +207,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         TopicFailoverOperation op,
         TransitionStage stage,
         long topicVersionToAwait,
-        String target
+        TransitionEvent.Target target
     ) {
         return TransitionEvent.of(
             op.getId(),
@@ -233,22 +243,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         }
     }
 
-    private static Map<String, RegionConfig> switchProduceAllowed(
-        Map<String, RegionConfig> configs,
-        RegionName source,
-        RegionName target
-    ) {
-        Map<String, RegionConfig> updated = new HashMap<>(configs);
-        RegionConfig sourceConfig = updated.get(source.value());
-        RegionConfig targetConfig = updated.get(target.value());
-        updated.put(
-            source.value(),
-            new RegionConfig(false, sourceConfig != null ? sourceConfig.getFailOverRegion() : null)
-        );
-        updated.put(
-            target.value(),
-            new RegionConfig(true, targetConfig != null ? targetConfig.getFailOverRegion() : null)
-        );
-        return updated;
+    private static boolean isState(VaradhiTopic topic, RegionName region, TopicState state) {
+        return topic.getProduceConfig(region).map(ProduceConfig::state).orElse(null) == state;
     }
 }

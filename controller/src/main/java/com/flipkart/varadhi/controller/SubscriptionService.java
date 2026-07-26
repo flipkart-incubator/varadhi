@@ -2,10 +2,6 @@ package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
-import com.flipkart.varadhi.spi.db.SubscriptionStore;
-import com.flipkart.varadhi.spi.db.TopicStore;
-import com.flipkart.varadhi.spi.db.TransitionStore;
-import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
 import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
 import com.flipkart.varadhi.controller.impl.failover.TopicFailoverOpExecutor;
@@ -14,19 +10,21 @@ import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
+import com.flipkart.varadhi.core.cluster.ConsumerInfo;
+import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.controller.PodToControllerApi;
-import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
+import com.flipkart.varadhi.core.cluster.controller.ConsumerCallbackApi;
+import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
-import com.flipkart.varadhi.core.cluster.ConsumerInfo;
-import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.TopicRegionConfigs;
+import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -44,6 +42,10 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import com.flipkart.varadhi.spi.db.TopicStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -53,8 +55,12 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
+/**
+ * Controller-side subscription lifecycle + consumer membership / shard-op callbacks.
+ */
 @Slf4j
-public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
+public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi {
+
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;
@@ -67,7 +73,7 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
     private final StageAwaiter stageAwaiter;
     private final TopicFailoverConfig failoverConfig;
 
-    public ControllerApiMgr(
+    public SubscriptionService(
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
         SubscriptionStore subscriptionStore,
@@ -125,9 +131,9 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
     CompletableFuture<SubscriptionState> getSubscriptionState(VaradhiSubscription subscription) {
         String subId = subscription.getName();
         return CompletableFuture.supplyAsync(() -> assignmentManager.getSubAssignments(subId))
-                                .thenCompose(assignments -> {
-                                    return getSubscriptionShardsState(subscription, assignments, subId);
-                                })
+                                .thenCompose(
+                                    assignments -> getSubscriptionShardsState(subscription, assignments, subId)
+                                )
                                 .exceptionally(t -> {
                                     // If not temporary, then alternate needs to be provided to allow recovery from this.
                                     throw new IllegalStateException(
@@ -261,13 +267,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         }
     }
 
-    @Override
-    public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
-        recordFailoverAck(ack);
-        return CompletableFuture.completedFuture(null);
-    }
-
-
     /*
      * TODO::It should be possible to abort running unsideline operation
      *  - to stop the subscription.
@@ -313,7 +312,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         );
     }
 
-    @Override
     public CompletableFuture<TopicFailoverOperation> createTopicFailover(
         String topicFqn,
         TopicFailoverRequest request
@@ -349,7 +347,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         });
     }
 
-    @Override
     public CompletableFuture<TransitionObject> getTopicFailover(String topicFqn) {
         return CompletableFuture.supplyAsync(() -> {
             if (!transitionStore.exists(topicFqn)) {
@@ -359,7 +356,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         });
     }
 
-    @Override
     public CompletableFuture<TransitionObject> abortTopicFailover(String topicFqn, String requestedBy) {
         return CompletableFuture.supplyAsync(() -> {
             if (!transitionStore.exists(topicFqn)) {
@@ -397,7 +393,6 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         });
     }
 
-    @Override
     public CompletableFuture<List<TransitionObject>> getActiveFailovers() {
         return CompletableFuture.supplyAsync(transitionStore::listActive);
     }
@@ -453,12 +448,12 @@ public class ControllerApiMgr implements ControllerApi, PodToControllerApi {
         }
         requireRegisteredRegion(source);
         requireRegisteredRegion(target);
-        if (!topic.getRegionConfigs().containsKey(source.value())) {
+        if (topic.getProduceConfig(source).isEmpty()) {
             throw new IllegalArgumentException(
                 "Topic " + topic.getName() + " is not configured for sourceRegion " + source.value() + "."
             );
         }
-        if (!topic.getRegionConfigs().containsKey(target.value())) {
+        if (topic.getProduceConfig(target).isEmpty()) {
             throw new IllegalArgumentException(
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );

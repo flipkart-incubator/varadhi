@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRemoteClient;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.entities.Resource;
@@ -31,17 +31,19 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class TopicTransitionPodWiring implements AutoCloseable {
 
     private final ScheduledExecutorService scheduler;
+    private final TransitionMetrics metrics;
 
-    private TopicTransitionPodWiring(ScheduledExecutorService scheduler) {
+    private TopicTransitionPodWiring(ScheduledExecutorService scheduler, TransitionMetrics metrics) {
         this.scheduler = scheduler;
+        this.metrics = metrics;
     }
 
     /**
-     * Installs {@link ProduceTransitionMsgHandler} when a cluster manager is configured.
+     * Wires {@link ProduceTransitionMsgHandler} on the cluster broadcast bus.
      *
-     * @return a closeable wiring handle, or {@code null} when installation was skipped
+     * @return a closeable wiring handle that owns the version-wait scheduler and metrics
      */
-    public static TopicTransitionPodWiring install(
+    public static TopicTransitionPodWiring wire(
         VaradhiClusterManager clusterManager,
         Vertx vertx,
         ResourceReadCacheRegistry cacheRegistry,
@@ -49,10 +51,6 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
         ProducerOptions producerOptions,
         MeterRegistry meterRegistry
     ) {
-        if (clusterManager == null) {
-            log.info("Skipping topic-transition stage handler: no cluster manager configured (produce-only mode)");
-            return null;
-        }
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(
@@ -61,10 +59,11 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
             r -> new Thread(r, "topic-transition-version-wait")
         );
+        TransitionMetrics metrics = new TransitionMetrics(meterRegistry);
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
             topicCache,
-            new ControllerConsumerClient(messageExchange),
+            new ControllerRemoteClient(messageExchange),
             producerService,
             new PodTransitionConfig(
                 producerOptions.getTransitionVersionWaitMs(),
@@ -72,19 +71,20 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
                 producerOptions.getTransitionAckReportDelayMs()
             ),
             scheduler,
-            new TransitionMetrics(meterRegistry)
+            metrics
         );
         messageRouter.registerPublishReceiveHandler(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
             TransitionBusAddress.EVENT_PUBLISH_API,
             handler
         );
-        log.info("Installed topic-transition stage handler");
-        return new TopicTransitionPodWiring(scheduler);
+        log.info("Wired topic-transition stage handler");
+        return new TopicTransitionPodWiring(scheduler, metrics);
     }
 
     @Override
     public void close() {
         scheduler.shutdownNow();
+        metrics.close();
     }
 }

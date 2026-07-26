@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.produce.failover;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.core.cluster.controller.PodToControllerApi;
+import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
 import com.flipkart.varadhi.core.cluster.events.EventType;
 import com.flipkart.varadhi.core.cluster.events.ResourceEvent;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
@@ -9,10 +9,11 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -57,6 +59,7 @@ class ProduceTransitionMsgHandlerTest {
     private static final String TOPIC = "topic1";
     private static final String FQN = PROJECT + "." + TOPIC;
     private static final VaradhiTopicName TOPIC_NAME = VaradhiTopicName.of(PROJECT, TOPIC);
+    private static final String DEPLOYED_REGION = "region-a";
     private static final RegionName TARGET_REGION = new RegionName("region-b");
     private static final int TARGET_STORAGE_TOPIC_ID = 7;
 
@@ -76,12 +79,13 @@ class ProduceTransitionMsgHandlerTest {
             vertx
         ).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
         producerService = mock(ProducerService.class);
-        when(producerService.hasCachedProducer(any())).thenReturn(true);
+        when(producerService.deployedRegion()).thenReturn(DEPLOYED_REGION);
+        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(true);
         when(producerService.getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class))).thenReturn(
             CompletableFuture.completedFuture(mock(Producer.class))
         );
-        when(producerService.getProducerForStorageTopic(any(VaradhiTopicName.class), anyInt())).thenReturn(
-            CompletableFuture.completedFuture(mock(Producer.class))
+        when(producerService.loadProducer(any(VaradhiTopicName.class), anyInt())).thenReturn(
+            CompletableFuture.completedFuture(null)
         );
         scheduler = Executors.newSingleThreadScheduledExecutor();
         metrics = new TransitionMetrics(new SimpleMeterRegistry());
@@ -118,6 +122,8 @@ class ProduceTransitionMsgHandlerTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {}))
+                     .withProduceRegion(RegionName.of(DEPLOYED_REGION));
         topic.setVersion(version);
         topicCache.onChange(
             new ResourceEvent<>(
@@ -145,7 +151,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    TARGET_REGION.value()
+                    new TransitionEvent.Target.Region(TARGET_REGION)
                 )
             )
         );
@@ -174,7 +180,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    String.valueOf(TARGET_STORAGE_TOPIC_ID)
+                    new TransitionEvent.Target.StorageTopic(TARGET_STORAGE_TOPIC_ID)
                 )
             )
         );
@@ -186,7 +192,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionType.STORAGE_MIGRATION, ack.transitionType());
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
-        verify(producerService).getProducerForStorageTopic(TOPIC_NAME, TARGET_STORAGE_TOPIC_ID);
+        verify(producerService).loadProducer(TOPIC_NAME, TARGET_STORAGE_TOPIC_ID);
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
     }
 
@@ -207,7 +213,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    TARGET_REGION.value()
+                    new TransitionEvent.Target.Region(TARGET_REGION)
                 )
             )
         );
@@ -221,63 +227,9 @@ class ProduceTransitionMsgHandlerTest {
     }
 
     @Test
-    void prepareAcksFailureWhenTargetBlank() throws Exception {
-        seed(10);
-        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
-
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    "  "
-                )
-            )
-        );
-
-        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        TransitionAck ack = acker.acks.get(0);
-        assertFalse(ack.isSuccess());
-        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
-        assertTrue(ack.errorMsg().contains("non-blank target"));
-        verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
-    }
-
-    @Test
-    void prepareAcksFailureWhenStorageTargetNotNumeric() throws Exception {
-        seed(10);
-        ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
-
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.STORAGE_MIGRATION,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    "not-an-id"
-                )
-            )
-        );
-
-        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
-        TransitionAck ack = acker.acks.get(0);
-        assertFalse(ack.isSuccess());
-        assertEquals(TransitionParticipation.INVOLVED, ack.participation());
-        assertTrue(ack.errorMsg().contains("storage-topic id"));
-        verify(producerService, never()).getProducerForStorageTopic(any(VaradhiTopicName.class), anyInt());
-    }
-
-    @Test
     void prepareAcksOkWithoutWarmingWhenPodNotInvolved() throws Exception {
         seed(10);
-        when(producerService.hasCachedProducer(TOPIC_NAME)).thenReturn(false);
+        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.handle(
@@ -289,7 +241,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    TARGET_REGION.value()
+                    new TransitionEvent.Target.Region(TARGET_REGION)
                 )
             )
         );
@@ -300,13 +252,13 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionParticipation.NOT_INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
-        verify(producerService, never()).getProducerForStorageTopic(any(VaradhiTopicName.class), anyInt());
+        verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt());
     }
 
     @Test
     void switchEchoesParticipationDecidedAtPrepare() throws Exception {
         seed(10);
-        when(producerService.hasCachedProducer(TOPIC_NAME)).thenReturn(false);
+        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig(), 2);
 
         h.handle(
@@ -318,7 +270,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    TARGET_REGION.value()
+                    new TransitionEvent.Target.Region(TARGET_REGION)
                 )
             )
         );
@@ -357,7 +309,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    TARGET_REGION.value()
+                    new TransitionEvent.Target.Region(TARGET_REGION)
                 )
             )
         );
@@ -394,7 +346,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
-        verify(producerService, never()).getProducerForStorageTopic(any(VaradhiTopicName.class), anyInt());
+        verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt());
     }
 
     @Test
@@ -484,7 +436,7 @@ class ProduceTransitionMsgHandlerTest {
                     TransitionStage.PREPARE,
                     true,
                     10,
-                    TARGET_REGION.value()
+                    new TransitionEvent.Target.Region(TARGET_REGION)
                 )
             )
         );
@@ -568,7 +520,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(ack.isSuccess());
     }
 
-    private static final class CapturingControllerClient implements PodToControllerApi {
+    private static final class CapturingControllerClient implements TransitionApi {
         private final CopyOnWriteArrayList<TransitionAck> acks = new CopyOnWriteArrayList<>();
         private final CountDownLatch latch;
 
@@ -577,17 +529,12 @@ class ProduceTransitionMsgHandlerTest {
         }
 
         @Override
-        public CompletableFuture<Void> update(
-            String subOpId,
-            String shardOpId,
-            ShardOperation.State state,
-            String errorMsg
-        ) {
-            return CompletableFuture.completedFuture(null);
+        public CompletableFuture<Void> sendEvent(TransitionEvent event) {
+            throw new UnsupportedOperationException("sendEvent is controller-local");
         }
 
         @Override
-        public CompletableFuture<Void> ackTopicTransition(TransitionAck ack) {
+        public CompletableFuture<Void> ack(TransitionAck ack) {
             acks.add(ack);
             latch.countDown();
             return CompletableFuture.completedFuture(null);

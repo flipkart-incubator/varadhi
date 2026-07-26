@@ -41,9 +41,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-public class ControllerApiMgrTest {
+public class SubscriptionServiceTest {
 
-    ControllerApiMgr controllerApiMgr;
+    SubscriptionService subscriptionService;
     ConsumerApi consumerApi;
     AssignmentManager assignmentManager;
     OperationMgr operationMgr;
@@ -66,8 +66,8 @@ public class ControllerApiMgrTest {
         when(consumerClientFactory.getInstance(anyString())).thenReturn(consumerApi);
         subscriptionStore = mock(SubscriptionStore.class);
         when(metaStore.subscriptions()).thenReturn(subscriptionStore);
-        controllerApiMgr = spy(
-            new ControllerApiMgr(
+        subscriptionService = spy(
+            new SubscriptionService(
                 operationMgr,
                 assignmentManager,
                 subscriptionStore,
@@ -97,7 +97,7 @@ public class ControllerApiMgrTest {
         ConsumerNode consumerNode = new ConsumerNode(memberInfo);
         doReturn(CompletableFuture.completedFuture(consumerInfo)).when(consumerApi).getConsumerInfo();
 
-        CompletableFuture<String> result = controllerApiMgr.addConsumerNode(consumerNode);
+        CompletableFuture<String> result = subscriptionService.addConsumerNode(consumerNode);
         await().atMost(100, TimeUnit.SECONDS).until(result::isDone);
         verify(assignmentManager, times(1)).addConsumerNode(consumerNode);
         assertValue(consumerNode.getConsumerId(), result);
@@ -120,7 +120,7 @@ public class ControllerApiMgrTest {
                                                                                                                      )
                                                                                                                      .getConsumerInfo();
 
-        CompletableFuture<String> result = controllerApiMgr.addConsumerNode(consumerNode);
+        CompletableFuture<String> result = subscriptionService.addConsumerNode(consumerNode);
         await().atMost(100, TimeUnit.SECONDS).until(result::isDone);
         verify(assignmentManager, times(0)).addConsumerNode(consumerNode);
         assertException(result, ReplyException.class, "Host not available.");
@@ -140,7 +140,7 @@ public class ControllerApiMgrTest {
         doThrow(new RuntimeException("Some unknown failure.")).when(consumerApi).getConsumerInfo();
         RuntimeException re = assertThrows(
             RuntimeException.class,
-            () -> controllerApiMgr.addConsumerNode(consumerNode)
+            () -> subscriptionService.addConsumerNode(consumerNode)
         );
         assertEquals("Some unknown failure.", re.getMessage());
     }
@@ -162,7 +162,7 @@ public class ControllerApiMgrTest {
         setupConsumerState(sub1.getName(), 1, ConsumerState.CONSUMING);
         setupConsumerState(sub1.getName(), 2, ConsumerState.CONSUMING);
 
-        CompletableFuture<SubscriptionState> result = controllerApiMgr.getSubscriptionState(
+        CompletableFuture<SubscriptionState> result = subscriptionService.getSubscriptionState(
             sub1.getName(),
             requestedBy
         );
@@ -170,7 +170,7 @@ public class ControllerApiMgrTest {
         assertEquals(SubscriptionState.forRunning(), status);
 
         setupConsumerState(sub1.getName(), 2, null);
-        result = controllerApiMgr.getSubscriptionState(sub1.getName(), requestedBy);
+        result = subscriptionService.getSubscriptionState(sub1.getName(), requestedBy);
         status = awaitAsyncAndGetValue(result);
         // basically all shards are assigned, but the overall consumption state is unknown.
         assertEquals(new SubscriptionState(AssignmentState.ASSIGNED, null), status);
@@ -188,7 +188,7 @@ public class ControllerApiMgrTest {
         doReturn(new ArrayList<>()).when(assignmentManager).getSubAssignments(sub1.getName());
         doReturn(CompletableFuture.completedFuture(assignments)).when(assignmentManager)
                                                                 .assignShards(shards, sub1, List.of());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -207,7 +207,7 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.forRunning());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -228,7 +228,7 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStart(sub1, shards, consumerNodes, assignments, SubscriptionState.forPartiallyAssigned());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -250,7 +250,7 @@ public class ControllerApiMgrTest {
         doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(assignmentManager)
                                                                              .getSubAssignments(sub1.getName());
 
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -273,7 +273,7 @@ public class ControllerApiMgrTest {
         setupConsumerState(sub1.getName(), 0, ConsumerState.CONSUMING);
         ArgumentCaptor<ShardOperation.StartData> sCapture = ArgumentCaptor.forClass(ShardOperation.StartData.class);
         doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).start(sCapture.capture());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -300,7 +300,7 @@ public class ControllerApiMgrTest {
         ArgumentCaptor<SubscriptionOperation> subCapture = ArgumentCaptor.forClass(SubscriptionOperation.class);
         doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).start(shardCapture.capture());
         doNothing().when(operationMgr).updateSubOp(subCapture.capture());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -333,7 +333,7 @@ public class ControllerApiMgrTest {
 
         doNothing().when(operationMgr)
                    .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -369,7 +369,7 @@ public class ControllerApiMgrTest {
         doNothing().when(operationMgr)
                    .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
 
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.startSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.startSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -395,7 +395,7 @@ public class ControllerApiMgrTest {
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.forRunning());
         doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
                                                          .unAssignShards(assignments, sub1, true);
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -422,7 +422,7 @@ public class ControllerApiMgrTest {
 
         doReturn(new ArrayList<>()).when(assignmentManager).getSubAssignments(sub1.getName());
         doNothing().when(operationMgr).updateSubOp(any(SubscriptionOperation.class));
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -441,7 +441,7 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.forStopped());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -458,7 +458,7 @@ public class ControllerApiMgrTest {
         List<ConsumerNode> consumerNodes = getConsumerNodes(3);
         List<Assignment> assignments = new ArrayList<>();
         setupSubscriptionForStop(sub1, shards, consumerNodes, assignments, SubscriptionState.forStopped());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -475,7 +475,7 @@ public class ControllerApiMgrTest {
         doThrow(new MetaStoreException("Failed to get assignments for sub.")).when(assignmentManager)
                                                                              .getSubAssignments(sub1.getName());
 
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -502,7 +502,7 @@ public class ControllerApiMgrTest {
         doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).stop(sCapture.capture());
         doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
                                                          .unAssignShards(assignments, sub1, true);
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -534,7 +534,7 @@ public class ControllerApiMgrTest {
 
         doNothing().when(operationMgr)
                    .updateShardOp(anyString(), anyString(), any(ShardOperation.State.class), anyString());
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -570,7 +570,7 @@ public class ControllerApiMgrTest {
         doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager)
                                                          .unAssignShards(assignments, sub1, true);
 
-        CompletableFuture<SubscriptionOperation> result = controllerApiMgr.stopSubscription(
+        CompletableFuture<SubscriptionOperation> result = subscriptionService.stopSubscription(
             sub1.getName(),
             requestedBy
         );
@@ -594,7 +594,7 @@ public class ControllerApiMgrTest {
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         ShardOperation shardOp = OperationMgrTest.getShardStartOp(subOp.getId(), shards.get(0), sub1);
         doNothing().when(opStore).updateShardOp(any());
-        controllerApiMgr.update(subOp.getId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
+        subscriptionService.update(subOp.getId(), shardOp.getId(), shardOp.getState(), shardOp.getErrorMsg());
         verify(operationMgr, times(1)).updateShardOp(
             subOp.getId(),
             shardOp.getId(),
@@ -619,7 +619,7 @@ public class ControllerApiMgrTest {
                                                                shardOp.getState(),
                                                                shardOp.getErrorMsg()
                                                            );
-        CompletableFuture<Void> future = controllerApiMgr.update(
+        CompletableFuture<Void> future = subscriptionService.update(
             subOp.getId(),
             shardOp.getId(),
             shardOp.getState(),
@@ -633,14 +633,14 @@ public class ControllerApiMgrTest {
     public void testGetAllAssignments() {
         List<Assignment> expectedAssignments = new ArrayList<>();
         when(assignmentManager.getAllAssignments()).thenReturn(expectedAssignments);
-        List<Assignment> result = controllerApiMgr.getAllAssignments();
+        List<Assignment> result = subscriptionService.getAllAssignments();
         verify(assignmentManager, times(1)).getAllAssignments();
         assertListEquals(expectedAssignments, result);
     }
 
     @Test
     public void testGetPendingSubOps() {
-        controllerApiMgr.getPendingSubOps();
+        subscriptionService.getPendingSubOps();
         verify(operationMgr, times(1)).getPendingSubOps();
     }
 
@@ -652,7 +652,7 @@ public class ControllerApiMgrTest {
         SubscriptionOperation subOp = OperationMgrTest.getStartOp(sub1);
         doReturn(sub1).when(subscriptionStore).get(sub1.getName());
         doNothing().when(operationMgr).enqueue(any(), any());
-        controllerApiMgr.retryOperation(subOp);
+        subscriptionService.retryOperation(subOp);
         verify(operationMgr, times(1)).enqueue(eq(subOp), any());
     }
 
@@ -667,7 +667,7 @@ public class ControllerApiMgrTest {
         doReturn(CompletableFuture.completedFuture(NodeProvider.getConsumerInfo(node, sub1, shards))).when(consumerApi)
                                                                                                      .getConsumerInfo();
         doReturn(CompletableFuture.completedFuture(null)).when(assignmentManager).consumerNodeJoined(node);
-        CompletableFuture<Void> result = controllerApiMgr.consumerNodeJoined(node);
+        CompletableFuture<Void> result = subscriptionService.consumerNodeJoined(node);
         awaitAsyncAndGetValue(result);
         verify(consumerApi, times(1)).getConsumerInfo();
         verify(assignmentManager, times(1)).consumerNodeJoined(node);
@@ -726,7 +726,7 @@ public class ControllerApiMgrTest {
             return CompletableFuture.completedFuture(null);
         }).when(consumerApi).start(any());
 
-        CompletableFuture<Void> result = controllerApiMgr.consumerNodeLeft(nodes.get(0).getConsumerId());
+        CompletableFuture<Void> result = subscriptionService.consumerNodeLeft(nodes.get(0).getConsumerId());
         awaitAsyncAndGetValue(result);
         await().atMost(20, TimeUnit.SECONDS).until(() -> shardStartLatch.getCount() == 0);
 
@@ -775,7 +775,7 @@ public class ControllerApiMgrTest {
         doReturn(true).when(opStore).shardOpExists(anyString());
         doReturn(CompletableFuture.completedFuture(null)).when(consumerApi).stop(any());
         doReturn(new HashMap<>()).when(operationMgr).getShardOps(sub1.getName());
-        doReturn(CompletableFuture.completedFuture(state)).when(controllerApiMgr).getSubscriptionState(sub1);
+        doReturn(CompletableFuture.completedFuture(state)).when(subscriptionService).getSubscriptionState(sub1);
     }
 
     private void setupConsumerState(String subscriptionId, int shardId, ConsumerState state) {

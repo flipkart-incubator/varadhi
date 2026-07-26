@@ -9,7 +9,6 @@ import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
-import com.flipkart.varadhi.entities.TopicRegionConfigs;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicState;
@@ -31,8 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -85,14 +82,9 @@ class TopicFailoverOpExecutorTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.addInternalTopic(
-            SOURCE.value(),
-            SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + SOURCE.value()))
-        );
-        topic = topic.addInternalTopic(
-            TARGET.value(),
-            SegmentedStorageTopic.of(new DummyStorageTopic(FQN + "." + TARGET.value()))
-        );
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(FQN)))
+                     .withProduceRegion(SOURCE)
+                     .withProduceRegion(TARGET);
         topic.setVersion(1);
 
         op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
@@ -132,12 +124,12 @@ class TopicFailoverOpExecutorTest {
 
         ArgumentCaptor<VaradhiTopic> updated = ArgumentCaptor.forClass(VaradhiTopic.class);
         verify(topicStore, times(2)).update(updated.capture());
-        assertEquals(TopicState.Fenced, updated.getAllValues().get(0).getTopicState());
-        assertEquals(TARGET, TopicRegionConfigs.findProducingRegion(updated.getAllValues().get(0)).orElseThrow());
-        assertFalse(updated.getAllValues().get(0).getRegionConfig(SOURCE).isProduceAllowed());
-        assertTrue(updated.getAllValues().get(0).getRegionConfig(TARGET).isProduceAllowed());
-        assertEquals(TopicState.Producing, updated.getAllValues().get(1).getTopicState());
-        assertEquals(TARGET, TopicRegionConfigs.findProducingRegion(updated.getAllValues().get(1)).orElseThrow());
+        VaradhiTopic afterSwitch = updated.getAllValues().get(0);
+        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(SOURCE).orElseThrow().state());
+        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(TARGET).orElseThrow().state());
+        VaradhiTopic afterComplete = updated.getAllValues().get(1);
+        assertEquals(TopicState.Blocked, afterComplete.getProduceConfig(SOURCE).orElseThrow().state());
+        assertEquals(TopicState.Producing, afterComplete.getProduceConfig(TARGET).orElseThrow().state());
         assertEquals(TransitionStage.COMPLETED, transition.getCurrentStage());
         verify(transitionStore).delete(FQN);
 
