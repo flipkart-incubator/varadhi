@@ -8,31 +8,18 @@ import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * The <b>master</b> orchestration state for an in-flight topic transition. Controller-only:
- * it is never broadcast and never present in any pod cache, so no pod-side decision may depend
- * on it (pods route only off the {@code VaradhiTopic} version + per-region {@code TopicState}).
+ * Ephemeral controller-only orchestration pointer for an in-flight topic transition.
+ * Never broadcast / never in a pod cache — pods route only off {@code VaradhiTopic} version +
+ * per-region {@code TopicState}.
  *
- * <p>{@code name == topicFqn}, so an atomic ZK create enforces "one active transition per topic"
- * (the lock-free uniqueness guard). It is deleted when the transition reaches a terminal stage.
- *
- * <p><b>Naming</b>: the name is intentionally generic — this is an ephemeral ZK master for any
- * {@link TransitionKind}, not just {@code FAILOVER} (e.g. a future storage-topic migration would
- * reuse it). Because it is deleted on completion, it is where <em>live</em> stage-by-stage
- * orchestration state lives; the durable, forever-retained intent/outcome record for a failover is
- * the separate {@code TopicFailoverOperation} in the {@code OpStore}. Splitting the two keeps ZK
- * (small, ephemeral, high-churn) separate from the op history (durable, append-mostly, audited).
- *
- * <p>Fields here (including {@link #stageHistory}) exist to power the transition GET API response
- * and admin/audit visibility while the transition is in flight — some {@link StageSnapshot}
- * sub-fields (e.g. per-host ack detail) may not be fully populated yet.
+ * <p>{@code name == topicFqn}, so atomic ZK create enforces one active transition per topic.
+ * Deleted at a terminal stage. Durable request/outcome and per-stage history live on
+ * {@code TopicFailoverOperation} in the {@code OpStore}.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
-public class TransitionObject extends MetaStoreEntity {
+public class TransitionMaster extends MetaStoreEntity {
 
     private final TransitionKind transitionKind;
     private final String operationId;
@@ -44,10 +31,9 @@ public class TransitionObject extends MetaStoreEntity {
     private TransitionStage currentStage;
     private long topicVersionToAwait;
     private long updatedAt;
-    private final List<StageSnapshot> stageHistory;
 
     @JsonCreator
-    TransitionObject(
+    TransitionMaster(
         String topicFqn,
         int version,
         TransitionKind transitionKind,
@@ -57,8 +43,7 @@ public class TransitionObject extends MetaStoreEntity {
         long createdAt,
         TransitionStage currentStage,
         long topicVersionToAwait,
-        long updatedAt,
-        List<StageSnapshot> stageHistory
+        long updatedAt
     ) {
         super(topicFqn, version, MetaStoreEntityType.TRANSITION_OBJECT);
         this.topicFqn = topicFqn;
@@ -70,17 +55,16 @@ public class TransitionObject extends MetaStoreEntity {
         this.currentStage = currentStage;
         this.topicVersionToAwait = topicVersionToAwait;
         this.updatedAt = updatedAt;
-        this.stageHistory = stageHistory != null ? stageHistory : new ArrayList<>();
     }
 
-    public static TransitionObject forFailover(
+    public static TransitionMaster forFailover(
         String operationId,
         String topicFqn,
         RegionName sourceRegion,
         RegionName targetRegion
     ) {
         long now = System.currentTimeMillis();
-        return new TransitionObject(
+        return new TransitionMaster(
             topicFqn,
             0,
             TransitionKind.FAILOVER,
@@ -90,20 +74,18 @@ public class TransitionObject extends MetaStoreEntity {
             now,
             TransitionStage.PENDING,
             0L,
-            now,
-            new ArrayList<>()
+            now
         );
     }
 
     /**
-     * Advances the master to {@code stage}, stamping {@code topicVersionToAwait} (0 when the
-     * stage is not version-gated) and appending a new {@link StageSnapshot}.
+     * Advances live stage + version-to-await. Per-stage history is recorded on the linked
+     * {@code TopicFailoverOperation}, not here.
      */
     public void advanceTo(TransitionStage stage, long topicVersionToAwait) {
         this.currentStage = stage;
         this.topicVersionToAwait = topicVersionToAwait;
         this.updatedAt = System.currentTimeMillis();
-        this.stageHistory.add(StageSnapshot.started(stage));
     }
 
     @JsonIgnore
@@ -114,7 +96,7 @@ public class TransitionObject extends MetaStoreEntity {
     @Override
     public String toString() {
         return String.format(
-            "TransitionObject{topic=%s, kind=%s, opId=%s, %s->%s, stage=%s, vToAwait=%d}",
+            "TransitionMaster{topic=%s, kind=%s, opId=%s, %s->%s, stage=%s, vToAwait=%d}",
             topicFqn,
             transitionKind,
             operationId,

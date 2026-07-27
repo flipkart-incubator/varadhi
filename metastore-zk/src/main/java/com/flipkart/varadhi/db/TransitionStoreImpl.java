@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.db;
 
-import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.TransitionStore;
 
@@ -10,7 +10,7 @@ import static com.flipkart.varadhi.db.ZNode.TRANSITION;
 
 /**
  * ZooKeeper-backed {@link TransitionStore}. All writes are <b>untracked</b> (no L1 fan-out): the
- * {@link TransitionObject} is controller-only master state and must never reach a pod cache.
+ * {@link TransitionMaster} is controller-only master state and must never reach a pod cache.
  * Keyed by {@code topicFqn}, so {@link #create} enforces one active transition per topic.
  */
 public class TransitionStoreImpl implements TransitionStore {
@@ -26,15 +26,15 @@ public class TransitionStoreImpl implements TransitionStore {
     }
 
     @Override
-    public void create(TransitionObject transition) {
+    public void create(TransitionMaster transition) {
         ZNode znode = ZNode.ofTransition(transition.getName());
         zkMetaStore.createZNodeWithData(znode, transition);
     }
 
     @Override
-    public TransitionObject get(String topicFqn) {
+    public TransitionMaster get(String topicFqn) {
         ZNode znode = ZNode.ofTransition(topicFqn);
-        return zkMetaStore.getZNodeDataAsPojo(znode, TransitionObject.class);
+        return zkMetaStore.getZNodeDataAsPojo(znode, TransitionMaster.class);
     }
 
     @Override
@@ -43,7 +43,7 @@ public class TransitionStoreImpl implements TransitionStore {
     }
 
     @Override
-    public void update(TransitionObject transition) {
+    public void update(TransitionMaster transition) {
         ZNode znode = ZNode.ofTransition(transition.getName());
         zkMetaStore.updateZNodeWithData(znode, transition);
     }
@@ -54,10 +54,10 @@ public class TransitionStoreImpl implements TransitionStore {
     }
 
     @Override
-    public List<TransitionObject> listActive() {
+    public List<TransitionMaster> listActive() {
         return zkMetaStore.listChildren(ZNode.ofEntityType(TRANSITION))
                           .stream()
-                          .map(fqn -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofTransition(fqn), TransitionObject.class))
+                          .map(fqn -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofTransition(fqn), TransitionMaster.class))
                           .toList();
     }
 }

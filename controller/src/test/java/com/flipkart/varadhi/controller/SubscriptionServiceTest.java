@@ -75,11 +75,11 @@ public class SubscriptionServiceTest {
                 mock(TransitionStore.class),
                 mock(TopicStore.class),
                 mock(RegionStore.class),
+                mock(com.flipkart.varadhi.spi.services.StorageTopicService.class),
                 mock(VaradhiClusterManager.class),
                 mock(MessageExchange.class),
                 new StageAwaiter(),
-                TopicFailoverConfig.defaultConfig(),
-                0
+                TopicFailoverConfig.defaultConfig()
             )
         );
     }

@@ -11,8 +11,7 @@ public class RetryPolicy {
     private final int maxBackoffSeconds;
 
     public boolean canRetry(OrderedOperation operation) {
-        int maxAllowed = operation.maxRetryAllowed(maxRetryAllowed);
-        return operation.hasFailed() && operation.getRetryAttempt() < maxAllowed;
+        return operation.hasFailed() && operation.getRetryAttempt() < maxRetryAllowed;
     }
 
     public int getRetryBackoffSeconds(OrderedOperation operation) {

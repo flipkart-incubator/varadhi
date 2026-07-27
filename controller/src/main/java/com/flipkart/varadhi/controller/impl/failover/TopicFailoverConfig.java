@@ -1,14 +1,9 @@
 package com.flipkart.varadhi.controller.impl.failover;
 
 /**
- * Controller-side timing for the topic-failover stage barriers. Each value bounds how long the
- * controller waits for all expected pods to ack a stage before failing the stage (which aborts a
- * pre-switch transition or fails a post-switch one).
- *
- * <p>Kept as its own record (separate from the generic
- * {@link com.flipkart.varadhi.controller.config.OperationsConfig}) because failover stage timeouts
- * and retries are tuned independently of, and on a different scale than, routine operation
- * timeouts/retries.
+ * Controller-side timing for topic-failover stages. {@code prepareTimeoutMs} /
+ * {@code switchTimeoutMs} bound pod-ack barriers; {@code drainTimeoutMs} bounds the
+ * controller-side replication-lag poll when {@code waitForReplicationLagToClear} is set.
  */
 public record TopicFailoverConfig(long prepareTimeoutMs, long switchTimeoutMs, long drainTimeoutMs) {
 

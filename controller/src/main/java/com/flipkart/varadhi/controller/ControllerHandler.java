@@ -85,10 +85,9 @@ public class ControllerHandler {
         TopicFailoverRequest failoverRequest = new TopicFailoverRequest(
             request.sourceRegion(),
             request.targetRegion(),
-            request.waitForReplicationLagToClear(),
-            request.requestedBy()
+            request.waitForReplicationLagToClear()
         );
-        return subscriptionService.createTopicFailover(request.topicFqn(), failoverRequest)
+        return subscriptionService.createTopicFailover(request.topicFqn(), failoverRequest, request.requestedBy())
                                   .thenApply(message::getResponseMessage);
     }
 

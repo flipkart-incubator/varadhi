@@ -14,9 +14,9 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
 import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
@@ -73,11 +73,11 @@ class SubscriptionServiceFailoverTest {
             transitionStore,
             topicStore,
             regionStore,
+            mock(com.flipkart.varadhi.spi.services.StorageTopicService.class),
             mock(VaradhiClusterManager.class),
             mock(MessageExchange.class),
             new StageAwaiter(),
-            TopicFailoverConfig.defaultConfig(),
-            0
+            TopicFailoverConfig.defaultConfig()
         );
     }
 
@@ -99,13 +99,13 @@ class SubscriptionServiceFailoverTest {
         when(topicStore.get(FQN)).thenReturn(topicWithRegions());
         when(transitionStore.exists(FQN)).thenReturn(false);
 
-        TopicFailoverRequest request = new TopicFailoverRequest(SOURCE, TARGET, false, "tester");
-        TopicFailoverOperation op = subscriptionService.createTopicFailover(FQN, request).get();
+        TopicFailoverRequest request = new TopicFailoverRequest(SOURCE, TARGET, false);
+        TopicFailoverOperation op = subscriptionService.createTopicFailover(FQN, request, "tester").get();
 
         assertEquals(FQN, op.getTopicFqn());
         assertEquals(SOURCE, op.getSourceRegion());
         assertEquals(TARGET, op.getTargetRegion());
-        verify(transitionStore).create(any(TransitionObject.class));
+        verify(transitionStore).create(any(TransitionMaster.class));
         verify(operationMgr).createAndEnqueueTopicFailover(eq(op), any());
     }
 
@@ -116,7 +116,7 @@ class SubscriptionServiceFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, TARGET, false, "t"))
+            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, TARGET, false), "t")
                                      .get()
         );
         assertInstanceOf(InvalidOperationForResourceException.class, ex.getCause());
@@ -130,7 +130,8 @@ class SubscriptionServiceFailoverTest {
             ExecutionException.class,
             () -> subscriptionService.createTopicFailover(
                 FQN,
-                new TopicFailoverRequest(SOURCE, RegionName.of("nope"), false, "t")
+                new TopicFailoverRequest(SOURCE, RegionName.of("nope"), false),
+                "t"
             ).get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
@@ -143,7 +144,7 @@ class SubscriptionServiceFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, SOURCE, false, "t"))
+            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(SOURCE, SOURCE, false), "t")
                                      .get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
@@ -155,7 +156,7 @@ class SubscriptionServiceFailoverTest {
 
         ExecutionException ex = assertThrows(
             ExecutionException.class,
-            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(TARGET, SOURCE, false, "t"))
+            () -> subscriptionService.createTopicFailover(FQN, new TopicFailoverRequest(TARGET, SOURCE, false), "t")
                                      .get()
         );
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
@@ -175,7 +176,7 @@ class SubscriptionServiceFailoverTest {
 
     @Test
     void abortRejectsWhenNotAbortable() {
-        TransitionObject transition = TransitionObject.forFailover("op", FQN, SOURCE, TARGET);
+        TransitionMaster transition = TransitionMaster.forFailover("op", FQN, SOURCE, TARGET);
         transition.advanceTo(TransitionStage.SWITCH, 1L); // past the abortable window
         when(transitionStore.exists(FQN)).thenReturn(true);
         when(transitionStore.get(FQN)).thenReturn(transition);
@@ -189,13 +190,17 @@ class SubscriptionServiceFailoverTest {
 
     @Test
     void abortDeletesTransitionWhenAbortable() throws Exception {
-        TransitionObject transition = TransitionObject.forFailover("op", FQN, SOURCE, TARGET);
+        TransitionMaster transition = TransitionMaster.forFailover("op", FQN, SOURCE, TARGET);
         transition.advanceTo(TransitionStage.PREPARE, 1L);
+        TopicFailoverOperation failoverOp = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
         when(transitionStore.exists(FQN)).thenReturn(true);
         when(transitionStore.get(FQN)).thenReturn(transition);
+        when(operationMgr.getTopicFailoverOp("op")).thenReturn(failoverOp);
 
-        subscriptionService.abortTopicFailover(FQN, "tester").get();
+        TopicFailoverOperation returned = subscriptionService.abortTopicFailover(FQN, "tester").get();
 
         verify(transitionStore).delete(FQN);
+        verify(operationMgr).updateTopicFailoverOp(any(TopicFailoverOperation.class));
+        assertEquals(TransitionStage.ABORTED, returned.getStageHistory().get(returned.getStageHistory().size() - 1).getStage());
     }
 }

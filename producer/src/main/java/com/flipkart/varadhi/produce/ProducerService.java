@@ -286,26 +286,8 @@ public final class ProducerService {
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
-        // Same Pulsar topic + host producer name across region keys (single-pod multi-region
-        // and PREPARE warm of target while source is already producing). Reuse instead of
-        // opening a second connection that Pulsar rejects as ProducerBusy.
-        Producer<? extends Offset> shared = findCachedProducer(topicFQN, storageTopicId);
-        if (shared != null) {
-            producerCache.put(key, shared);
-            return CompletableFuture.completedFuture(shared);
-        }
 
         return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), producerLoadExecutor);
-    }
-
-    private Producer<? extends Offset> findCachedProducer(String topicFQN, int storageTopicId) {
-        for (var entry : producerCache.asMap().entrySet()) {
-            ProducerCacheKey k = entry.getKey();
-            if (k.varadhiTopicFQN().equals(topicFQN) && k.storageTopicId() == storageTopicId) {
-                return entry.getValue();
-            }
-        }
-        return null;
     }
 
     private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {
@@ -339,11 +321,12 @@ public final class ProducerService {
     }
 
     /**
-     * Pre-warms the producer for {@code storageTopicId} in this pod's deployed region into the
-     * local cache. Used by storage-migration PREPARE.
+     * Pre-warms the producer for {@code (storageTopicId, region)} into the local cache.
+     * Region failover PREPARE passes the failover target region; storage-migration PREPARE
+     * passes this pod's {@link #deployedRegion()}.
      */
-    public CompletableFuture<Void> loadProducer(VaradhiTopicName topicName, int storageTopicId) {
-        return getProducer(topicName.toFqn(), storageTopicId, deployedRegion).thenRun(() -> {});
+    public CompletableFuture<Void> loadProducer(VaradhiTopicName topicName, int storageTopicId, String region) {
+        return getProducer(topicName.toFqn(), storageTopicId, region).thenRun(() -> {});
     }
 
     /**

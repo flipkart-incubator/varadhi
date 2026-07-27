@@ -5,9 +5,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
+import com.flipkart.varadhi.entities.cluster.failover.StageSnapshot;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static com.flipkart.varadhi.entities.cluster.Operation.State.COMPLETED;
@@ -15,17 +19,13 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 import static com.flipkart.varadhi.entities.cluster.Operation.State.IN_PROGRESS;
 
 /**
- * The <b>intent</b> record for a topic failover, persisted in the {@code OpStore} and retained
- * forever as history. It captures <em>what was requested</em> and the final outcome; the live
- * per-stage orchestration state lives on the {@code TransitionObject} (the master).
+ * Durable intent + outcome record for a topic failover in the {@code OpStore}. Retained after the
+ * ephemeral {@code TransitionMaster} is deleted. Carries per-stage {@link #stageHistory} for
+ * audit/GET after COMPLETE/ABORT.
  *
- * <p>Ordering key is {@code "TopicFailover_" + topicFqn} so the {@code OperationMgr} serializes
- * all failover work for a given topic.
- *
- * <p>Live per-stage history stays on {@code TransitionObject} only; copying it onto this op when
- * the transition completes (so it survives past the ephemeral master's deletion) is a possible
- * future enhancement, not required for v1 — today the durable audit trail is this op's request +
- * outcome fields, not a stage-by-stage log.
+ * <p>Ordering key is {@code "TopicFailover_" + topicFqn} so {@code OperationMgr} serializes all
+ * failover work for a given topic. Retry limits come from the {@code RetryPolicy} passed when the
+ * op is enqueued — not stamped on this record.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
@@ -42,13 +42,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
     private long endTime;
     private State state;
     private String errorMsg;
-    /**
-     * Max retries for this operation, stamped at creation from
-     * {@code OperationsConfig.getTopicFailoverMaxRetryAllowed()}. Overrides
-     * {@link OrderedOperation#maxRetryAllowed(int)} so {@code controller.RetryPolicy} stays generic
-     * and does not need to know about this concrete operation type.
-     */
-    private final int maxRetryAllowed;
+    /** Per-stage audit log; survives past TransitionMaster deletion. */
+    private final List<StageSnapshot> stageHistory;
 
     @JsonCreator
     TopicFailoverOperation(
@@ -64,7 +59,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         long endTime,
         State state,
         String errorMsg,
-        int maxRetryAllowed
+        List<StageSnapshot> stageHistory
     ) {
         super(operationId, version, MetaStoreEntityType.TOPIC_FAILOVER_OPERATION);
         this.operationId = operationId;
@@ -78,7 +73,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         this.endTime = endTime;
         this.state = state;
         this.errorMsg = errorMsg;
-        this.maxRetryAllowed = maxRetryAllowed;
+        this.stageHistory = stageHistory != null ? new ArrayList<>(stageHistory) : new ArrayList<>();
     }
 
     public static TopicFailoverOperation of(
@@ -86,8 +81,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         RegionName sourceRegion,
         RegionName targetRegion,
         boolean waitForReplicationLagToClear,
-        String requestedBy,
-        int maxRetryAllowed
+        String requestedBy
     ) {
         return new TopicFailoverOperation(
             UUID.randomUUID().toString(),
@@ -102,13 +96,41 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
             0,
             IN_PROGRESS,
             null,
-            maxRetryAllowed
+            new ArrayList<>()
         );
     }
 
-    @Override
-    public int maxRetryAllowed(int policyDefault) {
-        return maxRetryAllowed;
+    /**
+     * Starts {@code stage}, closing any open snapshot as {@link StageSnapshot.Outcome#OK}.
+     */
+    public void beginStage(TransitionStage stage) {
+        completeOpenStage(StageSnapshot.Outcome.OK, null);
+        stageHistory.add(StageSnapshot.started(stage));
+    }
+
+    private void completeOpenStage(StageSnapshot.Outcome outcome, String error) {
+        if (stageHistory.isEmpty()) {
+            return;
+        }
+        StageSnapshot last = stageHistory.get(stageHistory.size() - 1);
+        if (last.getOutcome() != StageSnapshot.Outcome.IN_PROGRESS) {
+            return;
+        }
+        last.setEndedAt(System.currentTimeMillis());
+        last.setOutcome(outcome);
+        last.setErrorMsg(error);
+    }
+
+    /**
+     * Copies progress fields (state, error, endTime, stageHistory) from {@code src} onto this
+     * store-loaded instance before persist — used by {@code OperationMgr} to avoid version races.
+     */
+    public void applyProgressFrom(TopicFailoverOperation src) {
+        this.state = src.getState();
+        this.errorMsg = src.getErrorMsg();
+        this.endTime = src.getEndTime();
+        this.stageHistory.clear();
+        this.stageHistory.addAll(src.getStageHistory());
     }
 
     @JsonIgnore
@@ -147,7 +169,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
             0,
             IN_PROGRESS,
             null,
-            maxRetryAllowed
+            new ArrayList<>()
         );
     }
 
@@ -175,6 +197,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     @Override
     public void markFail(String error) {
+        completeOpenStage(StageSnapshot.Outcome.FAILED, error);
         this.state = ERRORED;
         this.errorMsg = error;
         this.endTime = System.currentTimeMillis();
@@ -182,6 +205,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     @Override
     public void markCompleted() {
+        completeOpenStage(StageSnapshot.Outcome.OK, null);
         this.state = COMPLETED;
         this.endTime = System.currentTimeMillis();
     }
@@ -197,13 +221,14 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
     @Override
     public String toString() {
         return String.format(
-            "TopicFailoverOperation{opId=%s, topic=%s, %s->%s, state=%s, retry=%d}",
+            "TopicFailoverOperation{opId=%s, topic=%s, %s->%s, state=%s, retry=%d, stages=%d}",
             operationId,
             topicFqn,
             sourceRegion,
             targetRegion,
             state,
-            retryAttempt
+            retryAttempt,
+            stageHistory.size()
         );
     }
 }

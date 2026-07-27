@@ -17,4 +17,15 @@ public interface StorageTopicService {
     void delete(Project project, String topicName);
 
     boolean exists(String topicName);
+
+    /**
+     * Replication backlog from {@code source} toward {@code target} for {@code topic}, in
+     * backend-defined units (Pulsar: messages pending geo-replication). {@code 0} means caught up.
+     *
+     * <p>Default stub returns {@code 0} so topic-failover DRAIN can wire before a real stack
+     * implementation lands. Pulsar should override with admin/replication metrics.
+     */
+    default long getReplicationLag(StorageTopic topic, RegionName source, RegionName target) {
+        return 0L;
+    }
 }

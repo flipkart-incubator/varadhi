@@ -20,11 +20,9 @@ import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
-import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.TopicProduceConfigs;
-import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -35,17 +33,14 @@ import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import com.flipkart.varadhi.entities.cluster.failover.*;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
 import com.flipkart.varadhi.spi.db.RegionStore;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -68,11 +63,11 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
     private final TransitionStore transitionStore;
     private final TopicStore topicStore;
     private final RegionStore regionStore;
+    private final StorageTopicService storageTopicService;
     private final VaradhiClusterManager clusterManager;
     private final MessageExchange messageExchange;
     private final StageAwaiter stageAwaiter;
     private final TopicFailoverConfig failoverConfig;
-    private final int topicFailoverMaxRetryAllowed;
 
     public SubscriptionService(
         OperationMgr operationMgr,
@@ -82,11 +77,11 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         TransitionStore transitionStore,
         TopicStore topicStore,
         RegionStore regionStore,
+        StorageTopicService storageTopicService,
         VaradhiClusterManager clusterManager,
         MessageExchange messageExchange,
         StageAwaiter stageAwaiter,
-        TopicFailoverConfig failoverConfig,
-        int topicFailoverMaxRetryAllowed
+        TopicFailoverConfig failoverConfig
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.assignmentManager = assignmentManager;
@@ -95,11 +90,11 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         this.transitionStore = transitionStore;
         this.topicStore = topicStore;
         this.regionStore = regionStore;
+        this.storageTopicService = storageTopicService;
         this.clusterManager = clusterManager;
         this.messageExchange = messageExchange;
         this.stageAwaiter = stageAwaiter;
         this.failoverConfig = failoverConfig;
-        this.topicFailoverMaxRetryAllowed = topicFailoverMaxRetryAllowed;
         this.operationMgr.setTopicFailoverTerminalFailureHandler(this::cleanupFailedTopicFailover);
     }
 
@@ -108,7 +103,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         if (!transitionStore.exists(topicFqn)) {
             return;
         }
-        TransitionObject transition = transitionStore.get(topicFqn);
+        TransitionMaster transition = transitionStore.get(topicFqn);
         log.warn("Cleaning up failed topic failover op {} for {} (error={})", op.getId(), topicFqn, op.getErrorMsg());
         broadcastTransition(
             TransitionEvent.of(
@@ -317,7 +312,8 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
 
     public CompletableFuture<TopicFailoverOperation> createTopicFailover(
         String topicFqn,
-        TopicFailoverRequest request
+        TopicFailoverRequest request,
+        String requestedBy
     ) {
         return CompletableFuture.supplyAsync(() -> {
             VaradhiTopic topic = topicStore.get(topicFqn); // throws ResourceNotFoundException if missing
@@ -332,12 +328,11 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
                 request.sourceRegion(),
                 request.targetRegion(),
                 request.waitForReplicationLagToClear(),
-                request.requestedBy(),
-                topicFailoverMaxRetryAllowed
+                requestedBy
             );
             // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
             transitionStore.create(
-                TransitionObject.forFailover(op.getId(), topicFqn, request.sourceRegion(), request.targetRegion())
+                TransitionMaster.forFailover(op.getId(), topicFqn, request.sourceRegion(), request.targetRegion())
             );
             log.info(
                 "Created topic failover op {} for {} ({}->{})",
@@ -351,21 +346,22 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         });
     }
 
-    public CompletableFuture<TransitionObject> getTopicFailover(String topicFqn) {
+    public CompletableFuture<TopicFailoverOperation> getTopicFailover(String topicFqn) {
         return CompletableFuture.supplyAsync(() -> {
             if (!transitionStore.exists(topicFqn)) {
                 throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
             }
-            return transitionStore.get(topicFqn);
+            TransitionMaster transition = transitionStore.get(topicFqn);
+            return operationMgr.getTopicFailoverOp(transition.getOperationId());
         });
     }
 
-    public CompletableFuture<TransitionObject> abortTopicFailover(String topicFqn, String requestedBy) {
+    public CompletableFuture<TopicFailoverOperation> abortTopicFailover(String topicFqn, String requestedBy) {
         return CompletableFuture.supplyAsync(() -> {
             if (!transitionStore.exists(topicFqn)) {
                 throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
             }
-            TransitionObject transition = transitionStore.get(topicFqn);
+            TransitionMaster transition = transitionStore.get(topicFqn);
             if (!transition.isAbortable()) {
                 throw new InvalidOperationForResourceException(
                     "Failover for " + topicFqn + " is not abortable in stage " + transition.getCurrentStage() + "."
@@ -391,13 +387,16 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
                 )
             );
             stageAwaiter.abort(transition.getOperationId(), "aborted by " + requestedBy);
+            TopicFailoverOperation failoverOp = operationMgr.getTopicFailoverOp(transition.getOperationId());
+            failoverOp.beginStage(TransitionStage.ABORTED);
+            operationMgr.updateTopicFailoverOp(failoverOp);
             transition.advanceTo(TransitionStage.ABORTED, 0L);
             transitionStore.delete(topicFqn);
-            return transition;
+            return failoverOp;
         });
     }
 
-    public CompletableFuture<List<TransitionObject>> getActiveFailovers() {
+    public CompletableFuture<List<TransitionMaster>> getActiveFailovers() {
         return CompletableFuture.supplyAsync(transitionStore::listActive);
     }
 
@@ -426,6 +425,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
             operationMgr,
             transitionStore,
             topicStore,
+            storageTopicService,
             messageExchange,
             stageAwaiter,
             clusterManager,

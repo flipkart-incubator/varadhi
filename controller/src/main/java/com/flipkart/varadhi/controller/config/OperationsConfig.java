@@ -7,11 +7,9 @@ public class OperationsConfig {
     private int maxConcurrentOps = 2;
     private int maxRetryAllowed = 3;
     /**
-     * Retries for {@link com.flipkart.varadhi.entities.cluster.TopicFailoverOperation} only;
-     * {@code 0} = fail once. Kept separate from {@link #maxRetryAllowed} because a stuck failover
-     * has different retry economics than a routine subscription operation (see
-     * {@link com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig} for the related
-     * per-stage timeouts). Stamped onto each {@code TopicFailoverOperation} at creation time.
+     * Max retries for topic-failover ops only ({@code 0} = fail once). Used to build a separate
+     * {@link com.flipkart.varadhi.controller.RetryPolicy} when enqueueing failover — same backoff
+     * knobs as {@link #maxRetryAllowed}, different ceiling.
      */
     private int topicFailoverMaxRetryAllowed = 0;
     private int retryIntervalInSeconds = 10;

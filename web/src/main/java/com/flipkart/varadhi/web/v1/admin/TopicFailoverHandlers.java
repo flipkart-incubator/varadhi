@@ -35,10 +35,10 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
  * <ul>
  *   <li>POST {@code /v1/projects/:project/topics/:topic/failover} — request a failover
  *       (source→target). Returns {@code 200} with the intent op once durably recorded.</li>
- *   <li>GET  {@code /v1/projects/:project/topics/:topic/failover} — current transition snapshot
- *       (404 if none active).</li>
+ *   <li>GET  {@code /v1/projects/:project/topics/:topic/failover} — in-flight failover op
+ *       (includes stageHistory); 404 if none active.</li>
  *   <li>POST {@code /v1/projects/:project/topics/:topic/failover/abort} — abort, honored only while
- *       the transition is still abortable (PENDING/PREPARE).</li>
+ *       the transition is still abortable (PENDING/PREPARE/DRAIN).</li>
  * </ul>
  */
 @Slf4j
@@ -94,8 +94,9 @@ public class TopicFailoverHandlers implements RouteProvider {
 
     public void create(RoutingContext ctx) {
         TopicFailoverRequest body = ctx.get(REQUEST_BODY);
-        TopicFailoverRequest request = body.withRequestedBy(ctx.getIdentityOrDefault());
-        ctx.handleResponse(controllerClient.createTopicFailover(getVaradhiTopicName(ctx), request));
+        ctx.handleResponse(
+            controllerClient.createTopicFailover(getVaradhiTopicName(ctx), body, ctx.getIdentityOrDefault())
+        );
     }
 
     public void status(RoutingContext ctx) {

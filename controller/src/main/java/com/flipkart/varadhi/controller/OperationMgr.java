@@ -25,13 +25,24 @@ public class OperationMgr {
     private final Map<String, RetryOpTask> retryOpTasks;
     private final Map<String, Deque<OpTask>> opTasks;
     private final RetryPolicy retryPolicy;
+    private final RetryPolicy topicFailoverRetryPolicy;
     private volatile Consumer<TopicFailoverOperation> topicFailoverTerminalFailureHandler;
 
     public OperationMgr(int maxConcurrentOps, OpStore opStore, RetryPolicy retryPolicy) {
+        this(maxConcurrentOps, opStore, retryPolicy, retryPolicy);
+    }
+
+    public OperationMgr(
+        int maxConcurrentOps,
+        OpStore opStore,
+        RetryPolicy retryPolicy,
+        RetryPolicy topicFailoverRetryPolicy
+    ) {
         this.opStore = opStore;
         this.opTasks = new ConcurrentHashMap<>();
         this.retryOpTasks = new ConcurrentHashMap<>();
         this.retryPolicy = retryPolicy;
+        this.topicFailoverRetryPolicy = topicFailoverRetryPolicy;
         //TODO::ExecutorService should emit the metrics.
         this.executor = Executors.newFixedThreadPool(
             maxConcurrentOps,
@@ -209,7 +220,7 @@ public class OperationMgr {
     }
 
     void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
-        OpTask opTask = new OpTask(opExecutor, op -> opStore.updateSubOp((SubscriptionOperation)op), subOp);
+        OpTask opTask = new OpTask(opExecutor, op -> opStore.updateSubOp((SubscriptionOperation)op), subOp, retryPolicy);
         enqueueOpTask(opTask);
     }
 
@@ -219,7 +230,12 @@ public class OperationMgr {
     }
 
     void enqueueTopicFailover(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
-        OpTask opTask = new OpTask(opExecutor, o -> opStore.updateTopicFailoverOp((TopicFailoverOperation)o), op);
+        OpTask opTask = new OpTask(
+            opExecutor,
+            o -> opStore.updateTopicFailoverOp((TopicFailoverOperation)o),
+            op,
+            topicFailoverRetryPolicy
+        );
         enqueueOpTask(opTask);
     }
 
@@ -243,7 +259,7 @@ public class OperationMgr {
     public void updateTopicFailoverOp(TopicFailoverOperation operation) {
         processOpTaskForOpUpdate(operation, op -> {
             TopicFailoverOperation latest = opStore.getTopicFailoverOp(operation.getId());
-            latest.update(operation.getState(), operation.getErrorMsg());
+            latest.applyProgressFrom(operation);
             opStore.updateTopicFailoverOp(latest);
             return latest;
         });
@@ -318,7 +334,7 @@ public class OperationMgr {
         ScheduledFuture<Void> scheduledFuture;
 
         void schedule() {
-            int backOffSeconds = retryPolicy.getRetryBackoffSeconds(opTask.operation);
+            int backOffSeconds = opTask.retryPolicy.getRetryBackoffSeconds(opTask.operation);
             scheduledFuture = delayedScheduler.schedule(() -> {
                 // task is getting scheduled for execution, remove it from retry pending.
                 retryOpTasks.remove(opTask.getOrderingKey());
@@ -366,6 +382,7 @@ public class OperationMgr {
         final OpExecutor<OrderedOperation> opExecutor;
         final Consumer<OrderedOperation> dbUpdateHandler;
         OrderedOperation operation;
+        final RetryPolicy retryPolicy;
 
         void execute() {
             CompletableFuture.runAsync(() -> {
@@ -391,7 +408,7 @@ public class OperationMgr {
                 try {
                     OrderedOperation retryOp = operation.nextRetry();
                     dbUpdateHandler.accept(retryOp);
-                    RetryOpTask task = new RetryOpTask(new OpTask(opExecutor, dbUpdateHandler, retryOp));
+                    RetryOpTask task = new RetryOpTask(new OpTask(opExecutor, dbUpdateHandler, retryOp, retryPolicy));
                     task.schedule();
                 } catch (MetaStoreException e) {
                     log.error("Retry ERROR -- {} not retried due to failure {}", operation, e.getMessage());

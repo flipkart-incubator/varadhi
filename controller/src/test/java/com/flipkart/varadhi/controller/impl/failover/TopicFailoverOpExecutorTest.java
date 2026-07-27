@@ -14,10 +14,11 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
 import io.vertx.core.Future;
 import lombok.EqualsAndHashCode;
 import org.mockito.ArgumentCaptor;
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -60,10 +62,11 @@ class TopicFailoverOpExecutorTest {
     private MessageExchange messageExchange;
     private StageAwaiter stageAwaiter;
     private VaradhiClusterManager clusterManager;
+    private StorageTopicService storageTopicService;
     private TopicFailoverOpExecutor executor;
 
     private VaradhiTopic topic;
-    private TransitionObject transition;
+    private TransitionMaster transition;
     private TopicFailoverOperation op;
 
     @BeforeEach
@@ -74,6 +77,8 @@ class TopicFailoverOpExecutorTest {
         messageExchange = mock(MessageExchange.class);
         stageAwaiter = mock(StageAwaiter.class);
         clusterManager = mock(VaradhiClusterManager.class);
+        storageTopicService = mock(StorageTopicService.class);
+        when(storageTopicService.getReplicationLag(any(), any(), any())).thenReturn(0L);
 
         topic = VaradhiTopic.of(
             "proj",
@@ -87,8 +92,8 @@ class TopicFailoverOpExecutorTest {
                      .withProduceRegion(TARGET);
         topic.setVersion(1);
 
-        op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester", 0);
-        transition = TransitionObject.forFailover(op.getId(), FQN, SOURCE, TARGET);
+        op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
+        transition = TransitionMaster.forFailover(op.getId(), FQN, SOURCE, TARGET);
 
         AtomicReference<VaradhiTopic> topicRef = new AtomicReference<>(topic);
         when(topicStore.get(FQN)).thenAnswer(invocation -> topicRef.get());
@@ -111,6 +116,7 @@ class TopicFailoverOpExecutorTest {
             operationMgr,
             transitionStore,
             topicStore,
+            storageTopicService,
             messageExchange,
             stageAwaiter,
             clusterManager,
@@ -135,14 +141,17 @@ class TopicFailoverOpExecutorTest {
 
         verify(stageAwaiter).expect(anyString(), eq(TransitionStage.PREPARE), anySet(), anyLong());
         verify(stageAwaiter).expect(anyString(), eq(TransitionStage.SWITCH), anySet(), anyLong());
+        verify(stageAwaiter, times(0)).expect(anyString(), eq(TransitionStage.DRAIN), anySet(), anyLong());
         verify(messageExchange, times(4)).publish(
             eq(TransitionBusAddress.ROUTE_TOPIC_TRANSITION),
             eq(TransitionBusAddress.STAGE_BROADCAST_API),
             any()
         );
 
-        verify(operationMgr).updateTopicFailoverOp(op);
+        verify(operationMgr, times(5)).updateTopicFailoverOp(op);
         assertEquals(com.flipkart.varadhi.entities.cluster.Operation.State.COMPLETED, op.getState());
+        assertFalse(op.getStageHistory().isEmpty());
+        assertEquals(TransitionStage.COMPLETED, op.getStageHistory().get(op.getStageHistory().size() - 1).getStage());
     }
 
     @Test

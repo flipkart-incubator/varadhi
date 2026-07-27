@@ -10,6 +10,7 @@ import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicProduceConfigs;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -17,11 +18,12 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionObject;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
+import com.flipkart.varadhi.spi.services.StorageTopicService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
@@ -32,14 +34,17 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 /**
- * Drives a single topic failover through its stages on the controller.
+ * Drives a single topic failover: {@code PREPARE → DRAIN → SWITCH → COMPLETE}.
  */
 @Slf4j
 public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
 
+    private static final long DRAIN_POLL_INTERVAL_MS = 2_000L;
+
     private final OperationMgr operationMgr;
     private final TransitionStore transitionStore;
     private final TopicStore topicStore;
+    private final StorageTopicService storageTopicService;
     private final MessageExchange messageExchange;
     private final StageAwaiter stageAwaiter;
     private final VaradhiClusterManager clusterManager;
@@ -49,6 +54,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         OperationMgr operationMgr,
         TransitionStore transitionStore,
         TopicStore topicStore,
+        StorageTopicService storageTopicService,
         MessageExchange messageExchange,
         StageAwaiter stageAwaiter,
         VaradhiClusterManager clusterManager,
@@ -57,6 +63,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         this.operationMgr = operationMgr;
         this.transitionStore = transitionStore;
         this.topicStore = topicStore;
+        this.storageTopicService = storageTopicService;
         this.messageExchange = messageExchange;
         this.stageAwaiter = stageAwaiter;
         this.clusterManager = clusterManager;
@@ -71,7 +78,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
             if (!transitionStore.exists(fqn)) {
                 throw new FailoverAbortedException("no active transition for topic " + fqn);
             }
-            TransitionObject transition = transitionStore.get(fqn);
+            TransitionMaster transition = transitionStore.get(fqn);
             log.info("Executing topic failover op {} resuming from stage {}", op.getId(), transition.getCurrentStage());
             return resumeFrom(op, transition).thenRun(() -> finishSuccess(op));
         } catch (Exception e) {
@@ -79,21 +86,22 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         }
     }
 
-    private CompletableFuture<Void> resumeFrom(TopicFailoverOperation op, TransitionObject transition) {
+    private CompletableFuture<Void> resumeFrom(TopicFailoverOperation op, TransitionMaster transition) {
         TransitionStage stage = transition.getCurrentStage();
         CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
         if (stage == TransitionStage.PENDING || stage == TransitionStage.PREPARE) {
             chain = chain.thenCompose(v -> prepare(op));
         }
-        // Use thenComposeAsync to break any Vert.x event-loop thread continuation that may be
-        // inherited from stage-barrier completion callbacks (which are triggered from the event-loop
-        // sendHandler). Running blocking ZK ops or calling serverHosts().join() on the event-loop
-        // thread would deadlock because Vert.x Future completion is itself dispatched on that loop.
-        if (stage == TransitionStage.PENDING || stage == TransitionStage.PREPARE || stage == TransitionStage.SWITCH) {
+        // thenComposeAsync: break Vert.x event-loop continuations from stage-barrier callbacks so
+        // blocking ZK / lag polls / serverHosts().join() never run on the event loop.
+        if (stage == TransitionStage.PENDING || stage == TransitionStage.PREPARE || stage == TransitionStage.DRAIN) {
+            chain = chain.thenComposeAsync(v -> drain(op), ForkJoinPool.commonPool());
+        }
+        if (stage == TransitionStage.PENDING || stage == TransitionStage.PREPARE || stage == TransitionStage.DRAIN
+            || stage == TransitionStage.SWITCH) {
             chain = chain.thenComposeAsync(v -> switchStage(op), ForkJoinPool.commonPool());
         }
         if (stage != TransitionStage.COMPLETED && stage != TransitionStage.ABORTED) {
-            chain = chain.thenComposeAsync(v -> drain(op), ForkJoinPool.commonPool());
             chain = chain.thenComposeAsync(v -> complete(op), ForkJoinPool.commonPool());
         }
         return chain;
@@ -102,11 +110,8 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
     private CompletableFuture<Void> prepare(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
         long currentVersion = topic.getVersion();
-        TransitionObject transition = transitionStore.get(op.getTopicFqn());
-        if (transition.getCurrentStage() != TransitionStage.PREPARE) {
-            transition.advanceTo(TransitionStage.PREPARE, currentVersion);
-            transitionStore.update(transition);
-        }
+        TransitionMaster transition = transitionStore.get(op.getTopicFqn());
+        advanceMaster(op, transition, TransitionStage.PREPARE, currentVersion);
         TransitionEvent event = stageEvent(
             op,
             TransitionStage.PREPARE,
@@ -117,10 +122,62 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
     }
 
     /**
+     * After PREPARE, before SWITCH: optionally wait until source→target replication lag is clear
+     * via {@link StorageTopicService#getReplicationLag}, while source is still producing. Broadcasts
+     * DRAIN as a fleet marker (no pod ack barrier) — lag is controller-side.
+     */
+    private CompletableFuture<Void> drain(TopicFailoverOperation op) {
+        TransitionMaster transition = transitionStore.get(op.getTopicFqn());
+        advanceMaster(op, transition, TransitionStage.DRAIN, 0L);
+        broadcast(stageEvent(op, TransitionStage.DRAIN, 0L, null));
+        if (!op.isWaitForReplicationLagToClear()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return CompletableFuture.runAsync(() -> awaitLagCleared(op), ForkJoinPool.commonPool());
+    }
+
+    private void awaitLagCleared(TopicFailoverOperation op) {
+        VaradhiTopic topic = topicStore.get(op.getTopicFqn());
+        if (topic.getStorageTopic() == null) {
+            throw new FailoverAbortedException("DRAIN: topic " + op.getTopicFqn() + " has no storage topic");
+        }
+        StorageTopic storage = topic.getStorageTopic().getTopicToProduce();
+        long deadline = System.currentTimeMillis() + config.drainTimeoutMs();
+        long lastLag = -1;
+        while (true) {
+            lastLag = storageTopicService.getReplicationLag(storage, op.getSourceRegion(), op.getTargetRegion());
+            if (lastLag <= 0) {
+                log.info(
+                    "Failover op {}: replication lag cleared for {} ({} -> {})",
+                    op.getId(),
+                    op.getTopicFqn(),
+                    op.getSourceRegion().value(),
+                    op.getTargetRegion().value()
+                );
+                return;
+            }
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0) {
+                throw new FailoverAbortedException(
+                    "replication lag did not clear within %dms (last lag=%d) for %s".formatted(
+                        config.drainTimeoutMs(),
+                        lastLag,
+                        op.getTopicFqn()
+                    )
+                );
+            }
+            try {
+                Thread.sleep(Math.min(DRAIN_POLL_INTERVAL_MS, remaining));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new FailoverAbortedException("interrupted waiting for replication lag on " + op.getTopicFqn());
+            }
+        }
+    }
+
+    /**
      * Fences both source and target regions during the switch window: neither accepts produce until
-     * {@link #complete} settles the target as {@link TopicState#Producing}. This collapses the old
-     * two-part gate (global topicState + per-region produceAllowed flag) into a single per-region
-     * {@link ProduceConfig#state()}.
+     * {@link #complete} settles the target as {@link TopicState#Producing}.
      */
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
@@ -150,34 +207,10 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         }
         long switchedVersion = topic.getVersion();
 
-        TransitionObject transition = transitionStore.get(op.getTopicFqn());
-        if (transition.getCurrentStage() != TransitionStage.SWITCH) {
-            transition.advanceTo(TransitionStage.SWITCH, switchedVersion);
-            transitionStore.update(transition);
-        }
+        TransitionMaster transition = transitionStore.get(op.getTopicFqn());
+        advanceMaster(op, transition, TransitionStage.SWITCH, switchedVersion);
         TransitionEvent event = stageEvent(op, TransitionStage.SWITCH, switchedVersion, null);
         return runStageBarrier(op, TransitionStage.SWITCH, event, config.switchTimeoutMs());
-    }
-
-    /**
-     * Runs the DRAIN stage, between the SWITCH fence and {@link #complete}. If the request asked to
-     * wait for replication lag to clear, this blocks on a stage-ack barrier (bounded by
-     * {@link TopicFailoverConfig#drainTimeoutMs()}) before COMPLETE proceeds; otherwise it just
-     * broadcasts the stage and moves on immediately.
-     *
-     * <p>TODO: the actual replication-lag check is not yet implemented — pods currently just ack
-     * the stage without checking source-region lag.
-     */
-    private CompletableFuture<Void> drain(TopicFailoverOperation op) {
-        TransitionObject transition = transitionStore.get(op.getTopicFqn());
-        transition.advanceTo(TransitionStage.DRAIN, 0L);
-        transitionStore.update(transition);
-        TransitionEvent event = stageEvent(op, TransitionStage.DRAIN, 0L, null);
-        if (op.isWaitForReplicationLagToClear()) {
-            return runStageBarrier(op, TransitionStage.DRAIN, event, config.drainTimeoutMs());
-        }
-        broadcast(event);
-        return CompletableFuture.completedFuture(null);
     }
 
     private CompletableFuture<Void> complete(TopicFailoverOperation op) {
@@ -190,11 +223,29 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
                      .withProduceConfig(source, ProduceConfig.blocked())
             );
         }
-        TransitionObject transition = transitionStore.get(op.getTopicFqn());
-        transition.advanceTo(TransitionStage.COMPLETED, 0L);
-        transitionStore.update(transition);
+        TransitionMaster transition = transitionStore.get(op.getTopicFqn());
+        advanceMaster(op, transition, TransitionStage.COMPLETED, 0L);
         broadcast(stageEvent(op, TransitionStage.COMPLETED, 0L, null));
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * Moves the ephemeral master to {@code stage} and appends a durable {@link StageSnapshot} on
+     * the op. No-op when already at {@code stage} (resume).
+     */
+    private void advanceMaster(
+        TopicFailoverOperation op,
+        TransitionMaster transition,
+        TransitionStage stage,
+        long topicVersionToAwait
+    ) {
+        if (transition.getCurrentStage() == stage) {
+            return;
+        }
+        transition.advanceTo(stage, topicVersionToAwait);
+        transitionStore.update(transition);
+        op.beginStage(stage);
+        operationMgr.updateTopicFailoverOp(op);
     }
 
     private CompletableFuture<Void> runStageBarrier(

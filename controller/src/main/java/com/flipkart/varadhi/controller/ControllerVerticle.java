@@ -21,6 +21,7 @@ import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
@@ -41,6 +42,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private final VaradhiClusterManager clusterManager;
     private final MetaStoreProvider metaStoreProvider;
+    private final MessagingStackProvider messagingStackProvider;
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
@@ -60,6 +62,7 @@ public class ControllerVerticle extends AbstractVerticle {
         this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
+        this.messagingStackProvider = coreServices.getMessagingStackProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
     }
 
@@ -143,7 +146,8 @@ public class ControllerVerticle extends AbstractVerticle {
         OperationMgr operationMgr = new OperationMgr(
             operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
-            createRetryPolicy()
+            createRetryPolicy(operationsConfig.getMaxRetryAllowed()),
+            createRetryPolicy(operationsConfig.getTopicFailoverMaxRetryAllowed())
         );
 
         // Create assignment manager
@@ -161,22 +165,20 @@ public class ControllerVerticle extends AbstractVerticle {
             metaStoreProvider.getTransitionStore(),
             metaStoreProvider.getMetaStore().topics(),
             metaStoreProvider.getMetaStore().regions(),
+            messagingStackProvider.getStorageTopicService(),
             clusterManager,
             messageExchange,
             new StageAwaiter(),
-            TopicFailoverConfig.defaultConfig(),
-            operationsConfig.getTopicFailoverMaxRetryAllowed()
+            TopicFailoverConfig.defaultConfig()
         );
     }
 
     /**
-     * Creates a retry policy based on the controller configuration.
-     *
-     * @return the configured RetryPolicy
+     * Creates a retry policy with the given max-retry ceiling and shared backoff settings.
      */
-    private RetryPolicy createRetryPolicy() {
+    private RetryPolicy createRetryPolicy(int maxRetryAllowed) {
         return new RetryPolicy(
-            operationsConfig.getMaxRetryAllowed(),
+            maxRetryAllowed,
             operationsConfig.getRetryIntervalInSeconds(),
             operationsConfig.getRetryMinBackoffInSeconds(),
             operationsConfig.getRetryMaxBackOffInSeconds()
@@ -278,7 +280,7 @@ public class ControllerVerticle extends AbstractVerticle {
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
-        // Resume in-flight topic failovers from their TransitionObject stage
+        // Resume in-flight topic failovers from their TransitionMaster stage
         requeueInProgressFailovers(subscriptionService);
 
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
@@ -287,7 +289,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
     /**
      * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
-     * executor is idempotent and re-enters from {@code TransitionObject.currentStage}.
+     * executor is idempotent and re-enters from {@code TransitionMaster.currentStage}.
      */
     private void requeueInProgressFailovers(SubscriptionService subscriptionService) {
         List<TopicFailoverOperation> pendingFailovers = subscriptionService.getPendingTopicFailoverOps();
