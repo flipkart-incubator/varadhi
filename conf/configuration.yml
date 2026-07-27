@@ -1,4 +1,4 @@
-deployedRegion: "region-a"
+deployedRegion: "default"
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]

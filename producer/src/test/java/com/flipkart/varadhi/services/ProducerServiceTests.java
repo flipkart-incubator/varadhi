@@ -447,7 +447,7 @@ class ProducerServiceTests {
 
         Assertions.assertSame(producer, resolvedA);
         Assertions.assertSame(producer, resolvedB);
-        verify(producerFactory, times(2)).newProducer(any(), any());
+        verify(producerFactory, times(1)).newProducer(any(), any());
     }
 
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
