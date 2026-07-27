@@ -30,7 +30,12 @@ import lombok.Getter;
 @Getter
 public final class ZNode {
 
-    public static final String ENTITIES_BASE_PATH = "/varadhi/entities";
+    // Varadhi internal already persists Project JSON with a `properties` field;
+    // OSS Project does not define that field yet, so reading the same ZNodes fails deserialization
+    // Use a separate tree until OSS ships the matching model.
+    // TODO: Revert ENTITIES_BASE_PATH to "/varadhi/entities" once OSS Project includes `properties`
+    // and internal + OSS are on compatible entity jars.
+    public static final String ENTITIES_BASE_PATH = "/test-varadhi/entities";
     public static final String RESOURCE_NAME_SEPARATOR = ":";
 
     public static final ZNodeKind ORG = new ZNodeKind("Org", "%s");
