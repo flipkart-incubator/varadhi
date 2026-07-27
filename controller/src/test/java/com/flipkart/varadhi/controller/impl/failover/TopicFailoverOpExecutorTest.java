@@ -120,7 +120,8 @@ class TopicFailoverOpExecutorTest {
             messageExchange,
             stageAwaiter,
             clusterManager,
-            TopicFailoverConfig.defaultConfig()
+            TopicFailoverConfig.defaultConfig(),
+            SOURCE
         );
     }
 

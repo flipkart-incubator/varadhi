@@ -77,7 +77,8 @@ class SubscriptionServiceFailoverTest {
             mock(VaradhiClusterManager.class),
             mock(MessageExchange.class),
             new StageAwaiter(),
-            TopicFailoverConfig.defaultConfig()
+            TopicFailoverConfig.defaultConfig(),
+            SOURCE
         );
     }
 

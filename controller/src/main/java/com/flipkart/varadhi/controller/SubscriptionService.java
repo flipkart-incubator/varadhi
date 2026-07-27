@@ -68,6 +68,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
     private final MessageExchange messageExchange;
     private final StageAwaiter stageAwaiter;
     private final TopicFailoverConfig failoverConfig;
+    private final RegionName deployedRegion;
 
     public SubscriptionService(
         OperationMgr operationMgr,
@@ -81,7 +82,8 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         VaradhiClusterManager clusterManager,
         MessageExchange messageExchange,
         StageAwaiter stageAwaiter,
-        TopicFailoverConfig failoverConfig
+        TopicFailoverConfig failoverConfig,
+        RegionName deployedRegion
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.assignmentManager = assignmentManager;
@@ -95,6 +97,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         this.messageExchange = messageExchange;
         this.stageAwaiter = stageAwaiter;
         this.failoverConfig = failoverConfig;
+        this.deployedRegion = deployedRegion;
         this.operationMgr.setTopicFailoverTerminalFailureHandler(this::cleanupFailedTopicFailover);
     }
 
@@ -429,7 +432,8 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
             messageExchange,
             stageAwaiter,
             clusterManager,
-            failoverConfig
+            failoverConfig,
+            deployedRegion
         );
     }
 
@@ -465,7 +469,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         if (topic.getStorageTopic() == null) {
             throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }
-        RegionName producing = TopicProduceConfigs.findProducingRegion(topic).orElse(null);
+        RegionName producing = TopicProduceConfigs.findProducingRegion(topic, deployedRegion).orElse(null);
         if (producing != null) {
             if (!source.equals(producing)) {
                 throw new IllegalArgumentException(

@@ -3,7 +3,7 @@ package com.flipkart.varadhi.entities;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TopicProduceConfigsTest {
 
@@ -21,21 +21,36 @@ class TopicProduceConfigsTest {
     }
 
     @Test
-    void findProducingRegion_returnsSoleProducer() {
+    void findProducingRegion_returnsDeployedWhenNoFailOver() {
         VaradhiTopic topic = topicWithRegions();
 
-        assertEquals(RegionName.of("r1"), TopicProduceConfigs.findProducingRegion(topic).orElseThrow());
+        assertEquals(
+            RegionName.of("r1"),
+            TopicProduceConfigs.findProducingRegion(topic, RegionName.of("r1")).orElseThrow()
+        );
+        assertEquals(
+            RegionName.of("r2"),
+            TopicProduceConfigs.findProducingRegion(topic, RegionName.of("r2")).orElseThrow()
+        );
     }
 
     @Test
-    void findProducingRegion_reflectsSwitchedProducer() {
+    void findProducingRegion_usesFailOverRegionWhenSet() {
+        VaradhiTopic topic = topicWithRegions().withProduceConfig(
+            RegionName.of("r1"),
+            new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
+        );
+
+        assertEquals(
+            RegionName.of("r2"),
+            TopicProduceConfigs.findProducingRegion(topic, RegionName.of("r1")).orElseThrow()
+        );
+    }
+
+    @Test
+    void findProducingRegion_emptyWhenRegionMissing() {
         VaradhiTopic topic = topicWithRegions();
 
-        VaradhiTopic updated = topic.withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked())
-                                    .withProduceConfig(RegionName.of("r2"), ProduceConfig.producing());
-
-        assertEquals(RegionName.of("r2"), TopicProduceConfigs.findProducingRegion(updated).orElseThrow());
-        assertFalse(updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state().isProduceAllowed());
-        assertEquals(RegionName.of("r1"), TopicProduceConfigs.findProducingRegion(topic).orElseThrow());
+        assertTrue(TopicProduceConfigs.findProducingRegion(topic, RegionName.of("r3")).isEmpty());
     }
 }

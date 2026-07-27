@@ -79,7 +79,8 @@ public class SubscriptionServiceTest {
                 mock(VaradhiClusterManager.class),
                 mock(MessageExchange.class),
                 new StageAwaiter(),
-                TopicFailoverConfig.defaultConfig()
+                TopicFailoverConfig.defaultConfig(),
+                RegionName.of("r1")
             )
         );
     }

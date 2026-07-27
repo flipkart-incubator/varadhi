@@ -49,6 +49,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
     private final StageAwaiter stageAwaiter;
     private final VaradhiClusterManager clusterManager;
     private final TopicFailoverConfig config;
+    private final RegionName deployedRegion;
 
     public TopicFailoverOpExecutor(
         OperationMgr operationMgr,
@@ -58,7 +59,8 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         MessageExchange messageExchange,
         StageAwaiter stageAwaiter,
         VaradhiClusterManager clusterManager,
-        TopicFailoverConfig config
+        TopicFailoverConfig config,
+        RegionName deployedRegion
     ) {
         this.operationMgr = operationMgr;
         this.transitionStore = transitionStore;
@@ -68,6 +70,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         this.stageAwaiter = stageAwaiter;
         this.clusterManager = clusterManager;
         this.config = config;
+        this.deployedRegion = deployedRegion;
     }
 
     @Override
@@ -181,7 +184,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
      */
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        RegionName producing = TopicProduceConfigs.findProducingRegion(topic).orElse(null);
+        RegionName producing = TopicProduceConfigs.findProducingRegion(topic, deployedRegion).orElse(null);
         RegionName source = Objects.requireNonNullElse(producing, op.getSourceRegion());
         RegionName target = op.getTargetRegion();
         boolean sourceFenced = isState(topic, source, TopicState.Fenced);
@@ -230,7 +233,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
     }
 
     /**
-     * Moves the ephemeral master to {@code stage} and appends a durable {@link StageSnapshot} on
+     * Moves the ephemeral master to {@code stage} and appends a durable {@link com.flipkart.varadhi.entities.cluster.failover.StageSnapshot} on
      * the op. No-op when already at {@code stage} (resume).
      */
     private void advanceMaster(

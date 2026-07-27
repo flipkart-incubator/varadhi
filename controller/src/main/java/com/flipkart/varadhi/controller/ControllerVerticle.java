@@ -16,6 +16,7 @@ import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
@@ -46,6 +47,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
+    private final RegionName deployedRegion;
 
     private ResourceEventProcessor entityEventProcessor;
 
@@ -56,7 +58,8 @@ public class ControllerVerticle extends AbstractVerticle {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         OperationsConfig opsConfig,
-        EventProcessorConfig eventProcessorConfig
+        EventProcessorConfig eventProcessorConfig,
+        RegionName deployedRegion
     ) {
         this.operationsConfig = opsConfig;
         this.eventProcessorConfig = eventProcessorConfig;
@@ -64,6 +67,7 @@ public class ControllerVerticle extends AbstractVerticle {
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
         this.messagingStackProvider = coreServices.getMessagingStackProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
+        this.deployedRegion = deployedRegion;
     }
 
     /**
@@ -169,7 +173,8 @@ public class ControllerVerticle extends AbstractVerticle {
             clusterManager,
             messageExchange,
             new StageAwaiter(),
-            TopicFailoverConfig.defaultConfig()
+            TopicFailoverConfig.defaultConfig(),
+            deployedRegion
         );
     }
 
