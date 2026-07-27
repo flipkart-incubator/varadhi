@@ -157,6 +157,11 @@ public class VaradhiTopicService {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
         TopicCapacityPolicy capacity = varadhiTopic.getCapacity();
         SegmentedStorageTopic storageTopic = varadhiTopic.getStorageTopic();
+        if (storageTopic == null) {
+            throw new IllegalStateException(
+                "Cannot create storage topics for " + varadhiTopic.getName() + ": storageTopic is not set."
+            );
+        }
         storageTopic.getActiveTopics().forEach(st -> storageTopicService.create(project, st, capacity));
     }
 
@@ -218,6 +223,7 @@ public class VaradhiTopicService {
             topicStore.update(varadhiTopic);
 
             SegmentedStorageTopic storageSegment = varadhiTopic.getStorageTopic();
+            // Null-safe: a topic whose create failed partway through may never have gotten a storage topic.
             if (storageSegment != null) {
                 storageSegment.getActiveTopics().forEach(st -> storageTopicService.delete(project, st.getName()));
             }

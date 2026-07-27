@@ -23,7 +23,7 @@ import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.TopicRegionConfigs;
+import com.flipkart.varadhi.entities.TopicProduceConfigs;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -72,6 +72,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
     private final MessageExchange messageExchange;
     private final StageAwaiter stageAwaiter;
     private final TopicFailoverConfig failoverConfig;
+    private final int topicFailoverMaxRetryAllowed;
 
     public SubscriptionService(
         OperationMgr operationMgr,
@@ -84,7 +85,8 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         VaradhiClusterManager clusterManager,
         MessageExchange messageExchange,
         StageAwaiter stageAwaiter,
-        TopicFailoverConfig failoverConfig
+        TopicFailoverConfig failoverConfig,
+        int topicFailoverMaxRetryAllowed
     ) {
         this.consumerClientFactory = consumerClientFactory;
         this.assignmentManager = assignmentManager;
@@ -97,6 +99,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         this.messageExchange = messageExchange;
         this.stageAwaiter = stageAwaiter;
         this.failoverConfig = failoverConfig;
+        this.topicFailoverMaxRetryAllowed = topicFailoverMaxRetryAllowed;
         this.operationMgr.setTopicFailoverTerminalFailureHandler(this::cleanupFailedTopicFailover);
     }
 
@@ -329,7 +332,8 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
                 request.sourceRegion(),
                 request.targetRegion(),
                 request.waitForReplicationLagToClear(),
-                request.requestedBy()
+                request.requestedBy(),
+                topicFailoverMaxRetryAllowed
             );
             // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
             transitionStore.create(
@@ -461,7 +465,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         if (topic.getStorageTopic() == null) {
             throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }
-        RegionName producing = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
+        RegionName producing = TopicProduceConfigs.findProducingRegion(topic).orElse(null);
         if (producing != null) {
             if (!source.equals(producing)) {
                 throw new IllegalArgumentException(

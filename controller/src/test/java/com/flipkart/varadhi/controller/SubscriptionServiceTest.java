@@ -62,7 +62,7 @@ public class SubscriptionServiceTest {
         consumerApi = mock(ConsumerApi.class);
         assignmentManager = mock(AssignmentManager.class);
         opStore = mock(OpStore.class);
-        operationMgr = spy(new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 0, 4, 5, 20)));
+        operationMgr = spy(new OperationMgr(config.getMaxConcurrentOps(), opStore, new RetryPolicy(0, 4, 5, 20)));
         when(consumerClientFactory.getInstance(anyString())).thenReturn(consumerApi);
         subscriptionStore = mock(SubscriptionStore.class);
         when(metaStore.subscriptions()).thenReturn(subscriptionStore);
@@ -78,7 +78,8 @@ public class SubscriptionServiceTest {
                 mock(VaradhiClusterManager.class),
                 mock(MessageExchange.class),
                 new StageAwaiter(),
-                TopicFailoverConfig.defaultConfig()
+                TopicFailoverConfig.defaultConfig(),
+                0
             )
         );
     }

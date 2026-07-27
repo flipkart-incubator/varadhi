@@ -5,9 +5,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 /** Read helpers for {@link VaradhiTopic#getProduceConfigs()}. */
-public final class TopicRegionConfigs {
+public final class TopicProduceConfigs {
 
-    private TopicRegionConfigs() {
+    private TopicProduceConfigs() {
     }
 
     public static Optional<RegionName> findProducingRegion(VaradhiTopic topic) {

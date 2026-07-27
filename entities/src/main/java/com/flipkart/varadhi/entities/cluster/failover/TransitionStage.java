@@ -21,6 +21,10 @@ package com.flipkart.varadhi.entities.cluster.failover;
  *       (N+1) so produce re-gates to the new region.</li>
  *   <li>{@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED} — lifecycle markers;
  *       usually acked immediately on receipt.</li>
+ *   <li>{@link #DRAIN} — reserved stage entered after {@link #SWITCH} while produce is still
+ *       fenced. When {@code TopicFailoverOperation.isWaitForReplicationLagToClear()} is
+ *       {@code true} the controller holds here as a barrier before {@link #COMPLETED}; the
+ *       actual replication-lag check the barrier waits on may still be stubbed (pods just ack).</li>
  * </ul>
  */
 public enum TransitionStage {
@@ -38,17 +42,7 @@ public enum TransitionStage {
     }
 
     /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */
-    public boolean isVersionGated() {
+    public boolean needsTopicVersionSync() {
         return this == PREPARE || this == SWITCH;
-    }
-
-    /** Stages acked immediately on receipt with no version wait. */
-    public boolean isImmediateAck() {
-        return !isVersionGated();
-    }
-
-    /** Only {@link #PREPARE} carries a {@code target} for producer pre-warm. */
-    public boolean requiresTarget() {
-        return this == PREPARE;
     }
 }

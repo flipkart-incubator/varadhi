@@ -13,11 +13,23 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.Map;
 
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
 public class FailureHandler implements Handler<RoutingContext> {
+
+    // Ordered so the first matching cause in the chain wins (checked top to bottom).
+    private static final List<Map.Entry<Class<? extends Throwable>, Integer>> EXCEPTION_STATUS_CODES = List.of(
+        Map.entry(DuplicateResourceException.class, HTTP_CONFLICT),
+        Map.entry(ServerNotAvailableException.class, HTTP_UNAVAILABLE),
+        Map.entry(IllegalArgumentException.class, HTTP_BAD_REQUEST),
+        Map.entry(ResourceNotFoundException.class, HTTP_NOT_FOUND),
+        Map.entry(InvalidOperationForResourceException.class, HTTP_CONFLICT),
+        Map.entry(UnsupportedOperationException.class, HTTP_NOT_IMPLEMENTED)
+    );
 
     @Override
     public void handle(RoutingContext ctx) {
@@ -89,23 +101,10 @@ public class FailureHandler implements Handler<RoutingContext> {
         if (httpException != null) {
             return httpException.getStatusCode();
         }
-        if (findCause(t, DuplicateResourceException.class) != null) {
-            return HTTP_CONFLICT;
-        }
-        if (findCause(t, ServerNotAvailableException.class) != null) {
-            return HTTP_UNAVAILABLE;
-        }
-        if (findCause(t, IllegalArgumentException.class) != null) {
-            return HTTP_BAD_REQUEST;
-        }
-        if (findCause(t, ResourceNotFoundException.class) != null) {
-            return HTTP_NOT_FOUND;
-        }
-        if (findCause(t, InvalidOperationForResourceException.class) != null) {
-            return HTTP_CONFLICT;
-        }
-        if (findCause(t, UnsupportedOperationException.class) != null) {
-            return HTTP_NOT_IMPLEMENTED;
+        for (Map.Entry<Class<? extends Throwable>, Integer> entry : EXCEPTION_STATUS_CODES) {
+            if (findCause(t, entry.getKey()) != null) {
+                return entry.getValue();
+            }
         }
         return HTTP_INTERNAL_ERROR;
     }

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-class TopicRegionConfigsTest {
+class TopicProduceConfigsTest {
 
     private VaradhiTopic topicWithRegions() {
         VaradhiTopic topic = VaradhiTopic.of(
@@ -24,7 +24,7 @@ class TopicRegionConfigsTest {
     void findProducingRegion_returnsSoleProducer() {
         VaradhiTopic topic = topicWithRegions();
 
-        assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(topic).orElseThrow());
+        assertEquals(RegionName.of("r1"), TopicProduceConfigs.findProducingRegion(topic).orElseThrow());
     }
 
     @Test
@@ -34,8 +34,8 @@ class TopicRegionConfigsTest {
         VaradhiTopic updated = topic.withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked())
                                     .withProduceConfig(RegionName.of("r2"), ProduceConfig.producing());
 
-        assertEquals(RegionName.of("r2"), TopicRegionConfigs.findProducingRegion(updated).orElseThrow());
+        assertEquals(RegionName.of("r2"), TopicProduceConfigs.findProducingRegion(updated).orElseThrow());
         assertFalse(updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state().isProduceAllowed());
-        assertEquals(RegionName.of("r1"), TopicRegionConfigs.findProducingRegion(topic).orElseThrow());
+        assertEquals(RegionName.of("r1"), TopicProduceConfigs.findProducingRegion(topic).orElseThrow());
     }
 }

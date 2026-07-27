@@ -87,7 +87,7 @@ class TopicFailoverOpExecutorTest {
                      .withProduceRegion(TARGET);
         topic.setVersion(1);
 
-        op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
+        op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester", 0);
         transition = TransitionObject.forFailover(op.getId(), FQN, SOURCE, TARGET);
 
         AtomicReference<VaradhiTopic> topicRef = new AtomicReference<>(topic);

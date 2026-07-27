@@ -10,7 +10,7 @@ import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.TopicRegionConfigs;
+import com.flipkart.varadhi.entities.TopicProduceConfigs;
 import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
@@ -124,7 +124,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
      */
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        RegionName producing = TopicRegionConfigs.findProducingRegion(topic).orElse(null);
+        RegionName producing = TopicProduceConfigs.findProducingRegion(topic).orElse(null);
         RegionName source = Objects.requireNonNullElse(producing, op.getSourceRegion());
         RegionName target = op.getTargetRegion();
         boolean sourceFenced = isState(topic, source, TopicState.Fenced);
@@ -159,11 +159,24 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         return runStageBarrier(op, TransitionStage.SWITCH, event, config.switchTimeoutMs());
     }
 
+    /**
+     * Runs the DRAIN stage, between the SWITCH fence and {@link #complete}. If the request asked to
+     * wait for replication lag to clear, this blocks on a stage-ack barrier (bounded by
+     * {@link TopicFailoverConfig#drainTimeoutMs()}) before COMPLETE proceeds; otherwise it just
+     * broadcasts the stage and moves on immediately.
+     *
+     * <p>TODO: the actual replication-lag check is not yet implemented — pods currently just ack
+     * the stage without checking source-region lag.
+     */
     private CompletableFuture<Void> drain(TopicFailoverOperation op) {
         TransitionObject transition = transitionStore.get(op.getTopicFqn());
         transition.advanceTo(TransitionStage.DRAIN, 0L);
         transitionStore.update(transition);
-        broadcast(stageEvent(op, TransitionStage.DRAIN, 0L, null));
+        TransitionEvent event = stageEvent(op, TransitionStage.DRAIN, 0L, null);
+        if (op.isWaitForReplicationLagToClear()) {
+            return runStageBarrier(op, TransitionStage.DRAIN, event, config.drainTimeoutMs());
+        }
+        broadcast(event);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -214,7 +227,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
             VaradhiTopicName.parse(op.getTopicFqn()),
             TransitionType.TOPIC_FAILOVER,
             stage,
-            stage.isVersionGated(),
+            stage.needsTopicVersionSync(),
             topicVersionToAwait,
             target
         );

@@ -18,6 +18,17 @@ import java.util.List;
  *
  * <p>{@code name == topicFqn}, so an atomic ZK create enforces "one active transition per topic"
  * (the lock-free uniqueness guard). It is deleted when the transition reaches a terminal stage.
+ *
+ * <p><b>Naming</b>: the name is intentionally generic — this is an ephemeral ZK master for any
+ * {@link TransitionKind}, not just {@code FAILOVER} (e.g. a future storage-topic migration would
+ * reuse it). Because it is deleted on completion, it is where <em>live</em> stage-by-stage
+ * orchestration state lives; the durable, forever-retained intent/outcome record for a failover is
+ * the separate {@code TopicFailoverOperation} in the {@code OpStore}. Splitting the two keeps ZK
+ * (small, ephemeral, high-churn) separate from the op history (durable, append-mostly, audited).
+ *
+ * <p>Fields here (including {@link #stageHistory}) exist to power the transition GET API response
+ * and admin/audit visibility while the transition is in flight — some {@link StageSnapshot}
+ * sub-fields (e.g. per-host ack detail) may not be fully populated yet.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
@@ -93,11 +104,6 @@ public class TransitionObject extends MetaStoreEntity {
         this.topicVersionToAwait = topicVersionToAwait;
         this.updatedAt = System.currentTimeMillis();
         this.stageHistory.add(StageSnapshot.started(stage));
-    }
-
-    @JsonIgnore
-    public StageSnapshot currentStageSnapshot() {
-        return stageHistory.isEmpty() ? null : stageHistory.get(stageHistory.size() - 1);
     }
 
     @JsonIgnore

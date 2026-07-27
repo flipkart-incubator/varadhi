@@ -21,6 +21,11 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.IN_PROGRESS;
  *
  * <p>Ordering key is {@code "TopicFailover_" + topicFqn} so the {@code OperationMgr} serializes
  * all failover work for a given topic.
+ *
+ * <p>Live per-stage history stays on {@code TransitionObject} only; copying it onto this op when
+ * the transition completes (so it survives past the ephemeral master's deletion) is a possible
+ * future enhancement, not required for v1 — today the durable audit trail is this op's request +
+ * outcome fields, not a stage-by-stage log.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
@@ -37,6 +42,13 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
     private long endTime;
     private State state;
     private String errorMsg;
+    /**
+     * Max retries for this operation, stamped at creation from
+     * {@code OperationsConfig.getTopicFailoverMaxRetryAllowed()}. Overrides
+     * {@link OrderedOperation#maxRetryAllowed(int)} so {@code controller.RetryPolicy} stays generic
+     * and does not need to know about this concrete operation type.
+     */
+    private final int maxRetryAllowed;
 
     @JsonCreator
     TopicFailoverOperation(
@@ -51,7 +63,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         long startTime,
         long endTime,
         State state,
-        String errorMsg
+        String errorMsg,
+        int maxRetryAllowed
     ) {
         super(operationId, version, MetaStoreEntityType.TOPIC_FAILOVER_OPERATION);
         this.operationId = operationId;
@@ -65,6 +78,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         this.endTime = endTime;
         this.state = state;
         this.errorMsg = errorMsg;
+        this.maxRetryAllowed = maxRetryAllowed;
     }
 
     public static TopicFailoverOperation of(
@@ -72,7 +86,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         RegionName sourceRegion,
         RegionName targetRegion,
         boolean waitForReplicationLagToClear,
-        String requestedBy
+        String requestedBy,
+        int maxRetryAllowed
     ) {
         return new TopicFailoverOperation(
             UUID.randomUUID().toString(),
@@ -86,8 +101,14 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
             System.currentTimeMillis(),
             0,
             IN_PROGRESS,
-            null
+            null,
+            maxRetryAllowed
         );
+    }
+
+    @Override
+    public int maxRetryAllowed(int policyDefault) {
+        return maxRetryAllowed;
     }
 
     @JsonIgnore
@@ -125,7 +146,8 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
             startTime,
             0,
             IN_PROGRESS,
-            null
+            null,
+            maxRetryAllowed
         );
     }
 

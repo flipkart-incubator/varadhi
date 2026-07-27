@@ -24,6 +24,8 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
  * @param stage          the stage being acknowledged
  * @param errorMsg       {@code null} (or blank) on success; a non-blank failure reason otherwise
  */
+// Forward-compatible bus deserialization: ignore unknown fields so newer pods can add ack fields
+// without breaking an older controller reading them off the cluster bus (repo-wide pattern).
 @JsonIgnoreProperties (ignoreUnknown = true)
 public record TransitionAck(
     String opId,

@@ -23,11 +23,12 @@ deliveryOptions:
 
 producerOptions:
   producerCacheTtlSeconds: 3600
-  # ZK watch → TopicCache can lag a few seconds under load; 1s default fails SWITCH flaky.
-  transitionVersionWaitMs: 30000
-  transitionPollIntervalMs: 50
-  # Test-only: delay SWITCH ack to controller so produce stays Blocked longer (0 = off).
-  transitionAckReportDelayMs: 0
+  transition:
+    # ZK watch → TopicCache can lag a few seconds under load; 1s default fails SWITCH flaky.
+    versionWaitMs: 30000
+    pollIntervalMs: 50
+    # Test-only: delay SWITCH ack to controller so produce stays Blocked longer (0 = off).
+    ackReportDelayMs: 0
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"

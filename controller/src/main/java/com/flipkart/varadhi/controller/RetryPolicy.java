@@ -1,20 +1,17 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class RetryPolicy {
     private final int maxRetryAllowed;
-    private final int topicFailoverMaxRetryAllowed;
     private final int retryIntervalInSeconds;
     private final int minBackoffSeconds;
     private final int maxBackoffSeconds;
 
-
     public boolean canRetry(OrderedOperation operation) {
-        int maxAllowed = operation instanceof TopicFailoverOperation ? topicFailoverMaxRetryAllowed : maxRetryAllowed;
+        int maxAllowed = operation.maxRetryAllowed(maxRetryAllowed);
         return operation.hasFailed() && operation.getRetryAttempt() < maxAllowed;
     }
 

@@ -164,7 +164,8 @@ public class ControllerVerticle extends AbstractVerticle {
             clusterManager,
             messageExchange,
             new StageAwaiter(),
-            TopicFailoverConfig.defaultConfig()
+            TopicFailoverConfig.defaultConfig(),
+            operationsConfig.getTopicFailoverMaxRetryAllowed()
         );
     }
 
@@ -176,7 +177,6 @@ public class ControllerVerticle extends AbstractVerticle {
     private RetryPolicy createRetryPolicy() {
         return new RetryPolicy(
             operationsConfig.getMaxRetryAllowed(),
-            operationsConfig.getTopicFailoverMaxRetryAllowed(),
             operationsConfig.getRetryIntervalInSeconds(),
             operationsConfig.getRetryMinBackoffInSeconds(),
             operationsConfig.getRetryMaxBackOffInSeconds()
