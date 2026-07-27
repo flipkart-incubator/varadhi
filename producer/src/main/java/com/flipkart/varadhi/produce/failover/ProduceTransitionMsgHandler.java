@@ -7,6 +7,7 @@ import com.flipkart.varadhi.core.cluster.MsgHandler;
 import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
@@ -190,14 +191,32 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     /**
      * Type-specific PREPARE warm for an {@link TransitionParticipation#INVOLVED} pod.
+     *
+     * <p>Region target: warm under the failover {@link TransitionEvent.Target.Region#region()} so the
+     * cache entry matches the produce key after switch. Storage target: warm that storage id under
+     * this pod's {@link ProducerService#deployedRegion()}.
      */
     private CompletableFuture<Void> createTarget(TransitionEvent event, VaradhiTopic topic) {
         TransitionEvent.Target target = event.target();
         if (target instanceof TransitionEvent.Target.Region regionTarget) {
-            return producerService.getProducerForRegion(topic, regionTarget.region()).thenAccept(producer -> {});
+            SegmentedStorageTopic storage = topic.getStorageTopic();
+            if (storage == null) {
+                return CompletableFuture.failedFuture(
+                    new IllegalStateException("PREPARE region target but topic has no storageTopic")
+                );
+            }
+            return producerService.loadProducer(
+                event.topicFqn(),
+                storage.getTopicToProduce().getId(),
+                regionTarget.region().value()
+            );
         }
         if (target instanceof TransitionEvent.Target.StorageTopic storageTarget) {
-            return producerService.loadProducer(event.topicFqn(), storageTarget.storageTopicId());
+            return producerService.loadProducer(
+                event.topicFqn(),
+                storageTarget.storageTopicId(),
+                producerService.deployedRegion()
+            );
         }
         return CompletableFuture.failedFuture(new IllegalStateException("PREPARE target missing"));
     }

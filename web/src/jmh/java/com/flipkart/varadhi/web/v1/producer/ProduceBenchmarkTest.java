@@ -308,7 +308,7 @@ public class ProduceBenchmarkTest {
 
     private List<Resource.EntityResource<VaradhiTopic>> createTestTopics(
         Project project,
-        MessagingStackProvider.Base messagingStackProvider
+        MessagingStackProvider messagingStackProvider
     ) {
         List<Resource.EntityResource<VaradhiTopic>> topics = new ArrayList<>();
         TopicCapacityPolicy policy = new TopicCapacityPolicy(100, 1000, 1, 2);

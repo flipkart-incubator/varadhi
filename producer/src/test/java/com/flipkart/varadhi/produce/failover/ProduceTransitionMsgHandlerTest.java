@@ -20,7 +20,6 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.spi.services.Producer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Vertx;
 import org.junit.jupiter.api.AfterEach;
@@ -81,10 +80,7 @@ class ProduceTransitionMsgHandlerTest {
         producerService = mock(ProducerService.class);
         when(producerService.deployedRegion()).thenReturn(DEPLOYED_REGION);
         when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(true);
-        when(producerService.getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class))).thenReturn(
-            CompletableFuture.completedFuture(mock(Producer.class))
-        );
-        when(producerService.loadProducer(any(VaradhiTopicName.class), anyInt())).thenReturn(
+        when(producerService.loadProducer(any(VaradhiTopicName.class), anyInt(), anyString())).thenReturn(
             CompletableFuture.completedFuture(null)
         );
         scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -122,8 +118,8 @@ class ProduceTransitionMsgHandlerTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {}))
-                     .withProduceRegion(RegionName.of(DEPLOYED_REGION));
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {
+        })).withProduceRegion(RegionName.of(DEPLOYED_REGION));
         topic.setVersion(version);
         topicCache.onChange(
             new ResourceEvent<>(
@@ -163,7 +159,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionType.TOPIC_FAILOVER, ack.transitionType());
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
-        verify(producerService).getProducerForRegion(any(VaradhiTopic.class), eq(TARGET_REGION));
+        verify(producerService).loadProducer(eq(TOPIC_NAME), eq(0), eq(TARGET_REGION.value()));
     }
 
     @Test
@@ -192,14 +188,14 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionType.STORAGE_MIGRATION, ack.transitionType());
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
-        verify(producerService).loadProducer(TOPIC_NAME, TARGET_STORAGE_TOPIC_ID);
+        verify(producerService).loadProducer(TOPIC_NAME, TARGET_STORAGE_TOPIC_ID, DEPLOYED_REGION);
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
     }
 
     @Test
     void prepareAcksFailureWhenWarmFails() throws Exception {
         seed(10);
-        when(producerService.getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class))).thenReturn(
+        when(producerService.loadProducer(any(VaradhiTopicName.class), anyInt(), anyString())).thenReturn(
             CompletableFuture.failedFuture(new RuntimeException("broker unreachable"))
         );
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
@@ -252,7 +248,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionParticipation.NOT_INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
-        verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt());
+        verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt(), anyString());
     }
 
     @Test
@@ -346,7 +342,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
-        verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt());
+        verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt(), anyString());
     }
 
     @Test

@@ -39,12 +39,8 @@ public final class RetryUtils {
         // RetryPolicy alone returns the last matching result when attempts are exhausted; wrap with
         // a Fallback so callers always see exhaustion as a failure (same path as probe errors).
         Fallback<T> exhaustion = Fallback.<T>builderOfException(
-                                             e -> new TimeoutException(
-                                                 "timeout: result polling exhausted after " + maxAttempts + " attempts"
-                                             )
-                                         )
-                                         .handleResultIf(retryOnResult::test)
-                                         .build();
+            e -> new TimeoutException("timeout: result polling exhausted after " + maxAttempts + " attempts")
+        ).handleResultIf(retryOnResult::test).build();
         return Failsafe.with(exhaustion).compose(policy).with(executor);
     }
 }

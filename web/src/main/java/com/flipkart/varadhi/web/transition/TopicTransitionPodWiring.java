@@ -66,8 +66,8 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
             new ControllerRemoteClient(messageExchange),
             producerService,
             new PodTransitionConfig(
-                producerOptions.getTransitionVersionWaitMs(),
-                producerOptions.getTransitionPollIntervalMs()
+                producerOptions.getTransition().getVersionWaitMs(),
+                producerOptions.getTransition().getPollIntervalMs()
             ),
             scheduler,
             metrics

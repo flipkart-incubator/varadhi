@@ -13,11 +13,23 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.Map;
 
 import static java.net.HttpURLConnection.*;
 
 @Slf4j
 public class FailureHandler implements Handler<RoutingContext> {
+
+    // Ordered so the first matching cause in the chain wins (checked top to bottom).
+    private static final List<Map.Entry<Class<? extends Throwable>, Integer>> EXCEPTION_STATUS_CODES = List.of(
+        Map.entry(DuplicateResourceException.class, HTTP_CONFLICT),
+        Map.entry(ServerNotAvailableException.class, HTTP_UNAVAILABLE),
+        Map.entry(IllegalArgumentException.class, HTTP_BAD_REQUEST),
+        Map.entry(ResourceNotFoundException.class, HTTP_NOT_FOUND),
+        Map.entry(InvalidOperationForResourceException.class, HTTP_CONFLICT),
+        Map.entry(UnsupportedOperationException.class, HTTP_NOT_IMPLEMENTED)
+    );
 
     @Override
     public void handle(RoutingContext ctx) {
@@ -63,25 +75,18 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private String getErrorFromFailure(Throwable t, int statusCode) {
-        if (t instanceof HttpException he) {
-            return he.getPayload();
-        } else {
-            StringBuilder sb = new StringBuilder();
-            if (null != t) {
-                sb.append(t.getMessage());
-                // include second level exception details when available and outermost exception is of not known type
-                // i.e. it doesn't extend from VaradhiException.
-                if (!(t instanceof VaradhiException)) {
-                    if (null != t.getCause()) {
-                        sb.append("Internal error : ");
-                        sb.append(t.getCause().getMessage());
-                    }
-                }
-            } else {
-                sb.append(getDefaultErrorMessageFromStatusCode(statusCode));
-            }
-            return sb.toString();
+        HttpException httpException = findCause(t, HttpException.class);
+        if (httpException != null) {
+            return httpException.getPayload();
         }
+        VaradhiException varadhiException = findCause(t, VaradhiException.class);
+        if (varadhiException != null) {
+            return varadhiException.getMessage();
+        }
+        if (null != t) {
+            return t.getMessage() != null ? t.getMessage() : getDefaultErrorMessageFromStatusCode(statusCode);
+        }
+        return getDefaultErrorMessageFromStatusCode(statusCode);
     }
 
     private String getDefaultErrorMessageFromStatusCode(int statusCode) {
@@ -92,24 +97,26 @@ public class FailureHandler implements Handler<RoutingContext> {
     }
 
     private int getStatusCodeFromFailure(Throwable t) {
-        //TODO:: review produceStatus code headerMapping for correctness.
-        Class tClazz = t.getClass();
-        if (t instanceof HttpException he) {
-            return he.getStatusCode();
-        } else if (DuplicateResourceException.class == tClazz) {
-            return HTTP_CONFLICT;
-        } else if (ServerNotAvailableException.class == tClazz) {
-            return HTTP_UNAVAILABLE;
-        } else if (IllegalArgumentException.class == tClazz) {
-            return HTTP_BAD_REQUEST;
-        } else if (ResourceNotFoundException.class == tClazz) {
-            return HTTP_NOT_FOUND;
-        } else if (InvalidOperationForResourceException.class == tClazz) {
-            return HTTP_CONFLICT;
-        } else if (UnsupportedOperationException.class == tClazz) {
-            return HTTP_NOT_IMPLEMENTED;
+        HttpException httpException = findCause(t, HttpException.class);
+        if (httpException != null) {
+            return httpException.getStatusCode();
+        }
+        for (Map.Entry<Class<? extends Throwable>, Integer> entry : EXCEPTION_STATUS_CODES) {
+            if (findCause(t, entry.getKey()) != null) {
+                return entry.getValue();
+            }
         }
         return HTTP_INTERNAL_ERROR;
+    }
+
+    private static <T extends Throwable> T findCause(Throwable t, Class<T> type) {
+        while (t != null) {
+            if (type.isInstance(t)) {
+                return type.cast(t);
+            }
+            t = t.getCause();
+        }
+        return null;
     }
 
 }

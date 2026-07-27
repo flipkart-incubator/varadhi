@@ -9,15 +9,20 @@ import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
+import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
+import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
@@ -38,9 +43,11 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private final VaradhiClusterManager clusterManager;
     private final MetaStoreProvider metaStoreProvider;
+    private final MessagingStackProvider messagingStackProvider;
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
+    private final RegionName deployedRegion;
 
     private ResourceEventProcessor entityEventProcessor;
 
@@ -51,13 +58,16 @@ public class ControllerVerticle extends AbstractVerticle {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         OperationsConfig opsConfig,
-        EventProcessorConfig eventProcessorConfig
+        EventProcessorConfig eventProcessorConfig,
+        RegionName deployedRegion
     ) {
         this.operationsConfig = opsConfig;
         this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
+        this.messagingStackProvider = coreServices.getMessagingStackProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
+        this.deployedRegion = deployedRegion;
     }
 
     /**
@@ -140,7 +150,8 @@ public class ControllerVerticle extends AbstractVerticle {
         OperationMgr operationMgr = new OperationMgr(
             operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
-            createRetryPolicy()
+            createRetryPolicy(operationsConfig.getMaxRetryAllowed()),
+            createRetryPolicy(operationsConfig.getTopicFailoverMaxRetryAllowed())
         );
 
         // Create assignment manager
@@ -154,18 +165,25 @@ public class ControllerVerticle extends AbstractVerticle {
             operationMgr,
             assigner,
             metaStoreProvider.getMetaStore().subscriptions(),
-            consumerClientFactory
+            consumerClientFactory,
+            metaStoreProvider.getTransitionStore(),
+            metaStoreProvider.getMetaStore().topics(),
+            metaStoreProvider.getMetaStore().regions(),
+            messagingStackProvider.getStorageTopicService(),
+            clusterManager,
+            messageExchange,
+            new StageAwaiter(),
+            TopicFailoverConfig.defaultConfig(),
+            deployedRegion
         );
     }
 
     /**
-     * Creates a retry policy based on the controller configuration.
-     *
-     * @return the configured RetryPolicy
+     * Creates a retry policy with the given max-retry ceiling and shared backoff settings.
      */
-    private RetryPolicy createRetryPolicy() {
+    private RetryPolicy createRetryPolicy(int maxRetryAllowed) {
         return new RetryPolicy(
-            operationsConfig.getMaxRetryAllowed(),
+            maxRetryAllowed,
             operationsConfig.getRetryIntervalInSeconds(),
             operationsConfig.getRetryMinBackoffInSeconds(),
             operationsConfig.getRetryMaxBackOffInSeconds()
@@ -190,16 +208,21 @@ public class ControllerVerticle extends AbstractVerticle {
         // TODO: Handling membership changes during controller bootstrap.
         setupMembershipListener(subscriptionService);
 
-        // Get all cluster members and initialize consumer nodes
+        // Register API handlers immediately so they are available before consumer-node init
+        setupApiHandlers(messageRouter, handler);
+
+        // Get all cluster members and initialize consumer nodes asynchronously
         return clusterManager.getAllMembers()
                              .compose(allMembers -> initializeConsumerNodes(allMembers, subscriptionService))
                              .compose(consumerIds -> {
-                                 // Set up API handlers and restore controller state
-                                 setupApiHandlers(messageRouter, handler);
                                  restoreControllerState(subscriptionService, consumerIds);
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
+                                 log.error(
+                                     "Failed to initialize consumer nodes during leader election: {}",
+                                     e.getMessage()
+                                 );
                                  abortLeadership();
                              });
     }
@@ -262,8 +285,27 @@ public class ControllerVerticle extends AbstractVerticle {
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
+        // Resume in-flight topic failovers from their TransitionMaster stage
+        requeueInProgressFailovers(subscriptionService);
+
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
         // This should include strategies for recovering from failures without requiring controller restart
+    }
+
+    /**
+     * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
+     * executor is idempotent and re-enters from {@code TransitionMaster.currentStage}.
+     */
+    private void requeueInProgressFailovers(SubscriptionService subscriptionService) {
+        List<TopicFailoverOperation> pendingFailovers = subscriptionService.getPendingTopicFailoverOps();
+        if (pendingFailovers.isEmpty()) {
+            log.info("No pending topic failovers to resume");
+            return;
+        }
+        pendingFailovers.stream()
+                        .sorted(Comparator.comparing(TopicFailoverOperation::getStartTime))
+                        .forEach(subscriptionService::retryTopicFailover);
+        log.info("Resumed {} pending topic failover(s)", pendingFailovers.size());
     }
 
     /**
@@ -346,9 +388,19 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
 
+        // Topic failover lifecycle (web -> controller)
+        messageRouter.requestHandler(
+            ROUTE_CONTROLLER,
+            TransitionBusAddress.CREATE_FAILOVER_API,
+            handler::createFailover
+        );
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.GET_FAILOVER_API, handler::getFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.ABORT_FAILOVER_API, handler::abortFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.LIST_FAILOVERS_API, handler::listFailovers);
+
         // Register send handlers for pod → controller updates
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
-        messageRouter.sendHandler(ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, handler::ack);
+        messageRouter.sendHandler(ROUTE_CONTROLLER, TransitionBusAddress.STAGE_ACK_API, handler::ack);
 
         log.info("Controller API handlers registered successfully");
     }

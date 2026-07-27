@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,21 +37,19 @@ public final class TransitionMetrics {
 
     public TransitionMetrics(MeterRegistry registry) {
         this.registry = registry;
-        track(
-            Gauge.builder(VERSION_WAITS_IN_FLIGHT, versionWaitsInFlight, AtomicInteger::get).register(registry)
-        );
+        track(Gauge.builder(VERSION_WAITS_IN_FLIGHT, versionWaitsInFlight, AtomicInteger::get).register(registry));
         for (TransitionType type : TransitionType.values()) {
             for (TransitionParticipation participation : TransitionParticipation.values()) {
                 TransitionType transitionType = type;
                 TransitionParticipation participationValue = participation;
                 track(
                     Gauge.builder(
-                            PARTICIPATION,
-                            participationByType,
-                            map -> map.get(transitionType) == participationValue ? 1.0 : 0.0
-                        )
-                        .tags(Tags.of("type", transitionType.name(), "participation", participationValue.name()))
-                        .register(registry)
+                        PARTICIPATION,
+                        participationByType,
+                        map -> map.get(transitionType) == participationValue ? 1.0 : 0.0
+                    )
+                         .tags(Tags.of("type", transitionType.name(), "participation", participationValue.name()))
+                         .register(registry)
                 );
             }
         }
@@ -63,10 +62,8 @@ public final class TransitionMetrics {
 
     /** This pod acked a stage; {@code success} is the ack outcome. */
     public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
-        counter(
-            STAGE_ACKED,
-            Tags.of("type", type.name(), "stage", stage.name(), "success", Boolean.toString(success))
-        ).increment();
+        counter(STAGE_ACKED, Tags.of("type", type.name(), "stage", stage.name(), "success", Boolean.toString(success)))
+                                                                                                                       .increment();
     }
 
     /**
@@ -113,4 +110,7 @@ public final class TransitionMetrics {
         registeredMeters.add(meter);
         return meter;
     }
+
+    /** No-op instance for use in tests. */
+    public static final TransitionMetrics NOOP = new TransitionMetrics(new SimpleMeterRegistry());
 }

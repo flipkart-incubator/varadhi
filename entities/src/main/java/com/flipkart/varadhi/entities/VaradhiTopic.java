@@ -53,6 +53,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TOPIC, QUEUE
     }
 
+    /**
+     * Full constructor used by {@link #of} and {@link #copyWith}. Private: all external construction
+     * goes through the {@code of} factories or a {@code with*}/{@code copyWith} copy.
+     */
     private VaradhiTopic(
         String name,
         int version,
@@ -225,15 +229,24 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return resolveProduceTarget(region);
     }
 
+    /**
+     * Returns a copy with {@code region}'s {@link ProduceConfig} replaced; all other regions unchanged.
+     */
     public VaradhiTopic withProduceConfig(RegionName region, ProduceConfig config) {
         Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
         updated.put(region, config);
         return copyWith(updated, autoFailover);
     }
 
+    /**
+     * Returns a copy with {@link #autoFailover} set to the given value.
+     */
     public VaradhiTopic withAutoFailover(boolean autoFailover) {
         return copyWith(produceConfigs, autoFailover);
     }
+
+    // Note: Lombok @With is not used for these copy methods because fields are inherited from
+    // MetaStoreEntity / LifecycleEntity, which @With cannot see (same reason as Region.java).
 
     @JsonIgnore
     public String getProjectName() {
@@ -245,10 +258,17 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return VaradhiTopicName.parse(getName()).getTopicName();
     }
 
+    /**
+     * Resolves the shared {@link #storageTopic} for {@code region} regardless of {@link TopicState}.
+     * {@code null} if {@code region} has no produce config or storage is not yet provisioned.
+     */
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
         return getProduceTopicForRegion(RegionName.of(region));
     }
 
+    /**
+     * @see #getProduceTopicForRegion(String)
+     */
     public SegmentedStorageTopic getProduceTopicForRegion(RegionName region) {
         return produceConfigs.containsKey(region) ? storageTopic : null;
     }
@@ -257,10 +277,19 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return this.topicCategory == category;
     }
 
+    /**
+     * Package-visible copy helper used by other entities' {@code with*} builders that only need to
+     * touch {@link #produceConfigs} / {@link #autoFailover}; delegates to the private full copy.
+     */
     VaradhiTopic copyWith(Map<RegionName, ProduceConfig> produceConfigs, boolean autoFailover) {
         return copyWith(storageTopic, produceConfigs, autoFailover);
     }
 
+    /**
+     * Private copy helper backing all {@code with*} methods: builds a fresh instance carrying over
+     * every field, substituting the given ones. No null sentinels — callers must pass full replacement
+     * values (e.g. the current {@link #produceConfigs} unchanged) rather than relying on null-means-keep.
+     */
     private VaradhiTopic copyWith(
         SegmentedStorageTopic storageTopic,
         Map<RegionName, ProduceConfig> produceConfigs,

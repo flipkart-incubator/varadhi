@@ -76,7 +76,8 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        varadhiTopic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic)).withProduceRegion(RegionName.of("region1"));
+        varadhiTopic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic))
+                                   .withProduceRegion(RegionName.of("region1"));
 
         assertEquals(
             storageTopic.getName(),
@@ -104,7 +105,8 @@ class VaradhiTopicTest {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
-        VaradhiTopic topic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic)).withProduceRegion(RegionName.of("region1"));
+        VaradhiTopic topic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic))
+                                         .withProduceRegion(RegionName.of("region1"));
 
         assertAll(
             () -> assertNotNull(topic.getProduceTopicForRegion("region1"), "Region topic not found"),
@@ -179,7 +181,9 @@ class VaradhiTopicTest {
 
     @Test
     void getProduceTopic_emptyWhenBlocked() {
-        VaradhiTopic topic = createDefaultVaradhiTopic(false).withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))).withProduceRegion(RegionName.of("r1"));
+        VaradhiTopic topic = createDefaultVaradhiTopic(false).withStorageTopic(
+            SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
+        ).withProduceRegion(RegionName.of("r1"));
         topic = topic.withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked());
 
         assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
@@ -187,14 +191,10 @@ class VaradhiTopicTest {
 
     @Test
     void resolveProduceTarget_stillResolvesWhenFenced() {
-        VaradhiTopic topic = createDefaultVaradhiTopic(false)
-            .withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t")))
-            .withProduceRegion(RegionName.of("r1"))
-            .withProduceRegion(RegionName.of("r2"));
-        topic = topic.withProduceConfig(
-            RegionName.of("r1"),
-            new ProduceConfig(TopicState.Fenced, RegionName.of("r2"))
-        );
+        VaradhiTopic topic = createDefaultVaradhiTopic(false).withStorageTopic(
+            SegmentedStorageTopic.of(new DummyStorageTopic("t"))
+        ).withProduceRegion(RegionName.of("r1")).withProduceRegion(RegionName.of("r2"));
+        topic = topic.withProduceConfig(RegionName.of("r1"), new ProduceConfig(TopicState.Fenced, RegionName.of("r2")));
 
         assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
         ProduceTarget target = topic.resolveProduceTarget(RegionName.of("r1")).orElseThrow();
@@ -221,7 +221,9 @@ class VaradhiTopicTest {
 
     @Test
     void withProduceConfig_returnsCopyWithUpdatedRegionState() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false).withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))).withProduceRegion(RegionName.of("r1"));
+        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false).withStorageTopic(
+            SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
+        ).withProduceRegion(RegionName.of("r1"));
 
         VaradhiTopic updated = varadhiTopic.withProduceConfig(
             RegionName.of("r1"),

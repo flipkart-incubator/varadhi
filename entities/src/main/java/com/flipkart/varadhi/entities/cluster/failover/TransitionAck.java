@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.entities.cluster.failover;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 
 /**
@@ -23,6 +25,7 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
  * @param stage          the stage being acknowledged
  * @param errorMsg       {@code null} (or blank) on success; a non-blank failure reason otherwise
  */
+@JsonIgnoreProperties (ignoreUnknown = true)
 public record TransitionAck(
     String opId,
     VaradhiTopicName topicFqn,
@@ -34,11 +37,13 @@ public record TransitionAck(
 ) {
 
     /** Whether this ack represents success — derived solely from {@link #errorMsg()}. */
+    @JsonIgnore
     public boolean isSuccess() {
         return errorMsg == null || errorMsg.isEmpty();
     }
 
     /** Whether this ack represents failure — the inverse of {@link #isSuccess()}. */
+    @JsonIgnore
     public boolean isFailure() {
         return !isSuccess();
     }
