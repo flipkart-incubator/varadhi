@@ -286,8 +286,25 @@ public final class ProducerService {
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
+        // Same Pulsar producer name is used for a storage topic across region cache keys; reuse to
+        // avoid ProducerBusy when PREPARE warms the target region while source produce is active.
+        Producer<? extends Offset> shared = findSharedProducer(topicFQN, storageTopicId);
+        if (shared != null) {
+            producerCache.put(key, shared);
+            return CompletableFuture.completedFuture(shared);
+        }
 
         return CompletableFuture.supplyAsync(() -> loadProducerOrThrow(key), producerLoadExecutor);
+    }
+
+    private Producer<? extends Offset> findSharedProducer(String topicFQN, int storageTopicId) {
+        for (Map.Entry<ProducerCacheKey, Producer<? extends Offset>> entry : producerCache.asMap().entrySet()) {
+            ProducerCacheKey k = entry.getKey();
+            if (k.varadhiTopicFQN().equals(topicFQN) && k.storageTopicId() == storageTopicId) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     private Producer<? extends Offset> loadProducerOrThrow(ProducerCacheKey key) {

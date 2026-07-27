@@ -53,4 +53,29 @@ class TopicProduceConfigsTest {
 
         assertTrue(TopicProduceConfigs.findProducingRegion(topic, RegionName.of("r3")).isEmpty());
     }
+
+    @Test
+    void findActiveProducingRegion_returnsSoleProducer() {
+        VaradhiTopic topic = topicWithRegions();
+
+        assertEquals(RegionName.of("r1"), TopicProduceConfigs.findActiveProducingRegion(topic).orElseThrow());
+    }
+
+    @Test
+    void findActiveProducingRegion_usesFailOverWhenSet() {
+        VaradhiTopic topic = topicWithRegions().withProduceConfig(
+            RegionName.of("r1"),
+            new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
+        );
+
+        assertEquals(RegionName.of("r2"), TopicProduceConfigs.findActiveProducingRegion(topic).orElseThrow());
+    }
+
+    @Test
+    void findActiveProducingRegion_reflectsSwitchedProducer() {
+        VaradhiTopic topic = topicWithRegions().withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked())
+                                               .withProduceConfig(RegionName.of("r2"), ProduceConfig.producing());
+
+        assertEquals(RegionName.of("r2"), TopicProduceConfigs.findActiveProducingRegion(topic).orElseThrow());
+    }
 }

@@ -469,7 +469,7 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
         if (topic.getStorageTopic() == null) {
             throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }
-        RegionName producing = TopicProduceConfigs.findProducingRegion(topic, deployedRegion).orElse(null);
+        RegionName producing = TopicProduceConfigs.findActiveProducingRegion(topic).orElse(null);
         if (producing != null) {
             if (!source.equals(producing)) {
                 throw new IllegalArgumentException(

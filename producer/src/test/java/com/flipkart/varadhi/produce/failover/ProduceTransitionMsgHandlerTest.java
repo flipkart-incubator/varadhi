@@ -20,7 +20,6 @@ import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.spi.services.Producer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Vertx;
 import org.junit.jupiter.api.AfterEach;
@@ -119,8 +118,8 @@ class ProduceTransitionMsgHandlerTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {}))
-                     .withProduceRegion(RegionName.of(DEPLOYED_REGION));
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {
+        })).withProduceRegion(RegionName.of(DEPLOYED_REGION));
         topic.setVersion(version);
         topicCache.onChange(
             new ResourceEvent<>(

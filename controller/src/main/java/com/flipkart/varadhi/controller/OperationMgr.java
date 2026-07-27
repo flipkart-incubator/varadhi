@@ -220,7 +220,12 @@ public class OperationMgr {
     }
 
     void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
-        OpTask opTask = new OpTask(opExecutor, op -> opStore.updateSubOp((SubscriptionOperation)op), subOp, retryPolicy);
+        OpTask opTask = new OpTask(
+            opExecutor,
+            op -> opStore.updateSubOp((SubscriptionOperation)op),
+            subOp,
+            retryPolicy
+        );
         enqueueOpTask(opTask);
     }
 

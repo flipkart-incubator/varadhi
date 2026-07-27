@@ -104,7 +104,9 @@ public class ControllerHandler {
 
     public CompletableFuture<ResponseMessage> listFailovers(ClusterMessage message) {
         return subscriptionService.getActiveFailovers()
-                                  .thenApply(transitions -> message.getResponseMessage(new ActiveFailovers(transitions)));
+                                  .thenApply(
+                                      transitions -> message.getResponseMessage(new ActiveFailovers(transitions))
+                                  );
     }
 
     public void ack(ClusterMessage message) {

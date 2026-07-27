@@ -184,7 +184,7 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
      */
     private CompletableFuture<Void> switchStage(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        RegionName producing = TopicProduceConfigs.findProducingRegion(topic, deployedRegion).orElse(null);
+        RegionName producing = TopicProduceConfigs.findActiveProducingRegion(topic).orElse(null);
         RegionName source = Objects.requireNonNullElse(producing, op.getSourceRegion());
         RegionName target = op.getTargetRegion();
         boolean sourceFenced = isState(topic, source, TopicState.Fenced);

@@ -202,6 +202,9 @@ class SubscriptionServiceFailoverTest {
 
         verify(transitionStore).delete(FQN);
         verify(operationMgr).updateTopicFailoverOp(any(TopicFailoverOperation.class));
-        assertEquals(TransitionStage.ABORTED, returned.getStageHistory().get(returned.getStageHistory().size() - 1).getStage());
+        assertEquals(
+            TransitionStage.ABORTED,
+            returned.getStageHistory().get(returned.getStageHistory().size() - 1).getStage()
+        );
     }
 }
