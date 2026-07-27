@@ -83,11 +83,6 @@ public final class TransitionMetrics {
         participationByType.remove(type);
     }
 
-    /** A PREPARE resolved to NOT_INVOLVED on this pod. */
-    public void prepareNotInvolved(TransitionType type) {
-        registry.counter("topic.transition.prepare.not_involved", "type", type.name()).increment();
-    }
-
     /** Failed to deliver a {@code TransitionAck} to the controller. */
     public void ackSendFailed(TransitionType type, TransitionStage stage) {
         counter(ACK_SEND_FAILED, Tags.of("type", type.name(), "stage", stage.name())).increment();
