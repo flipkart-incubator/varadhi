@@ -15,7 +15,9 @@ public final class ThrowableUtils {
     public static Throwable unwrap(Throwable t) {
         if (t instanceof CompletionException || t instanceof ExecutionException) {
             Throwable cause = t.getCause();
-            return cause != null ? cause : t;
+            if (cause != null) {
+                return cause;
+            }
         }
         return t;
     }

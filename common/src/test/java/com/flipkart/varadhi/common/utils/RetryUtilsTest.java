@@ -58,4 +58,21 @@ class RetryUtilsTest {
         assertInstanceOf(TimeoutException.class, thrown.getCause());
         assertEquals(3, attempts.get());
     }
+
+    @Test
+    void newPollingExecutor_abortsImmediatelyOnProbeException() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newPollingExecutor(scheduler, 5, 5L, Optional::isEmpty);
+        AtomicInteger attempts = new AtomicInteger();
+
+        CompletableFuture<Optional<Long>> future = executor.getAsync(() -> {
+            attempts.getAndIncrement();
+            throw new IllegalStateException("topic gone");
+        });
+
+        ExecutionException thrown = assertThrows(ExecutionException.class, () -> future.get(2, TimeUnit.SECONDS));
+        assertInstanceOf(IllegalStateException.class, thrown.getCause());
+        assertEquals("topic gone", thrown.getCause().getMessage());
+        assertEquals(1, attempts.get());
+    }
 }

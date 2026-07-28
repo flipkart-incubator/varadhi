@@ -21,8 +21,9 @@ public final class RetryUtils {
 
     /**
      * Result-polling executor: retries while {@code retryOnResult} matches; probe exceptions abort
-     * immediately via {@code abortOn(Exception)}. Exhausted result retries complete exceptionally
-     * (not with the last matching result). Pair with {@link FailsafeExecutor#getAsync}.
+     * immediately via {@code abortOn(Exception)} and propagate (not rewritten as timeout). Exhausted
+     * result retries complete exceptionally with {@link TimeoutException}. Pair with
+     * {@link FailsafeExecutor#getAsync}.
      */
     public static <T> FailsafeExecutor<T> newPollingExecutor(
         Executor executor,
@@ -37,10 +38,12 @@ public final class RetryUtils {
                                            .abortOn(Exception.class)
                                            .build();
         // RetryPolicy alone returns the last matching result when attempts are exhausted; wrap with
-        // a Fallback so callers always see exhaustion as a failure (same path as probe errors).
+        // a Fallback so callers always see exhaustion as a failure. handleIf (not handleResultIf)
+        // replaces Failsafe's default "handle all exceptions" — otherwise abortOn probe failures
+        // would be rewritten as TimeoutException here.
         Fallback<T> exhaustion = Fallback.<T>builderOfException(
             e -> new TimeoutException("timeout: result polling exhausted after " + maxAttempts + " attempts")
-        ).handleResultIf(retryOnResult::test).build();
+        ).handleIf((result, failure) -> failure == null && retryOnResult.test(result)).build();
         return Failsafe.with(exhaustion).compose(policy).with(executor);
     }
 }

@@ -298,6 +298,7 @@ class ProduceTransitionMsgHandlerTest {
 
     @Test
     void prepareAcksFailureWhenStaleOrUnreachable() throws Exception {
+        seed(9); // behind target 10 — poll until timeout
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
         h.handle(
@@ -351,6 +352,7 @@ class ProduceTransitionMsgHandlerTest {
 
     @Test
     void switchAcksOkWhenVersionArrivesLater() throws Exception {
+        seed(10); // behind target — keep polling until seed(11)
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
         scheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
 
@@ -374,6 +376,7 @@ class ProduceTransitionMsgHandlerTest {
 
     @Test
     void switchAcksFailureOnTimeout() throws Exception {
+        seed(10); // behind target 11 — never converges
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
         h.handle(
@@ -394,6 +397,33 @@ class ProduceTransitionMsgHandlerTest {
         TransitionAck ack = acker.acks.get(0);
         assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("timeout"));
+    }
+
+    @Test
+    void switchAcksFailureWhenTopicAbsentFromCache() throws Exception {
+        ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
+
+        h.handle(
+            ClusterMessage.of(
+                TransitionEvent.of(
+                    OP_ID,
+                    TOPIC_NAME,
+                    TransitionType.TOPIC_FAILOVER,
+                    TransitionStage.SWITCH,
+                    true,
+                    11,
+                    null
+                )
+            )
+        );
+
+        assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
+        TransitionAck ack = acker.acks.get(0);
+        assertFalse(ack.isSuccess());
+        assertTrue(
+            ack.errorMsg().contains("does not exist") || ack.errorMsg().contains("ResourceNotFound"),
+            () -> "unexpected errorMsg: " + ack.errorMsg()
+        );
     }
 
     @Test

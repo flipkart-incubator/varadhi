@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities.cluster.failover;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 
 /**
@@ -34,11 +35,13 @@ public record TransitionAck(
 ) {
 
     /** Whether this ack represents success — derived solely from {@link #errorMsg()}. */
+    @JsonIgnore
     public boolean isSuccess() {
         return errorMsg == null || errorMsg.isEmpty();
     }
 
     /** Whether this ack represents failure — the inverse of {@link #isSuccess()}. */
+    @JsonIgnore
     public boolean isFailure() {
         return !isSuccess();
     }

@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.produce.failover;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.utils.RetryUtils;
 import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
@@ -54,12 +55,21 @@ import java.util.concurrent.ScheduledExecutorService;
 @Slf4j
 public final class ProduceTransitionMsgHandler implements MsgHandler {
 
+    /** Failsafe probe outcome: {@link Pending} keeps polling; {@link Done} stops with the observed version. */
+    private sealed interface VersionProbe permits VersionProbe.Pending, VersionProbe.Done {
+        record Pending() implements VersionProbe {
+        }
+
+        record Done(long version) implements VersionProbe {
+        }
+    }
+
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private final TransitionApi transitionApi;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
-    private final FailsafeExecutor<Optional<Long>> versionWaitExecutor;
+    private final FailsafeExecutor<VersionProbe> versionWaitExecutor;
     private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
 
     public ProduceTransitionMsgHandler(
@@ -80,7 +90,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             scheduler,
             config.versionWaitMaxAttempts(),
             config.podPollIntervalMs(),
-            Optional::isEmpty
+            probe -> probe instanceof VersionProbe.Pending
         );
     }
 
@@ -108,24 +118,25 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
                 ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
                 return;
             }
-            onVersionResolved(event, outcome.get());
+            onVersionResolved(event, ((VersionProbe.Done)outcome).version());
         });
     }
 
     /**
-     * Terminal when the cache has reached (or overshot) the coordinated version, empty while it is
-     * still behind or absent (keep polling). Returns the observed version on termination.
+     * {@link VersionProbe.Pending} while the cache is still behind the coordinated version (keep
+     * polling). {@link VersionProbe.Done} when at or past the target. Topic missing from the cache
+     * aborts immediately (Failsafe {@code abortOn}).
      */
-    private Optional<Long> probeVersion(String topicFqn, long targetVersion) {
-        Optional<Long> current = currentVersion(topicFqn);
-        if (current.isEmpty()) {
-            return Optional.empty();
+    private VersionProbe probeVersion(String topicFqn, long targetVersion) {
+        Optional<Resource.EntityResource<VaradhiTopic>> cached = topicCache.get(topicFqn);
+        if (cached.isEmpty()) {
+            throw new ResourceNotFoundException("Topic(%s) does not exist in topic cache.".formatted(topicFqn));
         }
-        long version = current.get();
-        if (version >= targetVersion) {
-            return Optional.of(version);
+        long version = cached.get().getVersion();
+        if (version < targetVersion) {
+            return new VersionProbe.Pending();
         }
-        return Optional.empty();
+        return new VersionProbe.Done(version);
     }
 
     private void onVersionResolved(TransitionEvent event, long current) {
@@ -146,10 +157,6 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
             return;
         }
         onVersionReached(event, cached.get().getEntity());
-    }
-
-    private Optional<Long> currentVersion(String topicFqn) {
-        return topicCache.get(topicFqn).map(Resource::getVersion).map(Integer::longValue);
     }
 
     private void onVersionReached(TransitionEvent event, VaradhiTopic topic) {
