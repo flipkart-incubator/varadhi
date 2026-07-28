@@ -53,4 +53,35 @@ class VaradhiTopicSerializationTest {
             )
         );
     }
+
+    @Test
+    void deserialize_produceConfigsWireShape() {
+        VaradhiTopic original = VaradhiTopicTestUtils.withProduceConfigs(
+            VaradhiTopic.of(
+                "project1",
+                "topic1",
+                false,
+                new TopicCapacityPolicy(100, 400, 2, 2),
+                LifecycleStatus.ActionCode.SYSTEM_ACTION
+            ).withAutoFailover(true),
+            Map.of(
+                RegionName.of("CH"),
+                ProduceConfig.producing(),
+                RegionName.of("HYD"),
+                new ProduceConfig(TopicState.Blocked, RegionName.of("CH"))
+            )
+        );
+
+        String json = JsonMapper.jsonSerialize(original);
+        assertTrue(json.contains("\"produceConfigs\""));
+        assertTrue(!json.contains("\"regionConfigs\""));
+
+        VaradhiTopic restored = JsonMapper.jsonDeserialize(json, VaradhiTopic.class);
+
+        assertAll(
+            () -> assertEquals(TopicState.Producing, restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state()),
+            () -> assertEquals(TopicState.Blocked, restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state()),
+            () -> assertEquals(RegionName.of("CH"), restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion())
+        );
+    }
 }

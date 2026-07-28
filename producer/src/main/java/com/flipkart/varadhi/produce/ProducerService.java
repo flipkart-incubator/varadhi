@@ -178,7 +178,7 @@ public final class ProducerService {
         var topic = topicMaybe.get();
 
         return producerFactory.newProducer(
-            topic.getEntity().getProduceTopicForRegion(produceRegion).getTopic(key.storageTopicId),
+            topic.getEntity().getStorageTopic().getTopic(key.storageTopicId),
             topic.getEntity().getCapacity()
         );
     }
@@ -233,16 +233,20 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        SegmentedStorageTopic internalTopic = topic.getProduceTopicForRegion(produceRegion);
-
-        if (internalTopic == null) {
-            throw new ResourceNotFoundException(String.format("Topic not found for region(%s).", produceRegion));
-        }
-
-        if (!internalTopic.getTopicState().isProduceAllowed()) {
-            return CompletableFuture.completedFuture(
-                ProduceResult.ofNonProducingTopic(message.getMessageId(), internalTopic.getTopicState())
-            );
+        RegionName deployed = RegionName.of(produceRegion);
+        Optional<ProduceTarget> produceTarget = topic.getProduceTarget(deployed);
+        if (produceTarget.isEmpty()) {
+            return topic.getProduceConfig(deployed)
+                        .map(
+                            config -> CompletableFuture.completedFuture(
+                                ProduceResult.ofNonProducingTopic(message.getMessageId(), config.state())
+                            )
+                        )
+                        .orElseThrow(
+                            () -> new ResourceNotFoundException(
+                                "Topic(%s) is not available in region(%s).".formatted(topic.getName(), produceRegion)
+                            )
+                        );
         }
 
         if (applyOrgFilter(topic, message)) {
@@ -253,7 +257,8 @@ public final class ProducerService {
             return CompletableFuture.completedFuture(ProduceResult.ofThrottled(message.getMessageId()));
         }
 
-        StorageTopic storageTopic = internalTopic.getTopicToProduce();
+        ProduceTarget target = produceTarget.get();
+        StorageTopic storageTopic = topic.getStorageTopic().getTopic(target.storageTopicId());
         return getProducer(topic.getName(), storageTopic).thenCompose(
             producer -> doProduce(producer, storageTopic.getName(), message)
         );

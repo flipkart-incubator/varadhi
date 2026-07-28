@@ -129,9 +129,12 @@ public class ProduceHandlersTest extends ProduceTestBase {
         }
 
         List<testData> data = List.of(
-            new testData(422, "Topic/Queue is blocked. Unblock the Topic/Queue before produce.", Blocked),
-            new testData(429, "Produce to Topic/Queue is currently rate limited, try again after sometime.", Throttled),
-            new testData(422, "Produce is not allowed for replicating Topic/Queue.", Replicating)
+            new testData(422, "Produce is not allowed in this region.", Blocked),
+            new testData(
+                422,
+                "Topic/Queue is fenced during failover. Retry after failover completes.",
+                Fenced
+            )
         );
 
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, topicPath);

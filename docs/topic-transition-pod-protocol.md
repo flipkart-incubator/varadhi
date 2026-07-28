@@ -22,7 +22,7 @@ Controller handler: `ControllerHandler.ack` → `TransitionService.ack`.
 | `opId` | Controller-assigned operation id (UUID). Barrier key with `stage`. |
 | `topicFqn` | Topic under transition (`VaradhiTopicName`). |
 | `transitionType` | `TOPIC_FAILOVER` or `STORAGE_MIGRATION`. |
-| `stage` | `PREPARE`, `SWITCH`, `PENDING`, `COMPLETED`, `ABORTED`. |
+| `stage` | `PREPARE`, `SWITCH`, `PENDING`, `DRAIN`, `COMPLETED`, `ABORTED`. `DRAIN` is controller-only (not broadcast to pods). |
 | `awaitVersion` | Controller-driven: when `true`, pod waits for `topicVersionToAwait` in TopicCache before acking. |
 | `topicVersionToAwait` | Exact topic version to observe when `awaitVersion` is true (ZK version 0 is valid). |
 | `target` | `TransitionEvent.Target` (`region` or `storageTopic`). PREPARE only for warm. Wire shape: `{"@targetType":"region","region":"..."}` or `{"@targetType":"storageTopic","storageTopicId":N}`. |

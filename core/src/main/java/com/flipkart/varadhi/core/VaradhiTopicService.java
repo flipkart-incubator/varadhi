@@ -198,9 +198,7 @@ public class VaradhiTopicService {
             topicStore.update(varadhiTopic);
 
             SegmentedStorageTopic storageSegment = varadhiTopic.getStorageTopic();
-            if (storageSegment != null) {
-                storageSegment.getActiveTopics().forEach(st -> storageTopicService.delete(project, st.getName()));
-            }
+            storageSegment.getActiveTopics().forEach(st -> storageTopicService.delete(project, st.getName()));
             topicStore.delete(varadhiTopic.getName());
         } catch (Exception e) {
             varadhiTopic.markDeleteFailed(e.getMessage());

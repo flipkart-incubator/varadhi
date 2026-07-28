@@ -81,7 +81,7 @@ class VaradhiTopicTest {
 
         assertEquals(
             storageTopic.getName(),
-            varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
+            varadhiTopic.getStorageSegmentForRegion("region1").getTopicToProduce().getName(),
             "Internal topic addition failed"
         );
     }
@@ -101,7 +101,7 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void getProduceTopicForRegion_WithValidRegion_ReturnsCorrectTopic() {
+    void getStorageSegmentForRegion_WithValidRegion_ReturnsCorrectTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
@@ -109,20 +109,20 @@ class VaradhiTopicTest {
                                          .withProduceRegion(RegionName.of("region1"));
 
         assertAll(
-            () -> assertNotNull(topic.getProduceTopicForRegion("region1"), "Region topic not found"),
+            () -> assertNotNull(topic.getStorageSegmentForRegion("region1"), "Region topic not found"),
             () -> assertEquals(
                 storageTopic.getName(),
-                topic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
+                topic.getStorageSegmentForRegion("region1").getTopicToProduce().getName(),
                 "Region topic name mismatch"
             )
         );
     }
 
     @Test
-    void getProduceTopicForRegion_WithUnknownRegion_ReturnsNull() {
+    void getStorageSegmentForRegion_WithUnknownRegion_ReturnsNull() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        assertNull(varadhiTopic.getProduceTopicForRegion("unknownRegion"), "Unknown region should return null");
+        assertNull(varadhiTopic.getStorageSegmentForRegion("unknownRegion"), "Unknown region should return null");
     }
 
     @Test
@@ -186,7 +186,7 @@ class VaradhiTopicTest {
         ).withProduceRegion(RegionName.of("r1"));
         topic = topic.withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked());
 
-        assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
+        assertTrue(topic.getProduceTarget(RegionName.of("r1")).isEmpty());
     }
 
     @Test
@@ -196,14 +196,15 @@ class VaradhiTopicTest {
         ).withProduceRegion(RegionName.of("r1")).withProduceRegion(RegionName.of("r2"));
         topic = topic.withProduceConfig(RegionName.of("r1"), new ProduceConfig(TopicState.Fenced, RegionName.of("r2")));
 
-        assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
+        assertTrue(topic.getProduceTarget(RegionName.of("r1")).isEmpty());
         ProduceTarget target = topic.resolveProduceTarget(RegionName.of("r1")).orElseThrow();
         assertEquals(RegionName.of("r2"), target.produceRegion());
-        assertEquals("t", target.storageTopic().getName());
+        assertEquals(0, target.storageTopicId());
+        assertEquals(VaradhiTopicName.of(PROJECT_NAME, TOPIC_NAME), target.topicFqn());
     }
 
     @Test
-    void getProduceTopic_usesFailOverRegionAsProduceKey() {
+    void getProduceTarget_usesFailOverRegionAsProduceKey() {
         VaradhiTopic topic = createDefaultVaradhiTopic(false);
         topic = topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t")))
                      .withProduceRegion(RegionName.of("r1"))
@@ -213,10 +214,11 @@ class VaradhiTopicTest {
             new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
         );
 
-        ProduceTarget target = topic.getProduceTopic(RegionName.of("r1")).orElseThrow();
+        ProduceTarget target = topic.getProduceTarget(RegionName.of("r1")).orElseThrow();
 
         assertEquals(RegionName.of("r2"), target.produceRegion());
-        assertEquals("t", target.storageTopic().getName());
+        assertEquals(0, target.storageTopicId());
+        assertEquals(VaradhiTopicName.of(PROJECT_NAME, TOPIC_NAME), target.topicFqn());
     }
 
     @Test

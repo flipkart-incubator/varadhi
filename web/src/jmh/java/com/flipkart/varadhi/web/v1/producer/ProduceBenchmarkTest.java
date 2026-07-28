@@ -14,6 +14,7 @@ import com.flipkart.varadhi.entities.OrgDetails;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -339,8 +340,7 @@ public class ProduceBenchmarkTest {
 
             // Add as internal topic with proper state
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
-            segmentedTopic.setTopicState(TopicState.Producing);
-            topic.addInternalTopic("default", segmentedTopic);
+            topic = topic.withStorageTopic(segmentedTopic).withProduceRegion(RegionName.of("default"));
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));
         }

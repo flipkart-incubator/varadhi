@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.entities;
 
 /**
- * Resolved produce target for a request region: the storage topic segment to write and the region
- * key used for the producer cache (local region, or {@link ProduceConfig#failOverRegion()} when set).
+ * Resolved produce target for a request region: producer cache identity
+ * ({@link #topicFqn()}, {@link #storageTopicId()}, {@link #produceRegion()}).
  */
-public record ProduceTarget(StorageTopic storageTopic, RegionName produceRegion) {
+public record ProduceTarget(VaradhiTopicName topicFqn, int storageTopicId, RegionName produceRegion) {
 }

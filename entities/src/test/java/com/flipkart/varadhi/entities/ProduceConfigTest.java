@@ -49,13 +49,4 @@ class ProduceConfigTest {
         assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
     }
 
-    @Test
-    void fromJson_legacyProduceAllowed() {
-        ProduceConfig producing = ProduceConfig.fromJson(null, true, null);
-        ProduceConfig blocked = ProduceConfig.fromJson(null, false, RegionName.of("CH"));
-
-        assertEquals(TopicState.Producing, producing.state());
-        assertEquals(TopicState.Blocked, blocked.state());
-        assertEquals(RegionName.of("CH"), blocked.failOverRegion());
-    }
 }

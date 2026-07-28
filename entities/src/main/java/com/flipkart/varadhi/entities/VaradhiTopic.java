@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -24,12 +23,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final SegmentedStorageTopic storageTopic;
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
-    /**
-     * Per-region produce policy; keyed by region. Multiple regions may be
-     * {@link TopicState#Producing} on a global topic. Legacy JSON used {@code regionConfigs}.
-     */
+    /** Per-region produce policy; keyed by region. */
     @JsonProperty ("produceConfigs")
-    @JsonAlias ("regionConfigs")
     @Getter (lombok.AccessLevel.NONE)
     private final Map<RegionName, ProduceConfig> produceConfigs;
     private final boolean grouped;
@@ -184,7 +179,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      *
      * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()} — use this when you need the
      * key for an already-cached producer (e.g. PREPARE participation while the region is
-     * {@link TopicState#Fenced}). For the produce HTTP path use {@link #getProduceTopic}.
+     * {@link TopicState#Fenced}). For the gated produce path use {@link #getProduceTarget}.
      */
     @JsonIgnore
     public Optional<ProduceTarget> resolveProduceTarget(String region) {
@@ -201,23 +196,26 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         if (!produceConfigs.containsKey(produceRegion)) {
             return Optional.empty();
         }
-        return Optional.of(new ProduceTarget(storageTopic.getTopicToProduce(), produceRegion));
+        StorageTopic segment = storageTopic.getTopicToProduce();
+        return Optional.of(
+            new ProduceTarget(VaradhiTopicName.parse(getName()), segment.getId(), produceRegion)
+        );
     }
 
     /**
-     * Resolves where produce for {@code region} should go.
+     * Resolves where produce for {@code region} should go when produce is allowed.
      *
      * <p>Empty when this region has no produce config, produce is not allowed ({@link TopicState}),
      * or storage is not provisioned. When present, {@link ProduceTarget#produceRegion()} is
      * {@code failOverRegion} if set, otherwise {@code region}.
      */
     @JsonIgnore
-    public Optional<ProduceTarget> getProduceTopic(String region) {
-        return getProduceTopic(RegionName.of(region));
+    public Optional<ProduceTarget> getProduceTarget(String region) {
+        return getProduceTarget(RegionName.of(region));
     }
 
     @JsonIgnore
-    public Optional<ProduceTarget> getProduceTopic(RegionName region) {
+    public Optional<ProduceTarget> getProduceTarget(RegionName region) {
         ProduceConfig config = produceConfigs.get(region);
         if (config == null || !config.state().isProduceAllowed()) {
             return Optional.empty();
@@ -245,11 +243,15 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return VaradhiTopicName.parse(getName()).getTopicName();
     }
 
-    public SegmentedStorageTopic getProduceTopicForRegion(String region) {
-        return getProduceTopicForRegion(RegionName.of(region));
+    /**
+     * Shared {@link SegmentedStorageTopic} when {@code region} is registered in
+     * {@link #produceConfigs}; {@code null} otherwise. Does not vary storage per region.
+     */
+    public SegmentedStorageTopic getStorageSegmentForRegion(String region) {
+        return getStorageSegmentForRegion(RegionName.of(region));
     }
 
-    public SegmentedStorageTopic getProduceTopicForRegion(RegionName region) {
+    public SegmentedStorageTopic getStorageSegmentForRegion(RegionName region) {
         return produceConfigs.containsKey(region) ? storageTopic : null;
     }
 

@@ -145,26 +145,17 @@ class ProducerServiceTests {
     void produceToBlockedTopic() throws InterruptedException {
         produceNotAllowedTopicState(
             TopicState.Blocked,
-            ProduceStatus.Blocked,
-            "Topic/Queue is blocked. Unblock the Topic/Queue before produce."
-        );
-    }
-
-    @Test
-    void produceToThrottledTopic() throws InterruptedException {
-        produceNotAllowedTopicState(
-            TopicState.Throttled,
-            ProduceStatus.Throttled,
-            "Produce to Topic/Queue is currently rate limited, try again after sometime."
-        );
-    }
-
-    @Test
-    void produceToReplicatingTopic() throws InterruptedException {
-        produceNotAllowedTopicState(
-            TopicState.Replicating,
             ProduceStatus.NotAllowed,
-            "Produce is not allowed for replicating Topic/Queue."
+            "Produce is not allowed in this region."
+        );
+    }
+
+    @Test
+    void produceToFencedTopic() throws InterruptedException {
+        produceNotAllowedTopicState(
+            TopicState.Fenced,
+            ProduceStatus.Fenced,
+            "Topic/Queue is fenced during failover. Retry after failover completes."
         );
     }
 
@@ -308,9 +299,11 @@ class ProducerServiceTests {
         topic.markCreated();
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
-        SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
-        ict.setTopicState(state);
-        topic.addInternalTopic(region, ict);
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(st))
+                     .withProduceRegion(RegionName.of(region));
+        if (state != TopicState.Producing) {
+            topic = topic.withProduceConfig(RegionName.of(region), new ProduceConfig(state, null));
+        }
         return topic;
     }
 

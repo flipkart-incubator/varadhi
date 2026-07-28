@@ -19,12 +19,14 @@ package com.flipkart.varadhi.entities.cluster.failover;
  *       change if a pod is unreachable or stale.</li>
  *   <li>{@link #SWITCH} — convergence: pod confirms it observed the new topic version
  *       (N+1) so produce re-gates to the new region.</li>
+ *   <li>{@link #DRAIN} — controller-only: polls source-broker replication lag until zero.
+ *       Not broadcast to pods; no ack barrier.</li>
  *   <li>{@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED} — lifecycle markers;
- *       usually acked immediately on receipt.</li>
+ *       usually acked immediately on receipt when broadcast.</li>
  * </ul>
  */
 public enum TransitionStage {
-    PENDING, PREPARE, SWITCH, COMPLETED, ABORTED;
+    PENDING, PREPARE, SWITCH, DRAIN, COMPLETED, ABORTED;
 
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
