@@ -18,7 +18,7 @@ import lombok.experimental.UtilityClass;
  *       publish — {@code ControllerRemoteClient#sendEvent} throws.</li>
  *   <li><b>Back leg (pod → controller):</b> a pod sends a {@code TransitionAck} via
  *       {@code ControllerRemoteClient#ack} to
- *       {@code <controllerRoute>." + TRANSITION_EVENT_ACK_API + ".send"} (the controller route is
+ *       {@code <controllerRoute>." + STAGE_ACK_API + ".send"} (the controller route is
  *       {@code ControllerApi.ROUTE_CONTROLLER}).</li>
  * </ul>
  */

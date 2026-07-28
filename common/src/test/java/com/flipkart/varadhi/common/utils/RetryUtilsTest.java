@@ -30,14 +30,9 @@ class RetryUtilsTest {
     }
 
     @Test
-    void newResultPollingExecutor_completesWhenProbeStopsRetrying() throws Exception {
+    void newPollingExecutor_completesWhenProbeStopsRetrying() throws Exception {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newResultPollingExecutor(
-            scheduler,
-            5,
-            5L,
-            Optional::isEmpty
-        );
+        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newPollingExecutor(scheduler, 5, 5L, Optional::isEmpty);
         AtomicInteger attempts = new AtomicInteger();
 
         CompletableFuture<Optional<Long>> future = executor.getAsync(
@@ -49,14 +44,9 @@ class RetryUtilsTest {
     }
 
     @Test
-    void newResultPollingExecutor_stopsAfterMaxAttempts() {
+    void newPollingExecutor_stopsAfterMaxAttempts() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newResultPollingExecutor(
-            scheduler,
-            3,
-            5L,
-            Optional::isEmpty
-        );
+        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newPollingExecutor(scheduler, 3, 5L, Optional::isEmpty);
         AtomicInteger attempts = new AtomicInteger();
 
         CompletableFuture<Optional<Long>> future = executor.getAsync(() -> {

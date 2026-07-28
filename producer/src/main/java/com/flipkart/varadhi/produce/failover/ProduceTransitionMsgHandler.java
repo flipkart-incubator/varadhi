@@ -56,7 +56,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final TransitionApi controllerClient;
+    private final TransitionApi transitionApi;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
     private final FailsafeExecutor<Optional<Long>> versionWaitExecutor;
@@ -65,7 +65,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     public ProduceTransitionMsgHandler(
         String hostname,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
-        TransitionApi controllerClient,
+        TransitionApi transitionApi,
         ProducerService producerService,
         PodTransitionConfig config,
         ScheduledExecutorService scheduler,
@@ -73,10 +73,10 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     ) {
         this.hostname = hostname;
         this.topicCache = topicCache;
-        this.controllerClient = controllerClient;
+        this.transitionApi = transitionApi;
         this.producerService = producerService;
         this.metrics = metrics;
-        this.versionWaitExecutor = RetryUtils.newResultPollingExecutor(
+        this.versionWaitExecutor = RetryUtils.newPollingExecutor(
             scheduler,
             config.versionWaitMaxAttempts(),
             config.podPollIntervalMs(),
@@ -284,7 +284,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void sendAck(TransitionAck ack) {
         // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
-        controllerClient.ack(ack).exceptionally(t -> {
+        transitionApi.ack(ack).exceptionally(t -> {
             metrics.ackSendFailed(ack.transitionType(), ack.stage());
             log.warn("Failed to deliver transition ack ack={}", ack, t);
             return null;

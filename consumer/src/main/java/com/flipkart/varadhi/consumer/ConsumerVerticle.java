@@ -33,9 +33,9 @@ public class ConsumerVerticle extends AbstractVerticle {
             coreServices.getMessagingStackProvider().getConsumerFactory(),
             coreServices.getMeterRegistry()
         );
-        ConsumerCallbackApi controllerClient = new ControllerRemoteClient(messageExchange);
+        ConsumerCallbackApi consumerCallbackApi = new ControllerRemoteClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, memberInfo);
-        ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, controllerClient);
+        ConsumerApiHandler handler = new ConsumerApiHandler(consumerApiManager, consumerCallbackApi);
         setupApiHandlers(messageRouter, handler);
         startPromise.complete();
     }

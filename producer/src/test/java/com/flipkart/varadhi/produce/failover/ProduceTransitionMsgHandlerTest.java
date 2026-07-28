@@ -66,7 +66,7 @@ class ProduceTransitionMsgHandlerTest {
     private Vertx vertx;
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private ProducerService producerService;
-    private CapturingControllerClient acker;
+    private CapturingTransitionApi acker;
     private ScheduledExecutorService scheduler;
     private TransitionMetrics metrics;
 
@@ -102,7 +102,7 @@ class ProduceTransitionMsgHandlerTest {
     }
 
     private ProduceTransitionMsgHandler handler(PodTransitionConfig config, int expectedAcks) {
-        acker = new CapturingControllerClient(expectedAcks);
+        acker = new CapturingTransitionApi(expectedAcks);
         return new ProduceTransitionMsgHandler(
             "host-1",
             topicCache,
@@ -122,8 +122,8 @@ class ProduceTransitionMsgHandlerTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {}))
-                     .withProduceRegion(RegionName.of(DEPLOYED_REGION));
+        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {
+        })).withProduceRegion(RegionName.of(DEPLOYED_REGION));
         topic.setVersion(version);
         topicCache.onChange(
             new ResourceEvent<>(
@@ -520,11 +520,11 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(ack.isSuccess());
     }
 
-    private static final class CapturingControllerClient implements TransitionApi {
+    private static final class CapturingTransitionApi implements TransitionApi {
         private final CopyOnWriteArrayList<TransitionAck> acks = new CopyOnWriteArrayList<>();
         private final CountDownLatch latch;
 
-        CapturingControllerClient(int expected) {
+        CapturingTransitionApi(int expected) {
             this.latch = new CountDownLatch(expected);
         }
 

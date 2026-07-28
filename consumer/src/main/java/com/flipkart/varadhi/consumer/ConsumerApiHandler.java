@@ -16,12 +16,12 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 
 @Slf4j
 public class ConsumerApiHandler {
-    private final ConsumerCallbackApi controllerClient;
+    private final ConsumerCallbackApi consumerCallbackApi;
     private final ConsumerApiMgr consumerApiMgr;
 
-    public ConsumerApiHandler(ConsumerApiMgr consumerApiMgr, ConsumerCallbackApi controllerClient) {
+    public ConsumerApiHandler(ConsumerApiMgr consumerApiMgr, ConsumerCallbackApi consumerCallbackApi) {
         this.consumerApiMgr = consumerApiMgr;
-        this.controllerClient = controllerClient;
+        this.consumerCallbackApi = consumerCallbackApi;
     }
 
     public void start(ClusterMessage message) {
@@ -65,11 +65,11 @@ public class ConsumerApiHandler {
     }
 
     private void failOperation(ShardOperation.OpData operation, String message) {
-        controllerClient.update(operation.getParentOpId(), operation.getOperationId(), ERRORED, message);
+        consumerCallbackApi.update(operation.getParentOpId(), operation.getOperationId(), ERRORED, message);
     }
 
     private void completeOperation(ShardOperation.OpData operation, String message) {
-        controllerClient.update(operation.getParentOpId(), operation.getOperationId(), COMPLETED, message);
+        consumerCallbackApi.update(operation.getParentOpId(), operation.getOperationId(), COMPLETED, message);
     }
 
 }
