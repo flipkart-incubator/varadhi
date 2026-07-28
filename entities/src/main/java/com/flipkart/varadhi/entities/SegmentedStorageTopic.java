@@ -4,7 +4,6 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,22 +20,11 @@ public class SegmentedStorageTopic {
 
     private final StorageTopic[] storageTopics;
 
-    private final int activeStorageTopicId;
-
-    @JsonIgnore
+    /** Index into {@link #storageTopics} for the active produce segment. */
     private final int produceIndex;
 
-    //TODO: state should be moved to a separate class. This class is not meant to handle runtime state.
-    @Setter
-    private TopicState topicState;
-
     public static SegmentedStorageTopic of(StorageTopic storageTopic) {
-        return new SegmentedStorageTopic(
-            new StorageTopic[] {storageTopic},
-            storageTopic.getId(),
-            0,
-            TopicState.Producing
-        );
+        return new SegmentedStorageTopic(new StorageTopic[] {storageTopic}, 0);
     }
 
     @JsonIgnore

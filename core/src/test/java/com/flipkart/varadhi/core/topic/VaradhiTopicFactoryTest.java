@@ -57,7 +57,7 @@ class VaradhiTopicFactoryTest {
 
         assertNotNull(varadhiTopic);
         SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
-        assertEquals(TopicState.Producing, internalTopic.getTopicState());
+        assertEquals(TopicState.Producing, varadhiTopic.getProduceConfig(RegionName.of(REGION)).orElseThrow().state());
         assertNotNull(internalTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(
@@ -104,11 +104,11 @@ class VaradhiTopicFactoryTest {
         );
         planDeploymentMethod.setAccessible(true);
 
-        planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
+        VaradhiTopic deployed = (VaradhiTopic)planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
 
-        SegmentedStorageTopic internalCompositeTopic = varadhiTopic.getProduceTopicForRegion(REGION);
+        SegmentedStorageTopic internalCompositeTopic = deployed.getProduceTopicForRegion(REGION);
         assertNotNull(internalCompositeTopic);
-        assertEquals(TopicState.Producing, internalCompositeTopic.getTopicState());
+        assertEquals(TopicState.Producing, deployed.getProduceConfig(RegionName.of(REGION)).orElseThrow().state());
         assertNotNull(internalCompositeTopic.getTopicToProduce());
 
         verify(storageTopicFactory, times(1)).getTopic(

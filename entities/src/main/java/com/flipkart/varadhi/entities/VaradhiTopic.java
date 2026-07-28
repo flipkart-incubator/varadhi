@@ -1,14 +1,18 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Represents a topic in the Varadhi.
@@ -17,7 +21,17 @@ import java.util.Objects;
 @EqualsAndHashCode (callSuper = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
-    private final Map<String, SegmentedStorageTopic> internalTopics;
+    private final SegmentedStorageTopic storageTopic;
+    /** When true, controller may automatically fail over this topic on region degradation. */
+    private final boolean autoFailover;
+    /**
+     * Per-region produce policy; keyed by region. Multiple regions may be
+     * {@link TopicState#Producing} on a global topic. Legacy JSON used {@code regionConfigs}.
+     */
+    @JsonProperty ("produceConfigs")
+    @JsonAlias ("regionConfigs")
+    @Getter (lombok.AccessLevel.NONE)
+    private final Map<RegionName, ProduceConfig> produceConfigs;
     private final boolean grouped;
 
     private final String nfrFilterName;
@@ -32,34 +46,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     private final TopicCapacityPolicy capacity;
     private final Map<String, Double> perRegionQuotaWeights;
 
-    // TODO: decide on where topic related auxiliary data lives. This data largely is not going to be used by crud, main produce or consume flow. But they power secondary functionalities. 
+    // TODO: decide on where topic related auxiliary data lives. This data largely is not going to be used by crud, main produce or consume flow. But they power secondary functionalities.
     private final MessageSizeProfile messageSizeProfile;
 
     public enum TopicCategory {
         TOPIC, QUEUE
     }
 
-    /**
-     * Constructs a new VaradhiTopic instance.
-     *
-     * @param name           the name of the topic
-     * @param version        the version of the topic
-     * @param grouped        whether the topic is grouped
-     * @param capacity       the capacity policy of the topic
-     * @param internalTopics the internal topics associated with this topic
-     * @param status         the status of the topic
-     * @param nfrFilterName  the name of the filter applied for NFR; {@code null} if not set
-     * @param topicCategory  topic vs queue classification; must not be {@code null}
-     * @param perRegionQuotaWeights per-region fraction of global produce quota; nullable until defaulted
-     * @param messageSizeProfile observed message size profile; nullable until defaulted
-     * @param rateLimiterMode per-topic rate limiter rollout mode; nullable until defaulted
-     */
     private VaradhiTopic(
         String name,
         int version,
         boolean grouped,
         TopicCapacityPolicy capacity,
-        Map<String, SegmentedStorageTopic> internalTopics,
+        SegmentedStorageTopic storageTopic,
+        boolean autoFailover,
+        Map<RegionName, ProduceConfig> produceConfigs,
         LifecycleStatus status,
         String nfrFilterName,
         TopicCategory topicCategory,
@@ -70,7 +71,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.internalTopics = internalTopics != null ? internalTopics : new HashMap<>();
+        this.storageTopic = storageTopic;
+        this.autoFailover = autoFailover;
+        this.produceConfigs = new HashMap<>(produceConfigs);
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
@@ -81,16 +84,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.status = status;
     }
 
-    /**
-     * Creates a new VaradhiTopic instance.
-     *
-     * @param project   the project associated with the topic
-     * @param name      the name of the topic
-     * @param grouped   whether the topic is grouped
-     * @param capacity  the capacity policy of the topic
-     * @param actionCode the actor code indicating the reason for the state
-     * @return a new VaradhiTopic instance
-     */
     public static VaradhiTopic of(
         String project,
         String name,
@@ -112,10 +105,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return of(project, name, grouped, capacity, actionCode, nfrStrategy, TopicCategory.TOPIC);
     }
 
-    /**
-     * Same as {@link #of(String, String, boolean, TopicCapacityPolicy, LifecycleStatus.ActionCode, String)} but
-     * sets {@link TopicCategory} (e.g. {@link TopicCategory#QUEUE} for the topic leg of a queue).
-     */
     public static VaradhiTopic of(
         String project,
         String name,
@@ -145,6 +134,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             INITIAL_VERSION,
             grouped,
             capacity,
+            null,
+            false,
             new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
@@ -155,62 +146,142 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         );
     }
 
-    /**
-     * Builds the topic name from the project name and topic name.
-     *
-     * @param projectName the name of the project
-     * @param topicName   the name of the topic
-     * @return the constructed topic name
-     */
     public static String fqn(String projectName, String topicName) {
         return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
-    /**
-     * Adds an internal topic for a specific region.
-     *
-     * @param region        the region for the internal topic
-     * @param internalTopic the internal topic to add
-     */
-    public void addInternalTopic(String region, SegmentedStorageTopic internalTopic) {
-        this.internalTopics.put(region, internalTopic);
+    public Map<RegionName, ProduceConfig> getProduceConfigs() {
+        return Collections.unmodifiableMap(produceConfigs);
     }
 
     /**
-     * Retrieves the project name from the topic name.
-     *
-     * @return the project name
+     * Sets the shared {@link #storageTopic}. Replaces any previous value.
      */
+    public VaradhiTopic withStorageTopic(SegmentedStorageTopic storageTopic) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
+    }
+
+    /**
+     * Registers {@code region} in {@link #produceConfigs}. First region starts
+     * {@link TopicState#Producing}; further regions {@link TopicState#Blocked}.
+     * Does not change {@link #storageTopic} — call {@link #withStorageTopic} separately.
+     */
+    public VaradhiTopic withProduceRegion(RegionName region) {
+        Map<RegionName, ProduceConfig> updatedConfigs = new HashMap<>(produceConfigs);
+        boolean firstRegion = updatedConfigs.isEmpty();
+        updatedConfigs.putIfAbsent(region, firstRegion ? ProduceConfig.producing() : ProduceConfig.blocked());
+        return copyWith(storageTopic, updatedConfigs, autoFailover);
+    }
+
+    @JsonIgnore
+    public Optional<ProduceConfig> getProduceConfig(RegionName region) {
+        return Optional.ofNullable(produceConfigs.get(region));
+    }
+
+    /**
+     * Resolves the producer cache key for {@code region}: storage topic + produce region
+     * ({@code failOverRegion} if set, otherwise {@code region}).
+     *
+     * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()} — use this when you need the
+     * key for an already-cached producer (e.g. PREPARE participation while the region is
+     * {@link TopicState#Fenced}). For the produce HTTP path use {@link #getProduceTopic}.
+     */
+    @JsonIgnore
+    public Optional<ProduceTarget> resolveProduceTarget(String region) {
+        return resolveProduceTarget(RegionName.of(region));
+    }
+
+    @JsonIgnore
+    public Optional<ProduceTarget> resolveProduceTarget(RegionName region) {
+        ProduceConfig config = produceConfigs.get(region);
+        if (config == null || storageTopic == null) {
+            return Optional.empty();
+        }
+        RegionName produceRegion = config.failOverRegion() != null ? config.failOverRegion() : region;
+        if (!produceConfigs.containsKey(produceRegion)) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProduceTarget(storageTopic.getTopicToProduce(), produceRegion));
+    }
+
+    /**
+     * Resolves where produce for {@code region} should go.
+     *
+     * <p>Empty when this region has no produce config, produce is not allowed ({@link TopicState}),
+     * or storage is not provisioned. When present, {@link ProduceTarget#produceRegion()} is
+     * {@code failOverRegion} if set, otherwise {@code region}.
+     */
+    @JsonIgnore
+    public Optional<ProduceTarget> getProduceTopic(String region) {
+        return getProduceTopic(RegionName.of(region));
+    }
+
+    @JsonIgnore
+    public Optional<ProduceTarget> getProduceTopic(RegionName region) {
+        ProduceConfig config = produceConfigs.get(region);
+        if (config == null || !config.state().isProduceAllowed()) {
+            return Optional.empty();
+        }
+        return resolveProduceTarget(region);
+    }
+
+    public VaradhiTopic withProduceConfig(RegionName region, ProduceConfig config) {
+        Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
+        updated.put(region, config);
+        return copyWith(updated, autoFailover);
+    }
+
+    public VaradhiTopic withAutoFailover(boolean autoFailover) {
+        return copyWith(produceConfigs, autoFailover);
+    }
+
     @JsonIgnore
     public String getProjectName() {
         return VaradhiTopicName.parse(getName()).getProjectName();
     }
 
-    /**
-     * Local topic name (segment after the project prefix in the fully-qualified name).
-     */
     @JsonIgnore
     public String getTopicName() {
         return VaradhiTopicName.parse(getName()).getTopicName();
     }
 
-    /**
-     * Retrieves the produce topic for a specific region.
-     *
-     * @param region the region for which to retrieve the produce topic
-     * @return the produce topic for the specified region
-     */
     public SegmentedStorageTopic getProduceTopicForRegion(String region) {
-        return internalTopics.get(region);
+        return getProduceTopicForRegion(RegionName.of(region));
     }
 
-    /**
-     * Whether this topic's {@link #getTopicCategory() category} equals {@code category}.
-     *
-     * @param category the category to compare against; must not be {@code null}
-     * @return {@code true} if the topic's category equals {@code category}
-     */
+    public SegmentedStorageTopic getProduceTopicForRegion(RegionName region) {
+        return produceConfigs.containsKey(region) ? storageTopic : null;
+    }
+
     public boolean isCategory(TopicCategory category) {
         return this.topicCategory == category;
+    }
+
+    VaradhiTopic copyWith(Map<RegionName, ProduceConfig> produceConfigs, boolean autoFailover) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
+    }
+
+    private VaradhiTopic copyWith(
+        SegmentedStorageTopic storageTopic,
+        Map<RegionName, ProduceConfig> produceConfigs,
+        boolean autoFailover
+    ) {
+        VaradhiTopic copy = new VaradhiTopic(
+            getName(),
+            getVersion(),
+            grouped,
+            capacity,
+            storageTopic,
+            autoFailover,
+            produceConfigs,
+            getStatus(),
+            nfrFilterName,
+            topicCategory,
+            perRegionQuotaWeights,
+            messageSizeProfile,
+            rateLimiterMode
+        );
+        copy.status = this.status;
+        return copy;
     }
 }
