@@ -75,18 +75,20 @@ public class ControllerVerticle extends AbstractVerticle {
 
         // Assume leadership and initialize event system
         onLeaderElected(subscriptionService, apiHandler, messageRouter).compose(v -> initializeEventSystem())
-                                                                    .onComplete(ar -> {
-                                                                        if (ar.succeeded()) {
-                                                                            log.info("Controller started successfully");
-                                                                            startPromise.complete();
-                                                                        } else {
-                                                                            log.error(
-                                                                                "Failed to start controller: {}",
-                                                                                ar.cause().getMessage()
-                                                                            );
-                                                                            startPromise.fail(ar.cause());
-                                                                        }
-                                                                    });
+                                                                       .onComplete(ar -> {
+                                                                           if (ar.succeeded()) {
+                                                                               log.info(
+                                                                                   "Controller started successfully"
+                                                                               );
+                                                                               startPromise.complete();
+                                                                           } else {
+                                                                               log.error(
+                                                                                   "Failed to start controller: {}",
+                                                                                   ar.cause().getMessage()
+                                                                               );
+                                                                               startPromise.fail(ar.cause());
+                                                                           }
+                                                                       });
     }
 
     /**

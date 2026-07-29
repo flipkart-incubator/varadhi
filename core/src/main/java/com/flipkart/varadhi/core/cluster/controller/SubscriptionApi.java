@@ -2,6 +2,7 @@ package com.flipkart.varadhi.core.cluster.controller;
 
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 
@@ -25,4 +26,6 @@ public interface SubscriptionApi {
     );
 
     CompletableFuture<ShardAssignments> getShardAssignments(String subscriptionId);
+
+    CompletableFuture<Void> update(String subOpId, String shardOpId, ShardOperation.State state, String errorMsg);
 }

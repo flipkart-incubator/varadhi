@@ -9,7 +9,6 @@ import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.controller.ConsumerCallbackApi;
 import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
@@ -35,7 +34,7 @@ import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
  * Controller-side subscription lifecycle + consumer membership / shard-op callbacks.
  */
 @Slf4j
-public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi {
+public class SubscriptionService implements SubscriptionApi {
 
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;

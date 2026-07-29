@@ -16,9 +16,9 @@ import java.util.concurrent.CompletableFuture;
 import static com.flipkart.varadhi.core.cluster.controller.ControllerApi.ROUTE_CONTROLLER;
 
 /**
- * Remote stub for {@link ControllerApi} + {@link ConsumerCallbackApi} over {@link MessageExchange}.
+ * Remote stub for {@link ControllerApi} over {@link MessageExchange}.
  */
-public class ControllerRemoteClient implements ControllerApi, ConsumerCallbackApi {
+public class ControllerRemoteClient implements ControllerApi {
 
     private final MessageExchange exchange;
 
