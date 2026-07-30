@@ -5,7 +5,7 @@ import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardDlqMessageRequest;
 import com.flipkart.varadhi.core.subscription.ShardStatusRequest;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerClient;
+import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
@@ -16,12 +16,12 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 
 @Slf4j
 public class ConsumerApiHandler {
-    private final ControllerConsumerClient controllerClient;
+    private final SubscriptionApi subscriptionApi;
     private final ConsumerApiMgr consumerApiMgr;
 
-    public ConsumerApiHandler(ConsumerApiMgr consumerApiMgr, ControllerConsumerClient controllerClient) {
+    public ConsumerApiHandler(ConsumerApiMgr consumerApiMgr, SubscriptionApi subscriptionApi) {
         this.consumerApiMgr = consumerApiMgr;
-        this.controllerClient = controllerClient;
+        this.subscriptionApi = subscriptionApi;
     }
 
     public void start(ClusterMessage message) {
@@ -65,11 +65,11 @@ public class ConsumerApiHandler {
     }
 
     private void failOperation(ShardOperation.OpData operation, String message) {
-        controllerClient.update(operation.getParentOpId(), operation.getOperationId(), ERRORED, message);
+        subscriptionApi.update(operation.getParentOpId(), operation.getOperationId(), ERRORED, message);
     }
 
     private void completeOperation(ShardOperation.OpData operation, String message) {
-        controllerClient.update(operation.getParentOpId(), operation.getOperationId(), COMPLETED, message);
+        subscriptionApi.update(operation.getParentOpId(), operation.getOperationId(), COMPLETED, message);
     }
 
 }

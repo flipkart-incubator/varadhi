@@ -2,19 +2,27 @@ package com.flipkart.varadhi.core.cluster.controller;
 
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
-import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
+import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
-import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
+import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
-import com.flipkart.varadhi.entities.cluster.*;
+import com.flipkart.varadhi.entities.cluster.ShardOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ControllerRestClient implements ControllerApi {
+import static com.flipkart.varadhi.core.cluster.controller.ControllerApi.ROUTE_CONTROLLER;
+
+/**
+ * Remote stub for {@link ControllerApi} over {@link MessageExchange}.
+ */
+public class ControllerRemoteClient implements ControllerApi {
+
     private final MessageExchange exchange;
 
-    public ControllerRestClient(MessageExchange exchange) {
+    public ControllerRemoteClient(MessageExchange exchange) {
         this.exchange = exchange;
     }
 
@@ -60,4 +68,14 @@ public class ControllerRestClient implements ControllerApi {
                        .thenApply(rm -> rm.getResponse(ShardAssignments.class));
     }
 
+    @Override
+    public CompletableFuture<Void> update(
+        String subOpId,
+        String shardOpId,
+        ShardOperation.State state,
+        String errorMsg
+    ) {
+        ClusterMessage msg = ClusterMessage.of(new ShardOpResponse(subOpId, shardOpId, state, errorMsg));
+        return exchange.send(ROUTE_CONTROLLER, "update", msg);
+    }
 }

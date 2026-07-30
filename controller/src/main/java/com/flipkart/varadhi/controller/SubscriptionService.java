@@ -1,17 +1,15 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.controller.impl.opexecutors.ReAssignOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StartOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.StopOpExecutor;
 import com.flipkart.varadhi.controller.impl.opexecutors.UnsidelinepOpExecutor;
-import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
-import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.controller.ControllerConsumerApi;
-import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
+import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
+import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
@@ -22,6 +20,7 @@ import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
+import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -31,14 +30,18 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
 
+/**
+ * Controller-side subscription lifecycle + consumer membership / shard-op callbacks.
+ */
 @Slf4j
-public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
+public class SubscriptionService implements SubscriptionApi {
+
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
     private final SubscriptionStore subscriptionStore;
     private final OperationMgr operationMgr;
 
-    public ControllerApiMgr(
+    public SubscriptionService(
         OperationMgr operationMgr,
         AssignmentManager assignmentManager,
         SubscriptionStore subscriptionStore,
@@ -59,9 +62,9 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
     CompletableFuture<SubscriptionState> getSubscriptionState(VaradhiSubscription subscription) {
         String subId = subscription.getName();
         return CompletableFuture.supplyAsync(() -> assignmentManager.getSubAssignments(subId))
-                                .thenCompose(assignments -> {
-                                    return getSubscriptionShardsState(subscription, assignments, subId);
-                                })
+                                .thenCompose(
+                                    assignments -> getSubscriptionShardsState(subscription, assignments, subId)
+                                )
                                 .exceptionally(t -> {
                                     // If not temporary, then alternate needs to be provided to allow recovery from this.
                                     throw new IllegalStateException(
@@ -194,7 +197,6 @@ public class ControllerApiMgr implements ControllerApi, ControllerConsumerApi {
             return CompletableFuture.failedFuture(e);
         }
     }
-
 
     /*
      * TODO::It should be possible to abort running unsideline operation

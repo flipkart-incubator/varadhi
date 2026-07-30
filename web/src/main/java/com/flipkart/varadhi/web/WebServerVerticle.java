@@ -44,7 +44,7 @@ import com.flipkart.varadhi.core.subscription.ShardProvisioner;
 import com.flipkart.varadhi.core.subscription.VaradhiSubscriptionFactory;
 import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
-import com.flipkart.varadhi.core.cluster.controller.ControllerRestClient;
+import com.flipkart.varadhi.core.cluster.controller.ControllerRemoteClient;
 
 import com.flipkart.varadhi.core.SpanProvider;
 import com.flipkart.varadhi.web.routes.RouteBehaviour;
@@ -266,7 +266,7 @@ public class WebServerVerticle extends AbstractVerticle {
         );
 
         // Initialize controller client and related services
-        ControllerApi controllerClient = new ControllerRestClient(messageExchange);
+        ControllerApi controllerClient = new ControllerRemoteClient(messageExchange);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
