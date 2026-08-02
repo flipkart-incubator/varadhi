@@ -12,6 +12,7 @@ import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.ProduceStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.RateLimiterMode;
@@ -24,7 +25,6 @@ import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
@@ -252,8 +252,8 @@ class ProducerServiceRateLimitIntegrationTest {
         );
         topic.markCreated();
         StorageTopic storageTopic = new DummyStorageTopic(topic.getName());
-        return topic.withStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                    .withProduceRegion(RegionName.of(REGION));
+        return topic.withSegmentedStorageTopic(SegmentedStorageTopic.of(storageTopic))
+                    .withProduceConfig(RegionName.of(REGION), ProduceConfig.producing());
     }
 
     private static MemberInfo server(String hostname) {

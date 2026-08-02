@@ -42,18 +42,9 @@ import lombok.extern.slf4j.Slf4j;
 public final class ProducerService {
 
     /**
-     * A record that serves as a cache key for producers.
-     *
-     * @param varadhiTopicFQN the full name of the Varadhi topic
-     * @param storageTopicId     the storage topic id
-     */
-    private record ProducerCacheKey(String varadhiTopicFQN, int storageTopicId) {
-    }
-
-    /**
      * Cache of producers for storage topics.
      */
-    private final LoadingCache<ProducerCacheKey, Producer<? extends Offset>> producerCache;
+    private final LoadingCache<ProduceKey, Producer<? extends Offset>> producerCache;
 
     /**
      * The region where messages are produced.
@@ -166,19 +157,19 @@ public final class ProducerService {
     private Producer<? extends Offset> loadProducerObject(
         String produceRegion,
         ProducerFactory producerFactory,
-        ProducerCacheKey key
+        ProduceKey key
     ) {
-        var topicMaybe = topicCache.get(key.varadhiTopicFQN);
+        var topicMaybe = topicCache.get(key.topicFqnString());
         if (topicMaybe.isEmpty()) {
             throw new ResourceNotFoundException(
-                "Topic(%s) does not exist in region(%s).".formatted(key.varadhiTopicFQN, produceRegion)
+                "Topic(%s) does not exist in region(%s).".formatted(key.topicFqnString(), produceRegion)
             );
         }
 
         var topic = topicMaybe.get();
 
         return producerFactory.newProducer(
-            topic.getEntity().getStorageTopic().getTopic(key.storageTopicId),
+            topic.getEntity().getSegmentedStorageTopic().getTopic(key.storageTopicId()),
             topic.getEntity().getCapacity()
         );
     }
@@ -234,8 +225,8 @@ public final class ProducerService {
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
         RegionName deployed = RegionName.of(produceRegion);
-        Optional<ProduceTarget> produceTarget = topic.getProduceTarget(deployed);
-        if (produceTarget.isEmpty()) {
+        Optional<ProduceKey> produceKey = ProduceKeyResolver.resolveForProduce(topic, deployed);
+        if (produceKey.isEmpty()) {
             return topic.getProduceConfig(deployed)
                         .map(
                             config -> CompletableFuture.completedFuture(
@@ -257,11 +248,30 @@ public final class ProducerService {
             return CompletableFuture.completedFuture(ProduceResult.ofThrottled(message.getMessageId()));
         }
 
-        ProduceTarget target = produceTarget.get();
-        StorageTopic storageTopic = topic.getStorageTopic().getTopic(target.storageTopicId());
-        return getProducer(topic.getName(), storageTopic).thenCompose(
-            producer -> doProduce(producer, storageTopic.getName(), message)
-        );
+        ProduceKey key = produceKey.get();
+        StorageTopic storageTopic = topic.getSegmentedStorageTopic().getTopic(key.storageTopicId());
+        return getProducer(key).thenCompose(producer -> doProduce(producer, storageTopic.getName(), message));
+    }
+
+    /**
+     * Gets a producer for the resolved {@link ProduceKey}.
+     */
+    public CompletableFuture<Producer<? extends Offset>> getProducer(ProduceKey produceKey) {
+        Producer<? extends Offset> producer = producerCache.getIfPresent(produceKey);
+        if (producer != null) {
+            return CompletableFuture.completedFuture(producer);
+        }
+
+        try {
+            return CompletableFuture.completedFuture(producerCache.get(produceKey));
+        } catch (Exception e) {
+            String errorMsg = String.format(
+                "Error getting producer for Topic(%s): %s",
+                produceKey.topicFqnString(),
+                e.getMessage()
+            );
+            return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
+        }
     }
 
     /**
@@ -275,22 +285,9 @@ public final class ProducerService {
      * @return a future that completes with the producer
      */
     public CompletableFuture<Producer<? extends Offset>> getProducer(String topicFQN, StorageTopic storageTopic) {
-        ProducerCacheKey key = new ProducerCacheKey(topicFQN, storageTopic.getId());
-        Producer<? extends Offset> producer = producerCache.getIfPresent(key);
-        if (producer != null) {
-            return CompletableFuture.completedFuture(producer);
-        }
-
-        try {
-            return CompletableFuture.completedFuture(producerCache.get(key));
-        } catch (Exception e) {
-            String errorMsg = String.format(
-                "Error getting producer for Topic(%s): %s",
-                storageTopic.getName(),
-                e.getMessage()
-            );
-            return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));
-        }
+        return getProducer(
+            new ProduceKey(VaradhiTopicName.parse(topicFQN), RegionName.of(produceRegion), storageTopic.getId())
+        );
     }
 
     /**

@@ -79,9 +79,18 @@ class VaradhiTopicSerializationTest {
         VaradhiTopic restored = JsonMapper.jsonDeserialize(json, VaradhiTopic.class);
 
         assertAll(
-            () -> assertEquals(TopicState.Producing, restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state()),
-            () -> assertEquals(TopicState.Blocked, restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state()),
-            () -> assertEquals(RegionName.of("CH"), restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion())
+            () -> assertEquals(
+                TopicState.Producing,
+                restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state()
+            ),
+            () -> assertEquals(
+                TopicState.Blocked,
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state()
+            ),
+            () -> assertEquals(
+                RegionName.of("CH"),
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion()
+            )
         );
     }
 }

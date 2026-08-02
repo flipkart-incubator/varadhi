@@ -17,20 +17,20 @@ import java.util.Optional;
  * Represents a topic in the Varadhi.
  *
  * <p>Per-region produce policy ({@link #produceConfigs}) is the single source of truth for
- * whether a region accepts produce ({@link TopicState}). Storage layout ({@link #storageTopic})
+ * whether a region accepts produce ({@link TopicState}). Storage layout ({@link #segmentedStorageTopic})
  * is shared across regions — region membership in {@code produceConfigs} gates access, not a
  * per-region storage map.
  *
- * <p>Produce resolution splits into two paths (see {@link #resolveProduceTarget} vs
- * {@link #getProduceTarget}): cache-key lookup (may succeed while {@link TopicState#Fenced})
- * vs gated produce (requires {@link TopicState#isProduceAllowed()}).
+ * <p>Produce routing is resolved by {@link ProduceKeyResolver}, not on this entity.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
 public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
+    // --- Fields ---
+
     /** Shared storage segment for this topic; nullable until provisioned. */
-    private final SegmentedStorageTopic storageTopic;
+    private final SegmentedStorageTopic segmentedStorageTopic;
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
     /**
@@ -61,6 +61,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TOPIC, QUEUE
     }
 
+    // --- Construction ---
+
     /**
      * Constructs a new VaradhiTopic instance.
      *
@@ -68,7 +70,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param version               the version of the topic
      * @param grouped               whether the topic is grouped
      * @param capacity              the capacity policy of the topic
-     * @param storageTopic          shared segmented storage; {@code null} until provisioned
+     * @param segmentedStorageTopic shared segmented storage; {@code null} until provisioned
      * @param autoFailover          whether controller may auto-failover on region degradation
      * @param produceConfigs        per-region produce policy; keyed by {@link RegionName}
      * @param status                the lifecycle status of the topic
@@ -83,7 +85,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         int version,
         boolean grouped,
         TopicCapacityPolicy capacity,
-        SegmentedStorageTopic storageTopic,
+        SegmentedStorageTopic segmentedStorageTopic,
         boolean autoFailover,
         Map<RegionName, ProduceConfig> produceConfigs,
         LifecycleStatus status,
@@ -96,7 +98,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.storageTopic = storageTopic;
+        this.segmentedStorageTopic = segmentedStorageTopic;
         this.autoFailover = autoFailover;
         this.produceConfigs = new HashMap<>(produceConfigs);
         this.nfrFilterName = nfrFilterName;
@@ -108,6 +110,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         this.rateLimiterMode = rateLimiterMode;
         this.status = status;
     }
+
+    // --- Factory methods ---
 
     /**
      * Creates a new VaradhiTopic instance.
@@ -196,90 +200,19 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return VaradhiTopicName.of(projectName, topicName).toFqn();
     }
 
-    /** Unmodifiable view of {@link #produceConfigs}. */
-    public Map<RegionName, ProduceConfig> getProduceConfigs() {
-        return Collections.unmodifiableMap(produceConfigs);
-    }
+    // --- Immutable updates ---
 
     /**
-     * Sets the shared {@link #storageTopic}. Replaces any previous value.
+     * Sets the shared {@link #segmentedStorageTopic}. Replaces any previous value.
      */
-    public VaradhiTopic withStorageTopic(SegmentedStorageTopic storageTopic) {
+    public VaradhiTopic withSegmentedStorageTopic(SegmentedStorageTopic storageTopic) {
         return copyWith(storageTopic, produceConfigs, autoFailover);
     }
 
     /**
-     * Registers {@code region} in {@link #produceConfigs}. First region starts
-     * {@link TopicState#Producing}; further regions {@link TopicState#Blocked}.
-     * Does not change {@link #storageTopic} — call {@link #withStorageTopic} separately.
+     * Sets or registers per-region produce policy for {@code region}.
+     * Does not change {@link #segmentedStorageTopic} — call {@link #withSegmentedStorageTopic} separately.
      */
-    public VaradhiTopic withProduceRegion(RegionName region) {
-        Map<RegionName, ProduceConfig> updatedConfigs = new HashMap<>(produceConfigs);
-        boolean firstRegion = updatedConfigs.isEmpty();
-        updatedConfigs.putIfAbsent(region, firstRegion ? ProduceConfig.producing() : ProduceConfig.blocked());
-        return copyWith(storageTopic, updatedConfigs, autoFailover);
-    }
-
-    @JsonIgnore
-    public Optional<ProduceConfig> getProduceConfig(RegionName region) {
-        return Optional.ofNullable(produceConfigs.get(region));
-    }
-
-    /**
-     * Resolves the producer cache key for {@code region}: storage topic + produce region
-     * ({@code failOverRegion} if set, otherwise {@code region}).
-     *
-     * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()} — use this when you need the
-     * key for an already-cached producer (e.g. PREPARE participation while the region is
-     * {@link TopicState#Fenced}). For the gated produce path use {@link #getProduceTarget}.
-     *
-     * <p>When {@link ProduceConfig#failOverRegion()} is set, the resolved {@link ProduceTarget}
-     * uses that region as {@link ProduceTarget#produceRegion()}; the target region must be
-     * present in {@link #produceConfigs} but need not be {@link TopicState#Producing} — the
-     * controller owns that invariant before advancing failover.
-     */
-    @JsonIgnore
-    public Optional<ProduceTarget> resolveProduceTarget(String region) {
-        return resolveProduceTarget(RegionName.of(region));
-    }
-
-    @JsonIgnore
-    public Optional<ProduceTarget> resolveProduceTarget(RegionName region) {
-        ProduceConfig config = produceConfigs.get(region);
-        if (config == null || storageTopic == null) {
-            return Optional.empty();
-        }
-        RegionName produceRegion = config.failOverRegion() != null ? config.failOverRegion() : region;
-        if (!produceConfigs.containsKey(produceRegion)) {
-            return Optional.empty();
-        }
-        StorageTopic segment = storageTopic.getTopicToProduce();
-        return Optional.of(
-            new ProduceTarget(VaradhiTopicName.parse(getName()), segment.getId(), produceRegion)
-        );
-    }
-
-    /**
-     * Resolves where produce for {@code region} should go when produce is allowed.
-     *
-     * <p>Empty when this region has no produce config, produce is not allowed ({@link TopicState}),
-     * or storage is not provisioned. When present, {@link ProduceTarget#produceRegion()} is
-     * {@code failOverRegion} if set, otherwise {@code region}.
-     */
-    @JsonIgnore
-    public Optional<ProduceTarget> getProduceTarget(String region) {
-        return getProduceTarget(RegionName.of(region));
-    }
-
-    @JsonIgnore
-    public Optional<ProduceTarget> getProduceTarget(RegionName region) {
-        ProduceConfig config = produceConfigs.get(region);
-        if (config == null || !config.state().isProduceAllowed()) {
-            return Optional.empty();
-        }
-        return resolveProduceTarget(region);
-    }
-
     public VaradhiTopic withProduceConfig(RegionName region, ProduceConfig config) {
         Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
         updated.put(region, config);
@@ -288,6 +221,39 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     public VaradhiTopic withAutoFailover(boolean autoFailover) {
         return copyWith(produceConfigs, autoFailover);
+    }
+
+    // --- Read accessors ---
+
+    /** Unmodifiable view of {@link #produceConfigs}. */
+    public Map<RegionName, ProduceConfig> getProduceConfigs() {
+        return Collections.unmodifiableMap(produceConfigs);
+    }
+
+    @JsonIgnore
+    public Optional<ProduceConfig> getProduceConfig(RegionName region) {
+        return Optional.ofNullable(produceConfigs.get(region));
+    }
+
+    /**
+     * Returns the shared {@link #segmentedStorageTopic} when {@code region} is registered in
+     * {@link #produceConfigs} and storage is provisioned.
+     *
+     * <p>Does <em>not</em> select a per-region storage segment — storage is shared. The name
+     * reflects membership ("this region participates in this topic"), not region-specific layout.
+     * For produce routing use {@link ProduceKeyResolver}.
+     */
+    @JsonIgnore
+    public Optional<SegmentedStorageTopic> getStorageSegmentForRegion(String region) {
+        return getStorageSegmentForRegion(RegionName.of(region));
+    }
+
+    @JsonIgnore
+    public Optional<SegmentedStorageTopic> getStorageSegmentForRegion(RegionName region) {
+        if (!produceConfigs.containsKey(region) || segmentedStorageTopic == null) {
+            return Optional.empty();
+        }
+        return Optional.of(segmentedStorageTopic);
     }
 
     /**
@@ -309,22 +275,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
-     * Returns the shared {@link #storageTopic} when {@code region} is registered in
-     * {@link #produceConfigs}; {@code null} otherwise.
-     *
-     * <p>Does <em>not</em> select a per-region storage segment — storage is shared. The name
-     * reflects membership ("this region participates in this topic"), not region-specific layout.
-     * For produce routing use {@link #getProduceTarget} or {@link #resolveProduceTarget}.
-     */
-    public SegmentedStorageTopic getStorageSegmentForRegion(String region) {
-        return getStorageSegmentForRegion(RegionName.of(region));
-    }
-
-    public SegmentedStorageTopic getStorageSegmentForRegion(RegionName region) {
-        return produceConfigs.containsKey(region) ? storageTopic : null;
-    }
-
-    /**
      * Whether this topic's {@link #getTopicCategory() category} equals {@code category}.
      *
      * @param category the category to compare against; must not be {@code null}
@@ -334,8 +284,10 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return this.topicCategory == category;
     }
 
+    // --- Copy helpers ---
+
     VaradhiTopic copyWith(Map<RegionName, ProduceConfig> produceConfigs, boolean autoFailover) {
-        return copyWith(storageTopic, produceConfigs, autoFailover);
+        return copyWith(segmentedStorageTopic, produceConfigs, autoFailover);
     }
 
     private VaradhiTopic copyWith(

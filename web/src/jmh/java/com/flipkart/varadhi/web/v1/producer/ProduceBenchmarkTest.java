@@ -11,6 +11,7 @@ import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.OrgDetails;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -20,7 +21,6 @@ import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.web.WebServerVerticle;
@@ -340,7 +340,8 @@ public class ProduceBenchmarkTest {
 
             // Add as internal topic with proper state
             SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
-            topic = topic.withStorageTopic(segmentedTopic).withProduceRegion(RegionName.of("default"));
+            topic = topic.withSegmentedStorageTopic(segmentedTopic)
+                         .withProduceConfig(RegionName.of("default"), ProduceConfig.producing());
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));
         }

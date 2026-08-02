@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProduceConfigTest {
 
     @Test
-    void withProduceRegion_firstProducingThenBlocked() {
+    void withProduceConfig_registersCallerSuppliedConfig() {
         VaradhiTopic topic = VaradhiTopic.of(
             "project1",
             "topic1",
@@ -18,9 +18,11 @@ class ProduceConfigTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")))
-                     .withProduceRegion(RegionName.of("r1"))
-                     .withProduceRegion(RegionName.of("r2"));
+        topic = topic.withSegmentedStorageTopic(
+            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
+        )
+                     .withProduceConfig(RegionName.of("r1"), ProduceConfig.producing())
+                     .withProduceConfig(RegionName.of("r2"), ProduceConfig.blocked());
 
         assertEquals(TopicState.Producing, topic.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
         assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
@@ -35,9 +37,11 @@ class ProduceConfigTest {
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")))
-                     .withProduceRegion(RegionName.of("r1"))
-                     .withProduceRegion(RegionName.of("r2"));
+        topic = topic.withSegmentedStorageTopic(
+            SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
+        )
+                     .withProduceConfig(RegionName.of("r1"), ProduceConfig.producing())
+                     .withProduceConfig(RegionName.of("r2"), ProduceConfig.blocked());
 
         VaradhiTopic updated = VaradhiTopicTestUtils.withProduceConfigs(
             topic,

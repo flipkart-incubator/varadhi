@@ -299,8 +299,8 @@ class ProducerServiceTests {
         topic.markCreated();
 
         StorageTopic st = new DummyStorageTopic(topic.getName());
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(st))
-                     .withProduceRegion(RegionName.of(region));
+        topic = topic.withSegmentedStorageTopic(SegmentedStorageTopic.of(st))
+                     .withProduceConfig(RegionName.of(region), ProduceConfig.producing());
         if (state != TopicState.Producing) {
             topic = topic.withProduceConfig(RegionName.of(region), new ProduceConfig(state, null));
         }

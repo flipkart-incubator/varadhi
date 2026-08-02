@@ -52,10 +52,7 @@ class TransitionAckSerializationTest {
             "timeout"
         );
 
-        TransitionAck restored = JsonMapper.jsonDeserialize(
-            JsonMapper.jsonSerialize(original),
-            TransitionAck.class
-        );
+        TransitionAck restored = JsonMapper.jsonDeserialize(JsonMapper.jsonSerialize(original), TransitionAck.class);
 
         assertEquals(original.opId(), restored.opId());
         assertEquals(original.topicFqn(), restored.topicFqn());
@@ -79,10 +76,7 @@ class TransitionAckSerializationTest {
             TransitionStage.COMPLETED
         );
 
-        TransitionAck restored = JsonMapper.jsonDeserialize(
-            JsonMapper.jsonSerialize(original),
-            TransitionAck.class
-        );
+        TransitionAck restored = JsonMapper.jsonDeserialize(JsonMapper.jsonSerialize(original), TransitionAck.class);
 
         assertNull(restored.errorMsg());
         assertTrue(restored.isSuccess());
