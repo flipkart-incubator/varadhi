@@ -5,8 +5,9 @@ package com.flipkart.varadhi.entities;
  * {@link TopicState#Producing} concurrently on a global topic; each pod gates produce using its
  * {@code deployedRegion}'s entry.
  *
- * <p>{@code failOverRegion} is set by the controller when this region's produce is routed elsewhere;
- * it must reference a region present in the topic's {@code produceConfigs} (controller validates on write).
+ * <p>{@code failOverRegion} is set by the controller when this region's produce is routed elsewhere
+ * (typically at SWITCH while this entry may still be {@link TopicState#Producing}); it must reference
+ * a region present in the topic's {@code produceConfigs} (controller validates on write).
  */
 public record ProduceConfig(TopicState state, RegionName failOverRegion) {
 

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransitionAckSerializationTest {
@@ -81,6 +82,61 @@ class TransitionAckSerializationTest {
         assertNull(restored.errorMsg());
         assertTrue(restored.isSuccess());
         assertFalse(restored.isFailure());
+    }
+
+    @Test
+    void isSuccess_whitespaceOnlyErrorMsgIsSuccess() {
+        TransitionAck ack = new TransitionAck(
+            OP_ID,
+            TOPIC,
+            TransitionType.TOPIC_FAILOVER,
+            TransitionParticipation.INVOLVED,
+            HOST,
+            TransitionStage.PREPARE,
+            "   "
+        );
+        assertTrue(ack.isSuccess());
+        assertFalse(ack.isFailure());
+    }
+
+    @Test
+    void failure_rejectsNullAndBlankErrorMsg() {
+        assertThrows(
+            NullPointerException.class,
+            () -> TransitionAck.failure(
+                OP_ID,
+                TOPIC,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionParticipation.INVOLVED,
+                HOST,
+                TransitionStage.PREPARE,
+                null
+            )
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> TransitionAck.failure(
+                OP_ID,
+                TOPIC,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionParticipation.INVOLVED,
+                HOST,
+                TransitionStage.PREPARE,
+                ""
+            )
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> TransitionAck.failure(
+                OP_ID,
+                TOPIC,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionParticipation.INVOLVED,
+                HOST,
+                TransitionStage.PREPARE,
+                "   "
+            )
+        );
     }
 
     private static void assertDerivedKeysAbsent(String json) throws Exception {

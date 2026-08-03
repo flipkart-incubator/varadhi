@@ -274,21 +274,6 @@ public final class ProducerService {
         }
     }
 
-    /**
-     * Gets a producer for the specified storage topic.
-     * <p>
-     * This method first checks if the producer is already in the cache. If not, it attempts
-     * to load it using the producer provider function.
-     *
-     * @param topicFQN the name of the Varadhi topic (used for caching)
-     * @param storageTopic   the storage topic to get a producer for
-     * @return a future that completes with the producer
-     */
-    public CompletableFuture<Producer<? extends Offset>> getProducer(String topicFQN, StorageTopic storageTopic) {
-        return getProducer(
-            new ProduceKey(VaradhiTopicName.parse(topicFQN), RegionName.of(produceRegion), storageTopic.getId())
-        );
-    }
 
     /**
      * Produces a message to a storage topic using the specified producer.

@@ -236,20 +236,19 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
-     * Returns the shared {@link #segmentedStorageTopic} when {@code region} is registered in
-     * {@link #produceConfigs} and storage is provisioned.
+     * Returns the shared {@link #segmentedStorageTopic} when {@code region} participates in this
+     * topic ({@code region} is registered in {@link #produceConfigs}) and storage is provisioned.
      *
-     * <p>Does <em>not</em> select a per-region storage segment — storage is shared. The name
-     * reflects membership ("this region participates in this topic"), not region-specific layout.
-     * For produce routing use {@link ProduceKeyResolver}.
+     * <p>Does <em>not</em> select a per-region storage segment — storage is shared. For produce
+     * routing use {@link ProduceKeyResolver}.
      */
     @JsonIgnore
-    public Optional<SegmentedStorageTopic> getStorageSegmentForRegion(String region) {
-        return getStorageSegmentForRegion(RegionName.of(region));
+    public Optional<SegmentedStorageTopic> getSegmentedStorageIfRegionParticipates(String region) {
+        return getSegmentedStorageIfRegionParticipates(RegionName.of(region));
     }
 
     @JsonIgnore
-    public Optional<SegmentedStorageTopic> getStorageSegmentForRegion(RegionName region) {
+    public Optional<SegmentedStorageTopic> getSegmentedStorageIfRegionParticipates(RegionName region) {
         if (!produceConfigs.containsKey(region) || segmentedStorageTopic == null) {
             return Optional.empty();
         }

@@ -79,7 +79,7 @@ class VaradhiTopicTest {
 
         assertEquals(
             storageTopic.getName(),
-            varadhiTopic.getStorageSegmentForRegion("region1").orElseThrow().getTopicToProduce().getName(),
+            varadhiTopic.getSegmentedStorageIfRegionParticipates("region1").orElseThrow().getTopicToProduce().getName(),
             "Internal topic addition failed"
         );
     }
@@ -99,7 +99,7 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void getStorageSegmentForRegion_WithValidRegion_ReturnsCorrectTopic() {
+    void getSegmentedStorageIfRegionParticipates_WithValidRegion_ReturnsCorrectTopic() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
         StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
 
@@ -107,20 +107,23 @@ class VaradhiTopicTest {
                                          .withProduceConfig(RegionName.of("region1"), ProduceConfig.producing());
 
         assertAll(
-            () -> assertTrue(topic.getStorageSegmentForRegion("region1").isPresent(), "Region topic not found"),
+            () -> assertTrue(
+                topic.getSegmentedStorageIfRegionParticipates("region1").isPresent(),
+                "Region topic not found"
+            ),
             () -> assertEquals(
                 storageTopic.getName(),
-                topic.getStorageSegmentForRegion("region1").orElseThrow().getTopicToProduce().getName(),
+                topic.getSegmentedStorageIfRegionParticipates("region1").orElseThrow().getTopicToProduce().getName(),
                 "Region topic name mismatch"
             )
         );
     }
 
     @Test
-    void getStorageSegmentForRegion_WithUnknownRegion_ReturnsEmpty() {
+    void getSegmentedStorageIfRegionParticipates_WithUnknownRegion_ReturnsEmpty() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        assertTrue(varadhiTopic.getStorageSegmentForRegion("unknownRegion").isEmpty());
+        assertTrue(varadhiTopic.getSegmentedStorageIfRegionParticipates("unknownRegion").isEmpty());
     }
 
     @Test

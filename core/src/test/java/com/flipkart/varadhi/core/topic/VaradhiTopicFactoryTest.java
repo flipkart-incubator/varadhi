@@ -56,7 +56,8 @@ class VaradhiTopicFactoryTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
         assertNotNull(varadhiTopic);
-        SegmentedStorageTopic internalTopic = varadhiTopic.getStorageSegmentForRegion(REGION).orElseThrow();
+        SegmentedStorageTopic internalTopic = varadhiTopic.getSegmentedStorageIfRegionParticipates(REGION)
+                                                          .orElseThrow();
         assertEquals(TopicState.Producing, varadhiTopic.getProduceConfig(RegionName.of(REGION)).orElseThrow().state());
         assertNotNull(internalTopic.getTopicToProduce());
 
@@ -79,7 +80,8 @@ class VaradhiTopicFactoryTest {
             "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
-        SegmentedStorageTopic internalTopic = varadhiTopic.getStorageSegmentForRegion(REGION).orElseThrow();
+        SegmentedStorageTopic internalTopic = varadhiTopic.getSegmentedStorageIfRegionParticipates(REGION)
+                                                          .orElseThrow();
         PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicToProduce();
 
         assertNotNull(storageTopic);
@@ -106,7 +108,8 @@ class VaradhiTopicFactoryTest {
 
         VaradhiTopic deployed = (VaradhiTopic)planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
 
-        SegmentedStorageTopic internalCompositeTopic = deployed.getStorageSegmentForRegion(REGION).orElseThrow();
+        SegmentedStorageTopic internalCompositeTopic = deployed.getSegmentedStorageIfRegionParticipates(REGION)
+                                                               .orElseThrow();
         assertNotNull(internalCompositeTopic);
         assertEquals(TopicState.Producing, deployed.getProduceConfig(RegionName.of(REGION)).orElseThrow().state());
         assertNotNull(internalCompositeTopic.getTopicToProduce());

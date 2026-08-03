@@ -16,6 +16,12 @@ public final class ProduceKeyResolver {
     /**
      * Resolves produce routing for {@code region}: topic + produce region + storage segment id.
      *
+     * <p>Uses the <em>active</em> storage segment ({@link SegmentedStorageTopic#getTopicToProduce()}).
+     * Correct for steady-state produce and topic failover after SWITCH. Storage-migration PREPARE
+     * must warm an explicit segment id from
+     * {@link com.flipkart.varadhi.entities.cluster.failover.TransitionEvent.Target.StorageTopic#storageTopicId()},
+     * not this resolver alone.
+     *
      * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()}.
      */
     public static Optional<ProduceKey> resolve(VaradhiTopic topic, RegionName region) {
