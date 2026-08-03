@@ -118,9 +118,7 @@ public final class VaradhiSubscriptionFactory {
         ConsumptionPolicy consumptionPolicy,
         RetryPolicy retryPolicy
     ) {
-        StorageTopic subscribedStorageTopic = topic.getSegmentedStorage(
-            RegionName.of(deployedRegion)
-        )
+        StorageTopic subscribedStorageTopic = topic.getSegmentedStorage(RegionName.of(deployedRegion))
                                                    .orElseThrow(
                                                        () -> new IllegalStateException(
                                                            "Topic(%s) has no storage for region(%s)".formatted(

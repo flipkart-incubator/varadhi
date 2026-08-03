@@ -80,10 +80,7 @@ class VaradhiTopicTest {
 
         assertEquals(
             storageTopic.getName(),
-            varadhiTopic.getSegmentedStorage(RegionName.of("region1"))
-                        .orElseThrow()
-                        .getTopicToProduce()
-                        .getName(),
+            varadhiTopic.getSegmentedStorage(RegionName.of("region1")).orElseThrow().getTopicToProduce().getName(),
             "Internal topic addition failed"
         );
     }
@@ -111,16 +108,10 @@ class VaradhiTopicTest {
                                          .withProduceConfig(RegionName.of("region1"), ProduceConfig.producing());
 
         assertAll(
-            () -> assertTrue(
-                topic.getSegmentedStorage(RegionName.of("region1")).isPresent(),
-                "Region topic not found"
-            ),
+            () -> assertTrue(topic.getSegmentedStorage(RegionName.of("region1")).isPresent(), "Region topic not found"),
             () -> assertEquals(
                 storageTopic.getName(),
-                topic.getSegmentedStorage(RegionName.of("region1"))
-                     .orElseThrow()
-                     .getTopicToProduce()
-                     .getName(),
+                topic.getSegmentedStorage(RegionName.of("region1")).orElseThrow().getTopicToProduce().getName(),
                 "Region topic name mismatch"
             )
         );
