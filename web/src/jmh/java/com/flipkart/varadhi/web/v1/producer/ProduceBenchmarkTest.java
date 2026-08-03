@@ -321,7 +321,8 @@ public class ProduceBenchmarkTest {
                 topicName,
                 i % 2 == 0, // alternate grouped/ungrouped
                 policy,
-                LifecycleStatus.ActionCode.USER_ACTION
+                LifecycleStatus.ActionCode.USER_ACTION,
+                null
             );
             topic.markCreated(); // Set state to active
 

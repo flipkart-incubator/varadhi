@@ -124,8 +124,11 @@ public class VaradhiTopicFactory {
             InternalQueueCategory.MAIN
         );
 
-        return varadhiTopic.withSegmentedStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                           .withProduceConfig(RegionName.of(deploymentRegion), ProduceConfig.producing());
+        return varadhiTopic.withSegmentedStorageTopicAndProduceConfig(
+            SegmentedStorageTopic.of(storageTopic),
+            RegionName.of(deploymentRegion),
+            ProduceConfig.producing()
+        );
     }
 
     private static void warnIfCapacityTightForAverageMessageSizes(

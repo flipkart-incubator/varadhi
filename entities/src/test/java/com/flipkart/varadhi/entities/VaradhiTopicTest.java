@@ -27,7 +27,8 @@ class VaradhiTopicTest {
             TOPIC_NAME,
             grouped,
             TOPIC_CAPACITY,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
     }
 
@@ -44,7 +45,7 @@ class VaradhiTopicTest {
             () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch"),
             () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory()),
             () -> assertFalse(varadhiTopic.isAutoFailover()),
-            () -> assertTrue(varadhiTopic.getProduceConfigs().isEmpty())
+            () -> assertTrue(varadhiTopic.getProduceConfig(RegionName.of("unknown")).isEmpty())
         );
     }
 
@@ -79,7 +80,10 @@ class VaradhiTopicTest {
 
         assertEquals(
             storageTopic.getName(),
-            varadhiTopic.getSegmentedStorageIfRegionParticipates("region1").orElseThrow().getTopicToProduce().getName(),
+            varadhiTopic.getSegmentedStorage(RegionName.of("region1"))
+                        .orElseThrow()
+                        .getTopicToProduce()
+                        .getName(),
             "Internal topic addition failed"
         );
     }
@@ -108,12 +112,15 @@ class VaradhiTopicTest {
 
         assertAll(
             () -> assertTrue(
-                topic.getSegmentedStorageIfRegionParticipates("region1").isPresent(),
+                topic.getSegmentedStorage(RegionName.of("region1")).isPresent(),
                 "Region topic not found"
             ),
             () -> assertEquals(
                 storageTopic.getName(),
-                topic.getSegmentedStorageIfRegionParticipates("region1").orElseThrow().getTopicToProduce().getName(),
+                topic.getSegmentedStorage(RegionName.of("region1"))
+                     .orElseThrow()
+                     .getTopicToProduce()
+                     .getName(),
                 "Region topic name mismatch"
             )
         );
@@ -123,7 +130,7 @@ class VaradhiTopicTest {
     void getSegmentedStorageIfRegionParticipates_WithUnknownRegion_ReturnsEmpty() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        assertTrue(varadhiTopic.getSegmentedStorageIfRegionParticipates("unknownRegion").isEmpty());
+        assertTrue(varadhiTopic.getSegmentedStorage(RegionName.of("unknownRegion")).isEmpty());
     }
 
     @Test
@@ -171,7 +178,10 @@ class VaradhiTopicTest {
             TOPIC_CAPACITY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.QUEUE
+            VaradhiTopic.TopicCategory.QUEUE,
+            null,
+            null,
+            null
         );
 
         assertAll(
@@ -215,7 +225,7 @@ class VaradhiTopicTest {
     void produceConfigs_emptyUntilProduceRegionAdded() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
-        assertTrue(varadhiTopic.getProduceConfigs().isEmpty());
+        assertTrue(varadhiTopic.getProduceConfig(RegionName.of("unknown")).isEmpty());
     }
 
     @Test

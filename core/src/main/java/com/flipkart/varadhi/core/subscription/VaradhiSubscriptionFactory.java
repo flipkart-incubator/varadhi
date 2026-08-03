@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.InternalCompositeSubscription;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.InternalQueueType;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.RetryPolicy;
 import com.flipkart.varadhi.entities.RetrySubscription;
 import com.flipkart.varadhi.entities.StorageSubscription;
@@ -117,7 +118,9 @@ public final class VaradhiSubscriptionFactory {
         ConsumptionPolicy consumptionPolicy,
         RetryPolicy retryPolicy
     ) {
-        StorageTopic subscribedStorageTopic = topic.getSegmentedStorageIfRegionParticipates(deployedRegion)
+        StorageTopic subscribedStorageTopic = topic.getSegmentedStorage(
+            RegionName.of(deployedRegion)
+        )
                                                    .orElseThrow(
                                                        () -> new IllegalStateException(
                                                            "Topic(%s) has no storage for region(%s)".formatted(

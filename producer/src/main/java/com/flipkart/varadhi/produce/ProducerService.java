@@ -159,10 +159,10 @@ public final class ProducerService {
         ProducerFactory producerFactory,
         ProduceKey key
     ) {
-        var topicMaybe = topicCache.get(key.topicFqnString());
+        var topicMaybe = topicCache.get(key.topicFqn().toFqn());
         if (topicMaybe.isEmpty()) {
             throw new ResourceNotFoundException(
-                "Topic(%s) does not exist in region(%s).".formatted(key.topicFqnString(), produceRegion)
+                "Topic(%s) does not exist in region(%s).".formatted(key.topicFqn().toFqn(), key.produceRegion())
             );
         }
 
@@ -267,7 +267,7 @@ public final class ProducerService {
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
-                produceKey.topicFqnString(),
+                produceKey.topicFqn().toFqn(),
                 e.getMessage()
             );
             return CompletableFuture.failedFuture(new ProduceException(errorMsg, e));

@@ -294,7 +294,8 @@ class ProducerServiceTests {
             name,
             false,
             null,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
         topic.markCreated();
 

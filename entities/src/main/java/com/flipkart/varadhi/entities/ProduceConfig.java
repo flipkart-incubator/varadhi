@@ -1,5 +1,9 @@
 package com.flipkart.varadhi.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.Optional;
+
 /**
  * Per-region produce policy for a {@link VaradhiTopic}. Multiple regions may be
  * {@link TopicState#Producing} concurrently on a global topic; each pod gates produce using its
@@ -10,6 +14,11 @@ package com.flipkart.varadhi.entities;
  * a region present in the topic's {@code produceConfigs} (controller validates on write).
  */
 public record ProduceConfig(TopicState state, RegionName failOverRegion) {
+
+    @JsonIgnore
+    public Optional<RegionName> getFailoverRegion() {
+        return Optional.ofNullable(failOverRegion);
+    }
 
     /** Region that accepts produce. */
     public static ProduceConfig producing() {

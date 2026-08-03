@@ -193,7 +193,10 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.TOPIC
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null
         );
         existing.markCreateFailed("previous failure");
 
@@ -204,7 +207,10 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.QUEUE
+            VaradhiTopic.TopicCategory.QUEUE,
+            null,
+            null,
+            null
         );
 
         when(topicStore.exists(vTopicName)).thenReturn(true);
@@ -226,7 +232,10 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.TOPIC
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null
         );
         existing.markCreateFailed("previous failure");
 
@@ -237,7 +246,10 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.TOPIC
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null
         );
 
         when(topicStore.exists(vTopicName)).thenReturn(true);

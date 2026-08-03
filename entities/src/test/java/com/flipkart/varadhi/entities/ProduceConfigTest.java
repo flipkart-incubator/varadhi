@@ -16,7 +16,8 @@ class ProduceConfigTest {
             "topic1",
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
         topic = topic.withSegmentedStorageTopic(
             SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))
@@ -35,7 +36,8 @@ class ProduceConfigTest {
             "topic1",
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
         topic = topic.withSegmentedStorageTopic(
             SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1"))

@@ -57,7 +57,8 @@ class TopicResourceTest {
             "topicName",
             true,
             new TopicCapacityPolicy(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
         TopicResource topicResource = TopicResource.from(varadhiTopic);
         assertAll(

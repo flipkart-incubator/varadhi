@@ -7,7 +7,6 @@ import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -121,18 +120,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param grouped    whether the topic is grouped
      * @param capacity   the capacity policy of the topic
      * @param actionCode the actor code indicating the reason for the state
+     * @param nfrStrategy the name of the filter applied for NFR; {@code null} if not set
      * @return a new VaradhiTopic instance
      */
-    public static VaradhiTopic of(
-        String project,
-        String name,
-        boolean grouped,
-        TopicCapacityPolicy capacity,
-        LifecycleStatus.ActionCode actionCode
-    ) {
-        return of(project, name, grouped, capacity, actionCode, null);
-    }
-
     public static VaradhiTopic of(
         String project,
         String name,
@@ -141,23 +131,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         LifecycleStatus.ActionCode actionCode,
         String nfrStrategy
     ) {
-        return of(project, name, grouped, capacity, actionCode, nfrStrategy, TopicCategory.TOPIC);
-    }
-
-    /**
-     * Same as {@link #of(String, String, boolean, TopicCapacityPolicy, LifecycleStatus.ActionCode, String)} but
-     * sets {@link TopicCategory} (e.g. {@link TopicCategory#QUEUE} for the topic leg of a queue).
-     */
-    public static VaradhiTopic of(
-        String project,
-        String name,
-        boolean grouped,
-        TopicCapacityPolicy capacity,
-        LifecycleStatus.ActionCode actionCode,
-        String nfrStrategy,
-        TopicCategory topicCategory
-    ) {
-        return of(project, name, grouped, capacity, actionCode, nfrStrategy, topicCategory, null, null, null);
+        return of(project, name, grouped, capacity, actionCode, nfrStrategy, TopicCategory.TOPIC, null, null, null);
     }
 
     public static VaradhiTopic of(
@@ -210,6 +184,19 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     /**
+     * Sets shared storage and per-region produce policy in one copy.
+     */
+    public VaradhiTopic withSegmentedStorageTopicAndProduceConfig(
+        SegmentedStorageTopic storageTopic,
+        RegionName region,
+        ProduceConfig config
+    ) {
+        Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
+        updated.put(region, config);
+        return copyWith(storageTopic, updated, autoFailover);
+    }
+
+    /**
      * Sets or registers per-region produce policy for {@code region}.
      * Does not change {@link #segmentedStorageTopic} — call {@link #withSegmentedStorageTopic} separately.
      */
@@ -219,16 +206,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return copyWith(updated, autoFailover);
     }
 
-    public VaradhiTopic withAutoFailover(boolean autoFailover) {
-        return copyWith(produceConfigs, autoFailover);
-    }
-
     // --- Read accessors ---
-
-    /** Unmodifiable view of {@link #produceConfigs}. */
-    public Map<RegionName, ProduceConfig> getProduceConfigs() {
-        return Collections.unmodifiableMap(produceConfigs);
-    }
 
     @JsonIgnore
     public Optional<ProduceConfig> getProduceConfig(RegionName region) {
@@ -243,13 +221,8 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * routing use {@link ProduceKeyResolver}.
      */
     @JsonIgnore
-    public Optional<SegmentedStorageTopic> getSegmentedStorageIfRegionParticipates(String region) {
-        return getSegmentedStorageIfRegionParticipates(RegionName.of(region));
-    }
-
-    @JsonIgnore
-    public Optional<SegmentedStorageTopic> getSegmentedStorageIfRegionParticipates(RegionName region) {
-        if (!produceConfigs.containsKey(region) || segmentedStorageTopic == null) {
+    public Optional<SegmentedStorageTopic> getSegmentedStorage(RegionName region) {
+        if (getProduceConfig(region).isEmpty() || segmentedStorageTopic == null) {
             return Optional.empty();
         }
         return Optional.of(segmentedStorageTopic);

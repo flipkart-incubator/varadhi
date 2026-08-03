@@ -16,7 +16,8 @@ class ProduceKeyResolverTest {
             TOPIC_NAME,
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         ).withSegmentedStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t")));
         for (RegionName region : regions) {
             topic = topic.withProduceConfig(region, ProduceConfig.producing());

@@ -90,7 +90,8 @@ class SubscriptionResourceTest {
             TOPIC_NAME,
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
 
         VaradhiSubscription varadhiSubscription = SubscriptionTestUtils.builder()

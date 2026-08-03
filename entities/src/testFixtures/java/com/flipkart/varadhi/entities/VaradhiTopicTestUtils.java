@@ -9,6 +9,14 @@ public final class VaradhiTopicTestUtils {
     }
 
     public static VaradhiTopic withProduceConfigs(VaradhiTopic topic, Map<RegionName, ProduceConfig> configs) {
-        return topic.copyWith(new HashMap<>(configs), topic.isAutoFailover());
+        return withProduceConfigs(topic, configs, topic.isAutoFailover());
+    }
+
+    public static VaradhiTopic withProduceConfigs(
+        VaradhiTopic topic,
+        Map<RegionName, ProduceConfig> configs,
+        boolean autoFailover
+    ) {
+        return topic.copyWith(new HashMap<>(configs), autoFailover);
     }
 }

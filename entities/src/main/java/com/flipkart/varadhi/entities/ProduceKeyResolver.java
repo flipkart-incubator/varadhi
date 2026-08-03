@@ -25,13 +25,13 @@ public final class ProduceKeyResolver {
      * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()}.
      */
     public static Optional<ProduceKey> resolve(VaradhiTopic topic, RegionName region) {
-        ProduceConfig config = topic.getProduceConfigs().get(region);
+        Optional<ProduceConfig> config = topic.getProduceConfig(region);
         SegmentedStorageTopic storageTopic = topic.getSegmentedStorageTopic();
-        if (config == null || storageTopic == null) {
+        if (config.isEmpty() || storageTopic == null) {
             return Optional.empty();
         }
-        RegionName produceRegion = config.failOverRegion() != null ? config.failOverRegion() : region;
-        if (!topic.getProduceConfigs().containsKey(produceRegion)) {
+        RegionName produceRegion = config.get().getFailoverRegion().orElse(region);
+        if (topic.getProduceConfig(produceRegion).isEmpty()) {
             return Optional.empty();
         }
         StorageTopic segment = storageTopic.getTopicToProduce();
@@ -42,8 +42,8 @@ public final class ProduceKeyResolver {
      * Resolves produce routing when produce is allowed for {@code region}.
      */
     public static Optional<ProduceKey> resolveForProduce(VaradhiTopic topic, RegionName region) {
-        ProduceConfig config = topic.getProduceConfigs().get(region);
-        if (config == null || !config.state().isProduceAllowed()) {
+        Optional<ProduceConfig> config = topic.getProduceConfig(region);
+        if (config.isEmpty() || !config.get().state().isProduceAllowed()) {
             return Optional.empty();
         }
         return resolve(topic, region);

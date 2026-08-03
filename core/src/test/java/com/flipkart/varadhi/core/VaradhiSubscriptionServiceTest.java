@@ -132,14 +132,16 @@ class VaradhiSubscriptionServiceTest {
             project1.getName(),
             false,
             null,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
         groupedTopic = VaradhiTopic.of(
             "GroupedTopic",
             project2.getName(),
             true,
             null,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
 
         subscription1 = createUngroupedSubscription("Sub1", project1, unGroupedTopic);
@@ -203,7 +205,8 @@ class VaradhiSubscriptionServiceTest {
             project2.getName(),
             true,
             capacity,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null
         );
         StorageTopic storageTopic = topicFactory.getTopic(
             0,
