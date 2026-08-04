@@ -36,6 +36,7 @@ Start broad and zoom in: **L1 → L2 → L3 → Flows**. Structure (what exists)
 |---|---|
 | [api.yaml](./api.yaml) | OpenAPI 3.0 spec (control-plane + produce APIs); rendered at the [hosted Swagger UI](https://flipkart-incubator.github.io/varadhi/). |
 | [TOPIC_MODEL_STRUCTURE.md](./TOPIC_MODEL_STRUCTURE.md) | Design note: current topic model + proposed Global Topics / multi-region (internal/proposed; not all wired). |
+| [failover/](./failover/) | Topic failover grooming: [feature](./failover/VaradhiTopicFailoverFeature.md), [produce](./failover/ProduceFailover.md), [controller](./failover/ControllerFailover.md). |
 
 ## Optional: local GitHub Wiki clone
 
