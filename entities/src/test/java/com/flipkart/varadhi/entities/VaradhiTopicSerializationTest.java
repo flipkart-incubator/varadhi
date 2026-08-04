@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +26,7 @@ class VaradhiTopicSerializationTest {
                 RegionName.of("CH"),
                 ProduceConfig.producing(),
                 RegionName.of("HYD"),
-                new ProduceConfig(TopicState.Blocked, RegionName.of("CH")),
+                new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH"))),
                 RegionName.of("SIN"),
                 ProduceConfig.producing()
             ),
@@ -53,7 +54,7 @@ class VaradhiTopicSerializationTest {
             ),
             () -> assertEquals(
                 RegionName.of("CH"),
-                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().getFailoverRegion().orElseThrow()
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion().orElseThrow()
             )
         );
     }
@@ -73,7 +74,7 @@ class VaradhiTopicSerializationTest {
                 RegionName.of("CH"),
                 ProduceConfig.producing(),
                 RegionName.of("HYD"),
-                new ProduceConfig(TopicState.Blocked, RegionName.of("CH"))
+                new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH")))
             ),
             true
         );
@@ -95,7 +96,7 @@ class VaradhiTopicSerializationTest {
             ),
             () -> assertEquals(
                 RegionName.of("CH"),
-                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().getFailoverRegion().orElseThrow()
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion().orElseThrow()
             )
         );
     }

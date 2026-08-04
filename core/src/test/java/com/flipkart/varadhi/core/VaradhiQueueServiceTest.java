@@ -159,6 +159,9 @@ class VaradhiQueueServiceTest {
             VaradhiTopic.TopicCategory.TOPIC,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
         plainTopic.markCreated();
@@ -191,6 +194,9 @@ class VaradhiQueueServiceTest {
             VaradhiTopic.TopicCategory.QUEUE,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
         existing.markCreated();
@@ -204,6 +210,9 @@ class VaradhiQueueServiceTest {
             VaradhiTopic.TopicCategory.QUEUE,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
 
@@ -677,7 +686,21 @@ class VaradhiQueueServiceTest {
     }
 
     private VaradhiTopic queueTopic(VaradhiTopic.TopicCategory category) {
-        return VaradhiTopic.of(PROJECT_NAME, QUEUE_NAME, false, CAPACITY, ACTION, null, category, null, null, null);
+        return VaradhiTopic.of(
+            PROJECT_NAME,
+            QUEUE_NAME,
+            false,
+            CAPACITY,
+            ACTION,
+            null,
+            category,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null
+        );
     }
 
     private VaradhiTopic activeQueueTopic() {

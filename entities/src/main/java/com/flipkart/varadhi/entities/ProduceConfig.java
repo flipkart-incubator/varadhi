@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import java.util.Optional;
 
 /**
@@ -12,21 +10,17 @@ import java.util.Optional;
  * <p>{@code failOverRegion} is set by the controller when this region's produce is routed elsewhere
  * (typically at SWITCH while this entry may still be {@link TopicState#Producing}); it must reference
  * a region present in the topic's {@code produceConfigs} (controller validates on write).
+ * Empty when produce stays in this region.
  */
-public record ProduceConfig(TopicState state, RegionName failOverRegion) {
-
-    @JsonIgnore
-    public Optional<RegionName> getFailoverRegion() {
-        return Optional.ofNullable(failOverRegion);
-    }
+public record ProduceConfig(TopicState state, Optional<RegionName> failOverRegion) {
 
     /** Region that accepts produce. */
     public static ProduceConfig producing() {
-        return new ProduceConfig(TopicState.Producing, null);
+        return new ProduceConfig(TopicState.Producing, Optional.empty());
     }
 
     /** Region that does not accept produce (standby / drained). */
     public static ProduceConfig blocked() {
-        return new ProduceConfig(TopicState.Blocked, null);
+        return new ProduceConfig(TopicState.Blocked, Optional.empty());
     }
 }

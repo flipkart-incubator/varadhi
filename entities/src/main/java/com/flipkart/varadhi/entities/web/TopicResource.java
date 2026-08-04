@@ -156,7 +156,10 @@ public class TopicResource extends BaseResource implements Validatable {
             topicCategory,
             perRegionQuotaWeights,
             messageSizeProfile,
-            rateLimiterMode
+            rateLimiterMode,
+            null,
+            false,
+            null
         );
     }
 }

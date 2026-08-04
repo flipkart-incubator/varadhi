@@ -248,7 +248,10 @@ class ProducerServiceRateLimitIntegrationTest {
             VaradhiTopic.TopicCategory.TOPIC,
             Map.of(REGION, 1.0),
             null,
-            mode
+            mode,
+            null,
+            false,
+            null
         );
         topic.markCreated();
         StorageTopic storageTopic = new DummyStorageTopic(topic.getName());

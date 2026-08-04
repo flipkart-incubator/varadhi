@@ -99,6 +99,9 @@ class EvenSplitPerPodTopicQuotaProviderTest {
             VaradhiTopic.TopicCategory.TOPIC,
             regionWeights,
             messageSizeProfile,
+            null,
+            null,
+            false,
             null
         );
     }

@@ -196,6 +196,9 @@ class VaradhiTopicServiceTest {
             VaradhiTopic.TopicCategory.TOPIC,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
         existing.markCreateFailed("previous failure");
@@ -210,6 +213,9 @@ class VaradhiTopicServiceTest {
             VaradhiTopic.TopicCategory.QUEUE,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
 
@@ -235,6 +241,9 @@ class VaradhiTopicServiceTest {
             VaradhiTopic.TopicCategory.TOPIC,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
         existing.markCreateFailed("previous failure");
@@ -249,6 +258,9 @@ class VaradhiTopicServiceTest {
             VaradhiTopic.TopicCategory.TOPIC,
             null,
             null,
+            null,
+            null,
+            false,
             null
         );
 

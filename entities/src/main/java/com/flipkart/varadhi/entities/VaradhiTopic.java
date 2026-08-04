@@ -131,7 +131,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         LifecycleStatus.ActionCode actionCode,
         String nfrStrategy
     ) {
-        return of(project, name, grouped, capacity, actionCode, nfrStrategy, TopicCategory.TOPIC, null, null, null);
+        return of(
+            project,
+            name,
+            grouped,
+            capacity,
+            actionCode,
+            nfrStrategy,
+            TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null
+        );
     }
 
     public static VaradhiTopic of(
@@ -144,16 +158,19 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         TopicCategory topicCategory,
         Map<String, Double> perRegionQuotaWeights,
         MessageSizeProfile messageSizeProfile,
-        RateLimiterMode rateLimiterMode
+        RateLimiterMode rateLimiterMode,
+        SegmentedStorageTopic segmentedStorageTopic,
+        boolean autoFailover,
+        Map<RegionName, ProduceConfig> produceConfigs
     ) {
         return new VaradhiTopic(
             fqn(project, name),
             INITIAL_VERSION,
             grouped,
             capacity,
-            null,
-            false,
-            new HashMap<>(),
+            segmentedStorageTopic,
+            autoFailover,
+            produceConfigs != null ? produceConfigs : new HashMap<>(),
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory,
@@ -215,14 +232,22 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     /**
      * Returns the shared {@link #segmentedStorageTopic} when {@code region} participates in this
-     * topic ({@code region} is registered in {@link #produceConfigs}) and storage is provisioned.
+     * topic and failover routing is consistent.
      *
-     * <p>Does <em>not</em> select a per-region storage segment — storage is shared. For produce
-     * routing use {@link ProduceKeyResolver}.
+     * <p>Checks {@code region} is in {@link #produceConfigs}. When {@link ProduceConfig#failOverRegion()}
+     * is set (post-failover or mid-SWITCH), the failover target must also be registered — same rule as
+     * {@link ProduceKeyResolver}. Storage is still the single shared {@link #segmentedStorageTopic};
+     * failover changes produce authority, not a per-region storage map. For produce routing and segment
+     * id use {@link ProduceKeyResolver}.
      */
     @JsonIgnore
     public Optional<SegmentedStorageTopic> getSegmentedStorage(RegionName region) {
-        if (getProduceConfig(region).isEmpty() || segmentedStorageTopic == null) {
+        Optional<ProduceConfig> config = getProduceConfig(region);
+        if (config.isEmpty() || segmentedStorageTopic == null) {
+            return Optional.empty();
+        }
+        RegionName effectiveRegion = config.get().failOverRegion().orElse(region);
+        if (getProduceConfig(effectiveRegion).isEmpty()) {
             return Optional.empty();
         }
         return Optional.of(segmentedStorageTopic);

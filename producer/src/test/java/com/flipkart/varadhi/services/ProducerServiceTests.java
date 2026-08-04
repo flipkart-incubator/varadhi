@@ -303,7 +303,7 @@ class ProducerServiceTests {
         topic = topic.withSegmentedStorageTopic(SegmentedStorageTopic.of(st))
                      .withProduceConfig(RegionName.of(region), ProduceConfig.producing());
         if (state != TopicState.Producing) {
-            topic = topic.withProduceConfig(RegionName.of(region), new ProduceConfig(state, null));
+            topic = topic.withProduceConfig(RegionName.of(region), new ProduceConfig(state, Optional.empty()));
         }
         return topic;
     }

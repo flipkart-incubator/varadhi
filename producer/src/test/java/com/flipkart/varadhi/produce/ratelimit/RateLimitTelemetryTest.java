@@ -112,7 +112,10 @@ class RateLimitTelemetryTest {
             VaradhiTopic.TopicCategory.TOPIC,
             Map.of(REGION, 1.0),
             null,
-            mode
+            mode,
+            null,
+            false,
+            null
         );
     }
 
