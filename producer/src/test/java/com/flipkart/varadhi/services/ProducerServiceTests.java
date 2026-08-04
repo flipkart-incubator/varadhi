@@ -132,7 +132,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         String topicName = VaradhiTopic.fqn(project.getName(), topic);
         doReturn(producer).when(producerFactory).newProducer(any(), any());
-        when(topicReadCache.get(topicName)).thenReturn(Optional.empty());
+        when(topicReadCache.get(topicName)).thenReturn(null);
         ResourceNotFoundException ex = Assertions.assertThrows(
             ResourceNotFoundException.class,
             () -> service.produceToTopic(msg1, topicName)
@@ -293,7 +293,7 @@ class ProducerServiceTests {
         StorageTopic st = new DummyStorageTopic(VaradhiTopic.fqn(project.getName(), name));
         ProduceConfig config = state == TopicState.Producing ?
             ProduceConfig.producing() :
-            new ProduceConfig(state, Optional.empty());
+            new ProduceConfig(state, null, 0);
         VaradhiTopic topic = VaradhiTopic.of(
             project.getName(),
             name,

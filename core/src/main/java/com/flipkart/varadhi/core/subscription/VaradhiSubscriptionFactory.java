@@ -1,22 +1,6 @@
 package com.flipkart.varadhi.core.subscription;
 
-import com.flipkart.varadhi.entities.ConsumptionPolicy;
-import com.flipkart.varadhi.entities.InternalCompositeSubscription;
-import com.flipkart.varadhi.entities.InternalQueueCategory;
-import com.flipkart.varadhi.entities.InternalQueueType;
-import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.RetryPolicy;
-import com.flipkart.varadhi.entities.RetrySubscription;
-import com.flipkart.varadhi.entities.StorageSubscription;
-import com.flipkart.varadhi.entities.StorageTopic;
-import com.flipkart.varadhi.entities.SubscriptionMultiShard;
-import com.flipkart.varadhi.entities.SubscriptionShards;
-import com.flipkart.varadhi.entities.SubscriptionUnitShard;
-import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicPartitions;
-import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.spi.services.StorageSubscriptionFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicFactory;
 import com.flipkart.varadhi.spi.services.StorageTopicService;
@@ -118,16 +102,19 @@ public final class VaradhiSubscriptionFactory {
         ConsumptionPolicy consumptionPolicy,
         RetryPolicy retryPolicy
     ) {
-        StorageTopic subscribedStorageTopic = topic.getSegmentedStorage(RegionName.of(deployedRegion))
-                                                   .orElseThrow(
-                                                       () -> new IllegalStateException(
-                                                           "Topic(%s) has no storage for region(%s)".formatted(
-                                                               topic.getName(),
-                                                               deployedRegion
-                                                           )
-                                                       )
-                                                   )
-                                                   .getTopicToProduce();
+        StorageTopic subscribedStorageTopic = TopicResolver.resolveStorageTopic(
+            topic,
+            RegionName.of(deployedRegion),
+            false
+        )
+                                                           .orElseThrow(
+                                                               () -> new IllegalStateException(
+                                                                   "Topic(%s) has no produce config for region(%s)".formatted(
+                                                                       topic.getName(),
+                                                                       deployedRegion
+                                                                   )
+                                                               )
+                                                           );
         List<TopicPartitions<? extends StorageTopic>> topicPartitions = topicService.shardTopic(
             subscribedStorageTopic,
             topic.getCapacity(),

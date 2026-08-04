@@ -3,7 +3,6 @@ package com.flipkart.varadhi.entities;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,7 +18,7 @@ class VaradhiTopicSerializationTest {
             RegionName.of("CH"),
             ProduceConfig.producing(),
             RegionName.of("HYD"),
-            new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH"))),
+            new ProduceConfig(TopicState.Blocked, RegionName.of("CH"), 0),
             RegionName.of("SIN"),
             ProduceConfig.producing()
         );
@@ -49,19 +48,19 @@ class VaradhiTopicSerializationTest {
             () -> assertTrue(restored.getProduceConfig(RegionName.of("SIN")).isPresent()),
             () -> assertEquals(
                 TopicState.Producing,
-                restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state()
+                restored.getProduceConfig(RegionName.of("CH")).orElseThrow().getState()
             ),
             () -> assertEquals(
                 TopicState.Blocked,
-                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state()
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().getState()
             ),
             () -> assertEquals(
                 TopicState.Producing,
-                restored.getProduceConfig(RegionName.of("SIN")).orElseThrow().state()
+                restored.getProduceConfig(RegionName.of("SIN")).orElseThrow().getState()
             ),
             () -> assertEquals(
                 RegionName.of("CH"),
-                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion().orElseThrow()
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().getFailOverRegion().orElseThrow()
             )
         );
     }
@@ -85,7 +84,7 @@ class VaradhiTopicSerializationTest {
                 RegionName.of("CH"),
                 ProduceConfig.producing(),
                 RegionName.of("HYD"),
-                new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH")))
+                new ProduceConfig(TopicState.Blocked, RegionName.of("CH"), 0)
             )
         );
 
@@ -98,15 +97,15 @@ class VaradhiTopicSerializationTest {
         assertAll(
             () -> assertEquals(
                 TopicState.Producing,
-                restored.getProduceConfig(RegionName.of("CH")).orElseThrow().state()
+                restored.getProduceConfig(RegionName.of("CH")).orElseThrow().getState()
             ),
             () -> assertEquals(
                 TopicState.Blocked,
-                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().state()
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().getState()
             ),
             () -> assertEquals(
                 RegionName.of("CH"),
-                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().failOverRegion().orElseThrow()
+                restored.getProduceConfig(RegionName.of("HYD")).orElseThrow().getFailOverRegion().orElseThrow()
             )
         );
     }

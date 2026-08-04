@@ -133,6 +133,13 @@ class VaradhiSubscriptionServiceTest {
             false,
             null,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            false,
             null
         );
         groupedTopic = VaradhiTopic.of(
@@ -141,6 +148,13 @@ class VaradhiSubscriptionServiceTest {
             true,
             null,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            false,
             null
         );
 
@@ -206,6 +220,13 @@ class VaradhiSubscriptionServiceTest {
             true,
             capacity,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            false,
             null
         );
         StorageTopic storageTopic = topicFactory.getTopic(

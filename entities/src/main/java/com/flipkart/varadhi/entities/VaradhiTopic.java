@@ -20,7 +20,7 @@ import java.util.Optional;
  * is shared across regions — region membership in {@code produceConfigs} gates access, not a
  * per-region storage map.
  *
- * <p>Produce routing is resolved by {@link ProduceKeyResolver}, not on this entity.
+ * <p>Produce routing is resolved by {@link TopicResolver}, not on this entity.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
@@ -28,13 +28,13 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     // --- Fields ---
 
-    /** Shared storage segment for this topic; nullable until provisioned. */
+    /** Shared storage segment for this topic; never null once the topic is usable for produce/consume. */
     private final SegmentedStorageTopic segmentedStorageTopic;
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
     /**
      * Per-region produce policy; keyed by {@link RegionName}. Serialized as {@code produceConfigs}
-     * (wire shape: {@code state}, optional {@code failOverRegion}).
+     * (wire shape: {@code state}, optional {@code failOverRegion}, {@code produceIdx}).
      */
     @JsonProperty ("produceConfigs")
     @Getter (lombok.AccessLevel.NONE)
@@ -111,42 +111,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     }
 
     // --- Factory methods ---
-
-    /**
-     * Creates a new VaradhiTopic instance.
-     *
-     * @param project    the project associated with the topic
-     * @param name       the name of the topic
-     * @param grouped    whether the topic is grouped
-     * @param capacity   the capacity policy of the topic
-     * @param actionCode the actor code indicating the reason for the state
-     * @param nfrStrategy the name of the filter applied for NFR; {@code null} if not set
-     * @return a new VaradhiTopic instance
-     */
-    public static VaradhiTopic of(
-        String project,
-        String name,
-        boolean grouped,
-        TopicCapacityPolicy capacity,
-        LifecycleStatus.ActionCode actionCode,
-        String nfrStrategy
-    ) {
-        return of(
-            project,
-            name,
-            grouped,
-            capacity,
-            actionCode,
-            nfrStrategy,
-            TopicCategory.TOPIC,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null
-        );
-    }
 
     public static VaradhiTopic of(
         String project,
@@ -232,21 +196,21 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     /**
      * Returns the shared {@link #segmentedStorageTopic} when {@code region} participates in this
-     * topic and failover routing is consistent.
+     * topic and failover routing is consistent. Assumes storage is provisioned.
      *
-     * <p>Checks {@code region} is in {@link #produceConfigs}. When {@link ProduceConfig#failOverRegion()}
+     * <p>Checks {@code region} is in {@link #produceConfigs}. When {@link ProduceConfig#getFailOverRegion()}
      * is set (post-failover or mid-SWITCH), the failover target must also be registered — same rule as
-     * {@link ProduceKeyResolver}. Storage is still the single shared {@link #segmentedStorageTopic};
+     * {@link TopicResolver}. Storage is still the single shared {@link #segmentedStorageTopic};
      * failover changes produce authority, not a per-region storage map. For produce routing and segment
-     * id use {@link ProduceKeyResolver}.
+     * id use {@link TopicResolver}.
      */
     @JsonIgnore
     public Optional<SegmentedStorageTopic> getSegmentedStorage(RegionName region) {
         Optional<ProduceConfig> config = getProduceConfig(region);
-        if (config.isEmpty() || segmentedStorageTopic == null) {
+        if (config.isEmpty()) {
             return Optional.empty();
         }
-        RegionName effectiveRegion = config.get().failOverRegion().orElse(region);
+        RegionName effectiveRegion = config.get().getFailOverRegion().orElse(region);
         if (getProduceConfig(effectiveRegion).isEmpty()) {
             return Optional.empty();
         }

@@ -13,6 +13,8 @@ import java.util.List;
  * A wrapper on the storage topic. In future this class will handle the adding additional storage topics for the purpose
  * of increasing partition count without affecting ordering.
  * This concept is internal and is never exposed to the user.
+ *
+ * <p>Active produce slot is selected via {@link ProduceConfig#getProduceIdx()}, not stored here.
  */
 @Getter
 @AllArgsConstructor
@@ -20,16 +22,13 @@ public class SegmentedStorageTopic {
 
     private final StorageTopic[] storageTopics;
 
-    /** Index into {@link #storageTopics} for the active produce segment. */
-    private final int produceIndex;
-
     public static SegmentedStorageTopic of(StorageTopic storageTopic) {
-        return new SegmentedStorageTopic(new StorageTopic[] {storageTopic}, 0);
+        return new SegmentedStorageTopic(new StorageTopic[] {storageTopic});
     }
 
     @JsonIgnore
-    public StorageTopic getTopicToProduce() {
-        return storageTopics[produceIndex];
+    public StorageTopic getTopicAtIndex(int index) {
+        return storageTopics[index];
     }
 
     @JsonIgnore

@@ -225,12 +225,12 @@ public final class ProducerService {
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
         RegionName deployed = RegionName.of(produceRegion);
-        Optional<ProduceKey> produceKey = ProduceKeyResolver.resolve(topic, deployed, true);
+        Optional<ProduceKey> produceKey = TopicResolver.resolve(topic, deployed, true);
         if (produceKey.isEmpty()) {
             return topic.getProduceConfig(deployed)
                         .map(
                             config -> CompletableFuture.completedFuture(
-                                ProduceResult.ofNonProducingTopic(message.getMessageId(), config.state())
+                                ProduceResult.ofNonProducingTopic(message.getMessageId(), config.getState())
                             )
                         )
                         .orElseThrow(

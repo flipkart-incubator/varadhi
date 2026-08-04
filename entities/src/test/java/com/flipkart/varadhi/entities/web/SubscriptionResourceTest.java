@@ -91,6 +91,13 @@ class SubscriptionResourceTest {
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            false,
             null
         );
 
