@@ -9,8 +9,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicTest {
@@ -38,9 +38,9 @@ class VaradhiTopicTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
     }
 
@@ -126,7 +126,7 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void of_nullProduceConfigs_startsWithEmptyMap() {
+    void of_emptyProduceConfigs_andNonNullStorage() {
         VaradhiTopic topic = VaradhiTopic.of(
             PROJECT_NAME,
             TOPIC_NAME,
@@ -138,13 +138,13 @@ class VaradhiTopicTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
 
         assertAll(
-            () -> assertNull(topic.getSegmentedStorageTopic()),
+            () -> assertNotNull(topic.getSegmentedStorageTopic()),
             () -> assertFalse(topic.isAutoFailover()),
             () -> assertTrue(topic.getProduceConfig(RegionName.of("r1")).isEmpty()),
             () -> assertTrue(topic.getPerRegionQuotaWeights().isEmpty())
@@ -301,9 +301,9 @@ class VaradhiTopicTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
 
         assertAll(
@@ -425,7 +425,7 @@ class VaradhiTopicTest {
 
         assertAll(
             () -> assertNotSame(original, updated),
-            () -> assertNull(original.getSegmentedStorageTopic()),
+            () -> assertNotNull(original.getSegmentedStorageTopic()),
             () -> assertEquals(storage, updated.getSegmentedStorageTopic()),
             () -> assertEquals(
                 TopicState.Producing,

@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.MessageSizeProfile;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicTestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -100,9 +101,9 @@ class EvenSplitPerPodTopicQuotaProviderTest {
             regionWeights,
             messageSizeProfile,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
     }
 }

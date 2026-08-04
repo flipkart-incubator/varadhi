@@ -28,7 +28,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     // --- Fields ---
 
-    /** Shared storage segment for this topic; never null once the topic is usable for produce/consume. */
+    /** Shared storage segment for this topic; never null. */
     private final SegmentedStorageTopic segmentedStorageTopic;
     /** When true, controller may automatically fail over this topic on region degradation. */
     private final boolean autoFailover;
@@ -69,9 +69,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * @param version               the version of the topic
      * @param grouped               whether the topic is grouped
      * @param capacity              the capacity policy of the topic
-     * @param segmentedStorageTopic shared segmented storage; {@code null} until provisioned
+     * @param segmentedStorageTopic shared segmented storage; must not be {@code null}
      * @param autoFailover          whether controller may auto-failover on region degradation
-     * @param produceConfigs        per-region produce policy; keyed by {@link RegionName}
+     * @param produceConfigs        per-region produce policy; keyed by {@link RegionName}; must not be {@code null}
      * @param status                the lifecycle status of the topic
      * @param nfrFilterName         the name of the filter applied for NFR; {@code null} if not set
      * @param topicCategory         topic vs queue classification; must not be {@code null}
@@ -97,9 +97,12 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         super(name, version, MetaStoreEntityType.TOPIC);
         this.grouped = grouped;
         this.capacity = capacity;
-        this.segmentedStorageTopic = segmentedStorageTopic;
+        this.segmentedStorageTopic = Objects.requireNonNull(
+            segmentedStorageTopic,
+            "segmentedStorageTopic must not be null"
+        );
         this.autoFailover = autoFailover;
-        this.produceConfigs = new HashMap<>(produceConfigs);
+        this.produceConfigs = new HashMap<>(Objects.requireNonNull(produceConfigs, "produceConfigs must not be null"));
         this.nfrFilterName = nfrFilterName;
         this.topicCategory = Objects.requireNonNull(topicCategory, "topicCategory must not be null");
         this.perRegionQuotaWeights = perRegionQuotaWeights != null ?
@@ -134,7 +137,7 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
             capacity,
             segmentedStorageTopic,
             autoFailover,
-            produceConfigs != null ? produceConfigs : new HashMap<>(),
+            produceConfigs,
             new LifecycleStatus(LifecycleStatus.State.CREATING, actionCode),
             nfrStrategy,
             topicCategory,
@@ -161,7 +164,11 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
      * Sets the shared {@link #segmentedStorageTopic}. Replaces any previous value.
      */
     public VaradhiTopic withSegmentedStorageTopic(SegmentedStorageTopic storageTopic) {
-        return copyWith(storageTopic, produceConfigs, autoFailover);
+        return copyWith(
+            Objects.requireNonNull(storageTopic, "storageTopic must not be null"),
+            produceConfigs,
+            autoFailover
+        );
     }
 
     /**

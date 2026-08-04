@@ -12,6 +12,11 @@ public final class VaradhiTopicTestUtils {
     private VaradhiTopicTestUtils() {
     }
 
+    /** Minimal storage segment for tests / resource conversion. */
+    public static SegmentedStorageTopic testStorage() {
+        return SegmentedStorageTopic.of(new TestStorageTopic("t"));
+    }
+
     /** Topic with shared storage and per-region produce policy. */
     public static VaradhiTopic topicWithStorageAndProduceConfigs(Map<RegionName, ProduceConfig> configs) {
         return topicWithStorageAndProduceConfigs(configs, false);
@@ -21,12 +26,12 @@ public final class VaradhiTopicTestUtils {
         Map<RegionName, ProduceConfig> configs,
         boolean autoFailover
     ) {
-        return topic(SegmentedStorageTopic.of(new TestStorageTopic("t")), autoFailover, configs);
+        return topic(testStorage(), autoFailover, configs);
     }
 
-    /** Topic with produce policy but no storage provisioned yet. */
+    /** Topic with produce policy and default test storage. */
     public static VaradhiTopic topicWithProduceConfigs(Map<RegionName, ProduceConfig> configs) {
-        return topic(null, false, configs);
+        return topic(testStorage(), false, configs);
     }
 
     private static VaradhiTopic topic(
@@ -51,8 +56,8 @@ public final class VaradhiTopicTestUtils {
         );
     }
 
-    static final class TestStorageTopic extends StorageTopic {
-        TestStorageTopic(String name) {
+    public static final class TestStorageTopic extends StorageTopic {
+        public TestStorageTopic(String name) {
             super(0, name);
         }
     }

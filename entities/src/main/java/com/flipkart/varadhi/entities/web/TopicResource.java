@@ -2,7 +2,10 @@ package com.flipkart.varadhi.entities.web;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.MessageSizeProfile;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RateLimiterMode;
+import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.Validatable;
 import com.flipkart.varadhi.entities.ValidateResource;
@@ -10,6 +13,7 @@ import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 
 import java.util.Map;
+import java.util.Objects;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -134,18 +138,21 @@ public class TopicResource extends BaseResource implements Validatable {
     }
 
     /**
-     * Converts this TopicResource instance to a VaradhiTopic instance.
-     *
-     * @return a new VaradhiTopic instance
+     * Converts this TopicResource to a {@link VaradhiTopic}. Storage and produce policy are required —
+     * provisioned by {@code VaradhiTopicFactory} (or tests).
      */
-    public VaradhiTopic toVaradhiTopic() {
-        return toVaradhiTopic(VaradhiTopic.TopicCategory.TOPIC);
+    public VaradhiTopic toVaradhiTopic(SegmentedStorageTopic storage, Map<RegionName, ProduceConfig> produceConfigs) {
+        return toVaradhiTopic(VaradhiTopic.TopicCategory.TOPIC, storage, produceConfigs);
     }
 
     /**
      * Converts this TopicResource to a {@link VaradhiTopic} with the given {@link VaradhiTopic.TopicCategory}.
      */
-    public VaradhiTopic toVaradhiTopic(VaradhiTopic.TopicCategory topicCategory) {
+    public VaradhiTopic toVaradhiTopic(
+        VaradhiTopic.TopicCategory topicCategory,
+        SegmentedStorageTopic storage,
+        Map<RegionName, ProduceConfig> produceConfigs
+    ) {
         return VaradhiTopic.of(
             getProject(),
             getName(),
@@ -157,9 +164,9 @@ public class TopicResource extends BaseResource implements Validatable {
             perRegionQuotaWeights,
             messageSizeProfile,
             rateLimiterMode,
-            null,
+            Objects.requireNonNull(storage, "storage must not be null"),
             false,
-            null
+            Objects.requireNonNull(produceConfigs, "produceConfigs must not be null")
         );
     }
 }

@@ -138,9 +138,9 @@ class VaradhiSubscriptionServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
         groupedTopic = VaradhiTopic.of(
             "GroupedTopic",
@@ -153,9 +153,9 @@ class VaradhiSubscriptionServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
 
         subscription1 = createUngroupedSubscription("Sub1", project1, unGroupedTopic);
@@ -225,9 +225,9 @@ class VaradhiSubscriptionServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
         StorageTopic storageTopic = topicFactory.getTopic(
             0,

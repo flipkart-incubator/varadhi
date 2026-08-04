@@ -96,9 +96,9 @@ class SubscriptionResourceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
 
         VaradhiSubscription varadhiSubscription = SubscriptionTestUtils.builder()

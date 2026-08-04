@@ -132,7 +132,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         String topicName = VaradhiTopic.fqn(project.getName(), topic);
         doReturn(producer).when(producerFactory).newProducer(any(), any());
-        when(topicReadCache.get(topicName)).thenReturn(null);
+        when(topicReadCache.get(topicName)).thenReturn(Optional.empty());
         ResourceNotFoundException ex = Assertions.assertThrows(
             ResourceNotFoundException.class,
             () -> service.produceToTopic(msg1, topicName)

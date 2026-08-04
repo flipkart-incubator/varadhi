@@ -15,6 +15,7 @@ import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicTestUtils;
 import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,9 +161,9 @@ class VaradhiQueueServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
         plainTopic.markCreated();
         VaradhiTopic requestedQueueTopic = queueTopic(VaradhiTopic.TopicCategory.QUEUE);
@@ -195,9 +196,9 @@ class VaradhiQueueServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
         existing.markCreated();
         VaradhiTopic requested = VaradhiTopic.of(
@@ -211,9 +212,9 @@ class VaradhiQueueServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
 
         when(topicService.exists(topicKey)).thenReturn(true);
@@ -697,9 +698,9 @@ class VaradhiQueueServiceTest {
             null,
             null,
             null,
-            null,
+            VaradhiTopicTestUtils.testStorage(),
             false,
-            null
+            Map.of()
         );
     }
 

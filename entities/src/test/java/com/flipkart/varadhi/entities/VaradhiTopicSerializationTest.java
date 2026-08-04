@@ -23,6 +23,7 @@ class VaradhiTopicSerializationTest {
             ProduceConfig.producing()
         );
 
+        // Empty storage: TestStorageTopic has no Jackson @JsonTypeName subtype.
         VaradhiTopic original = VaradhiTopic.of(
             "project1",
             "topic1",
@@ -34,7 +35,7 @@ class VaradhiTopicSerializationTest {
             null,
             null,
             null,
-            null,
+            new SegmentedStorageTopic(new StorageTopic[0]),
             true,
             configs
         );
@@ -78,7 +79,7 @@ class VaradhiTopicSerializationTest {
             null,
             null,
             null,
-            null,
+            new SegmentedStorageTopic(new StorageTopic[0]),
             true,
             Map.of(
                 RegionName.of("CH"),

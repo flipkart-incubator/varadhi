@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.core.topic;
 
-import java.lang.reflect.Method;
-
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -90,7 +88,7 @@ class VaradhiTopicFactoryTest {
     }
 
     @Test
-    void planDeployment_ValidVaradhiTopic_ShouldInvokeStorageTopicCreation() throws Exception {
+    void planDeployment_ValidVaradhiTopic_ShouldInvokeStorageTopicCreation() {
         TopicResource topicResource = TopicResource.grouped(
             TOPIC_NAME,
             project.getName(),
@@ -98,16 +96,7 @@ class VaradhiTopicFactoryTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
-
-        Method planDeploymentMethod = VaradhiTopicFactory.class.getDeclaredMethod(
-            "planDeployment",
-            Project.class,
-            VaradhiTopic.class
-        );
-        planDeploymentMethod.setAccessible(true);
-
-        VaradhiTopic deployed = (VaradhiTopic)planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
+        VaradhiTopic deployed = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
         SegmentedStorageTopic internalCompositeTopic = deployed.getSegmentedStorage(RegionName.of(REGION))
                                                                .orElseThrow();
