@@ -238,6 +238,7 @@ class ProducerServiceRateLimitIntegrationTest {
     }
 
     private static VaradhiTopic rateLimitTopic(RateLimiterMode mode, int qps, int throughputKBps) {
+        StorageTopic storageTopic = new DummyStorageTopic(VaradhiTopic.fqn(PROJECT.getName(), TOPIC));
         VaradhiTopic topic = VaradhiTopic.of(
             PROJECT.getName(),
             TOPIC,
@@ -249,14 +250,12 @@ class ProducerServiceRateLimitIntegrationTest {
             Map.of(REGION, 1.0),
             null,
             mode,
-            null,
+            SegmentedStorageTopic.of(storageTopic),
             false,
-            null
+            Map.of(RegionName.of(REGION), ProduceConfig.producing())
         );
         topic.markCreated();
-        StorageTopic storageTopic = new DummyStorageTopic(topic.getName());
-        return topic.withSegmentedStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                    .withProduceConfig(RegionName.of(REGION), ProduceConfig.producing());
+        return topic;
     }
 
     private static MemberInfo server(String hostname) {

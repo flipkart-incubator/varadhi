@@ -11,26 +11,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicSerializationTest {
 
+    private static final TopicCapacityPolicy CAPACITY = new TopicCapacityPolicy(100, 400, 2, 2);
+
     @Test
     void jsonRoundTrip_preservesAutoFailoverAndProduceConfigs() {
-        VaradhiTopic original = VaradhiTopicTestUtils.withProduceConfigs(
-            VaradhiTopic.of(
-                "project1",
-                "topic1",
-                false,
-                new TopicCapacityPolicy(100, 400, 2, 2),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
-                null
-            ),
-            Map.of(
-                RegionName.of("CH"),
-                ProduceConfig.producing(),
-                RegionName.of("HYD"),
-                new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH"))),
-                RegionName.of("SIN"),
-                ProduceConfig.producing()
-            ),
-            true
+        Map<RegionName, ProduceConfig> configs = Map.of(
+            RegionName.of("CH"),
+            ProduceConfig.producing(),
+            RegionName.of("HYD"),
+            new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH"))),
+            RegionName.of("SIN"),
+            ProduceConfig.producing()
+        );
+
+        VaradhiTopic original = VaradhiTopic.of(
+            "project1",
+            "topic1",
+            false,
+            CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            true,
+            configs
         );
 
         VaradhiTopic restored = JsonMapper.jsonDeserialize(JsonMapper.jsonSerialize(original), VaradhiTopic.class);
@@ -61,22 +68,25 @@ class VaradhiTopicSerializationTest {
 
     @Test
     void deserialize_produceConfigsWireShape() {
-        VaradhiTopic original = VaradhiTopicTestUtils.withProduceConfigs(
-            VaradhiTopic.of(
-                "project1",
-                "topic1",
-                false,
-                new TopicCapacityPolicy(100, 400, 2, 2),
-                LifecycleStatus.ActionCode.SYSTEM_ACTION,
-                null
-            ),
+        VaradhiTopic original = VaradhiTopic.of(
+            "project1",
+            "topic1",
+            false,
+            CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            null,
+            true,
             Map.of(
                 RegionName.of("CH"),
                 ProduceConfig.producing(),
                 RegionName.of("HYD"),
                 new ProduceConfig(TopicState.Blocked, Optional.of(RegionName.of("CH")))
-            ),
-            true
+            )
         );
 
         String json = JsonMapper.jsonSerialize(original);

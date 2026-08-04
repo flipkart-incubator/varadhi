@@ -377,13 +377,14 @@ class VaradhiTopicTest {
 
     @Test
     void withProduceConfig_registersMultipleRegions() {
-        VaradhiTopic updated = createDefaultVaradhiTopic(false).withProduceConfig(
-            RegionName.of("r1"),
-            ProduceConfig.producing()
-        ).withProduceConfig(RegionName.of("r2"), ProduceConfig.blocked());
+        VaradhiTopic original = createDefaultVaradhiTopic(false);
+
+        VaradhiTopic updated = original.withProduceConfig(RegionName.of("r1"), ProduceConfig.producing())
+                                       .withProduceConfig(RegionName.of("r2"), ProduceConfig.blocked());
 
         assertEquals(TopicState.Producing, updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
         assertEquals(TopicState.Blocked, updated.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
+        assertTrue(original.getProduceConfig(RegionName.of("r1")).isEmpty(), "original must be unchanged");
     }
 
     @Test
@@ -475,14 +476,14 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void withProduceConfigs_replacesMapWithoutMutatingOriginal() {
+    void copyWith_replacesProduceConfigsWithoutMutatingOriginal() {
         VaradhiTopic topic = VaradhiTopicTestUtils.topicWithStorageAndProduceConfigs(
             Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.blocked())
         );
 
-        VaradhiTopic updated = VaradhiTopicTestUtils.withProduceConfigs(
-            topic,
-            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.producing())
+        VaradhiTopic updated = topic.copyWith(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.producing()),
+            topic.isAutoFailover()
         );
 
         assertTrue(updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state().isProduceAllowed());
@@ -491,31 +492,11 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void withProduceConfigs_canToggleAutoFailover() {
-        VaradhiTopic topic = VaradhiTopicTestUtils.topicWithProduceConfigs(
-            Map.of(RegionName.of("r1"), ProduceConfig.producing())
-        );
+    void of_setsAutoFailover() {
+        Map<RegionName, ProduceConfig> configs = Map.of(RegionName.of("r1"), ProduceConfig.producing());
 
-        VaradhiTopic withFailover = VaradhiTopicTestUtils.withProduceConfigs(
-            topic,
-            Map.of(RegionName.of("r1"), ProduceConfig.producing()),
-            true
-        );
-        VaradhiTopic withoutFailover = VaradhiTopicTestUtils.withProduceConfigs(
-            withFailover,
-            Map.of(RegionName.of("r1"), ProduceConfig.blocked()),
-            false
-        );
-
-        assertAll(
-            () -> assertFalse(topic.isAutoFailover()),
-            () -> assertTrue(withFailover.isAutoFailover()),
-            () -> assertFalse(withoutFailover.isAutoFailover()),
-            () -> assertEquals(
-                TopicState.Blocked,
-                withoutFailover.getProduceConfig(RegionName.of("r1")).orElseThrow().state()
-            )
-        );
+        assertFalse(VaradhiTopicTestUtils.topicWithProduceConfigs(configs).isAutoFailover());
+        assertTrue(VaradhiTopicTestUtils.topicWithStorageAndProduceConfigs(configs, true).isAutoFailover());
     }
 
     @Test

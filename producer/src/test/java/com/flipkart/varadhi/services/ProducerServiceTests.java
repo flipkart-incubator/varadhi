@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -289,22 +290,26 @@ class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
+        StorageTopic st = new DummyStorageTopic(VaradhiTopic.fqn(project.getName(), name));
+        ProduceConfig config = state == TopicState.Producing ?
+            ProduceConfig.producing() :
+            new ProduceConfig(state, Optional.empty());
         VaradhiTopic topic = VaradhiTopic.of(
             project.getName(),
             name,
             false,
             null,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            null
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(st),
+            false,
+            Map.of(RegionName.of(region), config)
         );
         topic.markCreated();
-
-        StorageTopic st = new DummyStorageTopic(topic.getName());
-        topic = topic.withSegmentedStorageTopic(SegmentedStorageTopic.of(st))
-                     .withProduceConfig(RegionName.of(region), ProduceConfig.producing());
-        if (state != TopicState.Producing) {
-            topic = topic.withProduceConfig(RegionName.of(region), new ProduceConfig(state, Optional.empty()));
-        }
         return topic;
     }
 

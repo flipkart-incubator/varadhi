@@ -29,18 +29,6 @@ public final class VaradhiTopicTestUtils {
         return topic(null, false, configs);
     }
 
-    public static VaradhiTopic withProduceConfigs(VaradhiTopic topic, Map<RegionName, ProduceConfig> configs) {
-        return withProduceConfigs(topic, configs, topic.isAutoFailover());
-    }
-
-    public static VaradhiTopic withProduceConfigs(
-        VaradhiTopic topic,
-        Map<RegionName, ProduceConfig> configs,
-        boolean autoFailover
-    ) {
-        return topic.copyWith(new HashMap<>(configs), autoFailover);
-    }
-
     private static VaradhiTopic topic(
         SegmentedStorageTopic storage,
         boolean autoFailover,

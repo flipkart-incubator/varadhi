@@ -200,7 +200,7 @@ class VaradhiSubscriptionServiceTest {
         StorageTopicFactory<PulsarStorageTopic> topicFactory = new PulsarTopicFactory(planner);
         StorageTopicService topicService = new PulsarTopicService(null, planner);
 
-        VaradhiTopic topic = VaradhiTopic.of(
+        VaradhiTopic bare = VaradhiTopic.of(
             "GroupedTopic",
             project2.getName(),
             true,
@@ -210,13 +210,26 @@ class VaradhiSubscriptionServiceTest {
         );
         StorageTopic storageTopic = topicFactory.getTopic(
             0,
-            topic.getName(),
+            bare.getName(),
             project2,
             capacity,
             InternalQueueCategory.MAIN
         );
-        topic = topic.withSegmentedStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                     .withProduceConfig(RegionName.of(region), ProduceConfig.producing());
+        VaradhiTopic topic = VaradhiTopic.of(
+            "GroupedTopic",
+            project2.getName(),
+            true,
+            capacity,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(storageTopic),
+            false,
+            Map.of(RegionName.of(region), ProduceConfig.producing())
+        );
 
         SubscriptionResource subscriptionResource = SubscriptionResource.of(
             "SubscriptionResource",
