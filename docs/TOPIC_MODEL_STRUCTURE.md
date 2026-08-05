@@ -2,13 +2,11 @@
 
 ## Overview
 
-This document summarizes the current topic model structure and proposes changes to support Global Topics with multi-zone replication and failover capabilities.
+This document describes the **current** topic model and **proposed** follow-on work for full Global Topics with multi-zone replication and failover. Shipped infrastructure (`RegionName`, region admin APIs, `MemberInfo.region`) is documented separately from topic-entity fields that are not yet wired.
 
 ---
 
-## Current Topic Model Structure
-
-> **As of PR #332** (producer-side entity changes). Controller failover orchestration and legacy JSON backfill are not fully wired in this PR; see grooming docs under `docs/topic-failover-*.md` for future work.
+## Current Topic Model
 
 ### Class hierarchy
 
@@ -24,7 +22,7 @@ AbstractTopic (interface)
             └── capacity, grouped, topicCategory, rateLimiterMode, …
 ```
 
-### VaradhiTopic (implemented)
+### VaradhiTopic
 
 **Inherited:** `name`, `version`, `status` (from `LifecycleEntity`).
 
@@ -34,9 +32,11 @@ AbstractTopic (interface)
 - `autoFailover` — controller may auto-failover on region degradation.
 - `grouped`, `capacity`, `nfrFilterName`, `topicCategory`, `perRegionQuotaWeights`, `messageSizeProfile`, `rateLimiterMode`.
 
-**Immutable updates:** overloaded `with(...)` copies (storage, per-region config).
+**Immutable updates:** overloaded `with(...)` copies (storage, per-region config, `autoFailover`).
 
 **Removed from entity surface:** per-region `internalTopics` map, `getSegmentedStorage(region)` (tests use `VaradhiTopicTestUtils`).
+
+**Topic creation today:** `VaradhiTopicFactory` → `TopicResource.toVaradhiTopic(...)` seeds a single entry in `produceConfigs` for the deployment region (`ProduceConfig.producing()`). Multi-region topic creation is follow-up work.
 
 ### ProduceConfig (per region)
 
@@ -48,319 +48,248 @@ AbstractTopic (interface)
 
 Factories: `ProduceConfig.producing()`, `ProduceConfig.blocked()`.
 
+Failover is updated via immutable copies — e.g. `topic.with(region, new ProduceConfig(..., failOverRegion))` — not a mutable map on `VaradhiTopic`.
+
+### TopicState and ProduceStatus
+
+| `TopicState` | `isProduceAllowed()` | Client `ProduceStatus` |
+|--------------|----------------------|------------------------|
+| `Producing` | yes | `Success` (from broker path) |
+| `Fenced` | no | `Fenced` — retry after transition |
+| `Blocked` | no | `NotAllowed` |
+
+Multiple regions may be `Producing` at once on a global topic. `ProducerService` uses gated resolve and maps non-producing states via `ProduceResult`.
+
 ### Produce routing
 
-- **`TopicResolver`** — resolves `ProduceKey(topicFqn, produceRegion, storageTopicId)` from `VaradhiTopic` + deployed region.
-- **Ungated** `resolve(topic, region)` — cache warm / PREPARE while source is `Fenced`.
-- **Gated** `resolve(topic, region, true)` — HTTP produce; empty when source `Blocked`/`Fenced` or failover target missing.
+- **`ProduceKey`** — `(topicFqn, produceRegion, storageTopicId)`; producer cache key after resolve.
+- **`TopicResolver`** — resolves `ProduceKey` from `VaradhiTopic` + deployed region.
+- **Ungated** `resolve(topic, region)` — cache warm / PREPARE while source is `Fenced`. Does not check `TopicState.isProduceAllowed()`.
+- **Gated** `resolve(topic, region, true)` — HTTP produce; empty when source `Blocked`/`Fenced`, region missing from `produceConfigs`, or failover target config missing. Gating applies to the **source** region's `ProduceConfig` only (not the failover target's state).
+- **PREPARE / storage migration** — warm an explicit segment id from `TransitionEvent.Target.StorageTopic.storageTopicId`; ungated resolve alone is not sufficient.
 - **`ProducerService`** — uses gated resolve; `ResourceNotFoundException` when deployed region not in `produceConfigs`.
 
 ### SegmentedStorageTopic
 
 - `storageTopics[]` — backing segments.
-- `getTopic(int id)` — public lookup by `StorageTopic.id` (used after resolve).
+- `getTopic(int id)` — public lookup by `StorageTopic.id` (used after resolve). External callers must not use array-index lookup; `produceIdx` is a segment id, not necessarily an array slot.
 - Active slot per region comes from `ProduceConfig.produceIdx` on the resolved produce region.
 
-### Transition wire types (entities only in PR #332)
+### Wire serialization
 
-Under `entities/.../cluster/failover/`: `TransitionEvent`, `TransitionAck`, `TransitionStage`, `TransitionType`, participation enums. Pod/controller wiring is follow-up work — no `docs/topic-transition-pod-protocol.md` in tree.
+- JSON key is `produceConfigs` (not `regionConfigs` or legacy `internalTopics`).
+- Round-trip covered by `VaradhiTopicSerializationTest`.
+- Legacy metastore JSON migration (old `internalTopics` shape → `produceConfigs`) is **TBD** if not yet implemented in deserializer.
+
+### Transition wire types (entities only)
+
+Under `entities/.../cluster/failover/`: `TransitionEvent`, `TransitionAck`, `TransitionStage`, `TransitionType`, participation enums. Pod/controller wiring is follow-up work
 
 ---
 
-## Proposed (not yet fully implemented)
+## Implemented Infrastructure (shipped; not all wired to topics)
 
-### New Fields for VaradhiTopic
+These types exist in the codebase and support multi-region operations. They are **not** the same as full Global Topic entity support below.
 
-```java
-// Multi-region support
-private final Set<RegionName> replicationRegions;           // Where topic is replicated
-private final Set<RegionName> produceRegions;               // Where messages can be produced
+### RegionName
 
-// Failover configuration
-private final boolean autoFailover;                         // Enable automatic failover
-private final Map<RegionName, RegionName> failoverRegion;   // failed region → target region (topic failover)
+Record value object (`entities/.../RegionName.java`):
+- `RegionName.of(String value)` — validated, non-blank
+- `value()` / `@JsonValue` — string form
+- `BOOTSTRAP_REGION` — accepted during cluster bootstrap before metastore has regions
 
-// Classification
-private final Set<TopicTag> tags;                           // PROD, NON_PROD, HIGH_PRIORITY
-```
+Used in `produceConfigs`, `ProduceKey`, `MemberInfo`, and region APIs.
 
-**failoverRegion** supports single-topic failover: when Pulsar (or the message stack) is unavailable for this topic in one region, traffic can be routed to another replicated region. The map is mutable at runtime so the controller can set/clear entries when failover is triggered or reverted. Methods: `getFailoverRegion()`, `getFailoverTarget(RegionName)`, `addFailover(RegionName, RegionName)`, `removeFailover(RegionName)`.
+### Region and RegionStatus
 
-### Project.replicationRegions
+**`Region`** extends `MetaStoreEntity` (name, version, entity type). Status is immutable on an instance; use `withStatus(RegionStatus)` for updates (e.g. `PATCH /v1/regions/:region`).
 
-**Project** now has a mandatory **replicationRegions** (`Set<RegionName>`):
+- `Region.of(RegionName, RegionStatus)` — factory
+- `getRegionName()` — type-safe `RegionName` view
+- `isProduceAvailable()`, `isConsumeAvailable()`, `isMessageStackAvailable()`, `isAvailable()` — delegate to `RegionStatus`
 
-- Default replication regions for all topics under this project.
-- When a topic is created **without** specifying `replicationRegions`, it inherits this value from the project.
-- Mandatory at project level (at least one region); validated in the constructor.
-- Topic creation via `TopicResource.toVaradhiTopic(Project project)` uses `project.getReplicationRegions()`.
+**`RegionStatus`:** `AVAILABLE`, `UNAVAILABLE`, `PRODUCE_UNAVAILABLE`, `CONSUME_UNAVAILABLE`, `MSP_UNAVAILABLE` (messaging stack down). Same availability helpers as on `Region`.
 
-### New Supporting Classes
+### TopicTag
 
-**RegionName** - Value object for type-safe region names
-- **Fields:**
-  - `value` (String) - The region name string (final, validated)
-- **Methods:**
-  - `static RegionName of(String value)` - Factory method
-  - `String getValue()` - Returns the string value
-  - `String toString()` - Returns the string value
+Enum: `PROD`, `NON_PROD`, `HIGH_PRIORITY`. **Not yet** a field on `VaradhiTopic`.
 
-**Region** - Represents a region with availability status
-- **Fields:**
-  - `name` (RegionName) - The name of the region (final)
-  - `status` (RegionStatus) - Current availability status (mutable)
-- **Methods:**
-  - `static Region of(RegionName name)` - Creates with AVAILABLE status
-  - `static Region of(String name)` - Creates with AVAILABLE status
-  - `static Region of(RegionName name, RegionStatus status)` - Creates with specified status
-  - `String getName()` - Returns the region name as string
-  - `boolean isProduceAvailable()` - Checks if produce is available
-  - `boolean isConsumeAvailable()` - Checks if consume is available
-  - `boolean isAvailable()` - Checks if region is fully available
+### MemberInfo
 
-**RegionStatus** - Enum for region availability status
-- **Values:**
-  - `AVAILABLE` - Region is fully available for both produce and consume
-  - `UNAVAILABLE` - Region is completely unavailable (e.g. full region failure or network isolation)
-  - `PRODUCE_UNAVAILABLE` - Region available for consume but not produce (produce layer down)
-  - `CONSUME_UNAVAILABLE` - Region available for produce but not consume (consume layer down)
-  - `MSP_UNAVAILABLE` - Varadhi components are up but the **messaging stack** (e.g. Pulsar) is unavailable in the region; message-stack operations are not available while other availability checks may still reflect partial service
-- **Methods:**
-  - `boolean isMessageStackAvailable()` - `true` for `AVAILABLE`, `PRODUCE_UNAVAILABLE`, and `CONSUME_UNAVAILABLE`; `false` for `UNAVAILABLE` and `MSP_UNAVAILABLE`
-  - `boolean isProduceAvailable()` - Checks if produce operations are available
-  - `boolean isConsumeAvailable()` - Checks if consume operations are available
-  - `boolean isAvailable()` - Checks if region is fully available (`AVAILABLE` only)
+`core/.../cluster/MemberInfo` record includes `RegionName region` for multi-region topology, routing, and failover decisions.
 
-**TopicTag** - Enum for topic classification
-- **Values:**
-  - `PROD` - Production environment
-  - `NON_PROD` - Non-production environment  
-  - `HIGH_PRIORITY` - High priority topic
+### Region admin APIs
 
-### MemberInfo (proposed change)
-
-**MemberInfo** should include a **RegionName** field so that cluster members can be distinguished by region.
-
-- **Purpose:** Enables the system to identify which region a member (node) belongs to, which is required for multi-region topology, failover decisions, and region-aware routing.
-- **Proposed field:** `RegionName region` (or `regionName`) on `MemberInfo`.
-- **Usage:** When registering or discovering members, the region can be used to route traffic, enforce produce/consume region constraints, and determine failover targets.
-
-### RegionHandler (proposed)
-
-**RegionHandler** is a component for managing regions in Varadhi. It exposes administrative APIs for the lifecycle of regions.
-
-**Responsibility:** Manage region metadata and availability status (create, update status, delete).
-
-**APIs:**
+`web/.../RegionHandlers` (`RegionService`):
 
 | API | Description |
 |-----|-------------|
-| **List Regions** | `GET /v1/regions` — returns all regions. |
-| **Get Region** | `GET /v1/regions/:region` — returns one region. The `:region` segment must satisfy the same naming rules as create bodies; invalid names → HTTP 400, unknown valid name → HTTP 404. |
-| **Create Region** | `POST /v1/regions` — body is `RegionCreateRequest` JSON: `{ "name", "status" }` only (version and entity type are assigned by the server). |
-| **Update Region Status** | `PATCH /v1/regions/:region` — body is `{ "status": "<RegionStatus>" }`. Updates mutable status; region id is immutable after create. |
-| **Delete Region** | `DELETE /v1/regions/:region` — remove a region. Path validation matches create (400 vs 404 as above). |
+| `GET /v1/regions` | List all regions |
+| `GET /v1/regions/:region` | Get one region (400 invalid name, 404 unknown) |
+| `POST /v1/regions` | Create — body `RegionCreateRequest`: `{ "name", "status" }` |
+| `PATCH /v1/regions/:region` | Update status — body `RegionStatusUpdateRequest`: `{ "status" }` |
+| `DELETE /v1/regions/:region` | Delete region |
 
-**Notes:**
-- RegionHandler uses **RegionCreateRequest** / **RegionStatusUpdateRequest** for write bodies; persisted **Region** extends **MetaStoreEntity** (name, version, entity type) for responses and metastore.
-- **RegionHandler** works with the **Region** and **RegionName** entities and **RegionStatus** enum.
-- These APIs are intended for administrative/operational use (e.g. by controllers or ops tooling), not for regular produce/consume traffic.
+Write bodies: `RegionCreateRequest` / `RegionStatusUpdateRequest`. Persisted entity: `Region`. Administrative use only — not produce/consume traffic.
 
-### Key Changes
+---
 
-1. **Type Safety**: `RegionName` replaces `String` for region identifiers
-2. **Multi-Region Support**: Explicit `replicationRegions` and `produceRegions` configuration
-3. **Failover**: `autoFailover` flag enables automatic failover on failures
-4. **Classification**: `tags` for operational management
-5. **Simplification**: Removed redundant `ordered` field (uses `grouped` instead)
+## Proposed Global Topics Support (topic entity — not yet fully implemented)
 
-### Updated VaradhiTopic Methods
+### New fields on VaradhiTopic
 
-**Factory Methods:**
 ```java
-// Default Global Topic
-VaradhiTopic.of(project, name, grouped, capacity, actionCode, replicationRegions)
-
-// Full configuration
-VaradhiTopic.of(project, name, grouped, capacity, actionCode, nfrStrategy,
-                replicationRegions, produceRegions, autoFailover, tags)
+private final Set<TopicTag> tags;   // PROD, NON_PROD, HIGH_PRIORITY — enum exists; field TBD
 ```
 
-**Region Queries:**
+### Project.replicationRegions
+
+**Proposed:** mandatory `Set<RegionName>` on `Project`:
+- Default replication regions for all topics under the project.
+- Topics created without explicit regions inherit from the project.
+- At least one region; validated in constructor.
+- `TopicResource.toVaradhiTopic(Project)` would use `project.getReplicationRegions()`.
+
+**Not implemented** — `Project` has no `replicationRegions` today; factory uses deployment region only.
+
+### Explicit replication vs produce regions
+
+**Proposed** first-class sets on topic or create API:
+- `replicationRegions` — where the topic is replicated.
+- `produceRegions` — subset allowed to accept produce; defaults to all replication regions.
+
+**Current model:** region membership and produce policy live in `produceConfigs` only. A region not in the map cannot produce. No separate replication set on the entity.
+
+### Convenience query methods (proposed)
+
 ```java
 boolean canProduceInRegion(RegionName regionName)
 boolean isReplicatedInRegion(RegionName regionName)
+boolean isGlobalTopic()              // multiple regions in produceConfigs / replication set
+boolean isLocalTopic()
+boolean supportsFailover()           // multi-region + autoFailover
+boolean supportsMessageFailureFailover()
+boolean supportsTopicFailureFailover()
+String getOrderingSemantics()        // "Mostly Ordered" if grouped, else "Unordered"
 ```
 
-**Topic Type Queries:**
-```java
-boolean isGlobalTopic()              // Multiple regions
-boolean isLocalTopic()               // Single region
-boolean supportsFailover()           // Multi-region + auto-failover
-boolean supportsMessageFailureFailover()  // Ungrouped + failover
-boolean supportsTopicFailureFailover()     // Multi-region + failover
-```
+None of these exist on `VaradhiTopic` today. Equivalent checks use `produceConfigs` + `TopicResolver` + `grouped`.
 
-**Ordering:**
+### Proposed factory signatures (future)
+
+Convenience factories taking `Set<RegionName> replicationRegions` / `produceRegions` may wrap building `produceConfigs` and `segmentedStorageTopic`. Current factory:
+
 ```java
-String getOrderingSemantics()  // "Mostly Ordered" if grouped, "Unordered" otherwise
+VaradhiTopic.of(project, name, grouped, capacity, actionCode, nfrStrategy,
+                topicCategory, perRegionQuotaWeights, messageSizeProfile, rateLimiterMode,
+                segmentedStorageTopic, autoFailover, produceConfigs)
 ```
 
 ---
 
 ## Design Decisions
 
-### 1. Type-Safe Region Names
-- **Rationale**: Prevents errors from invalid region strings
-- **Implementation**: `RegionName` value object with validation
-- **Usage**: `Set<RegionName>` instead of `Set<String>`
+### 1. Type-safe region names (shipped)
+`RegionName` in `produceConfigs` and routing. Prevents invalid region strings at API and entity boundaries.
 
-### 2. Explicit Region Configuration
-- **Rationale**: Clear separation between replication and produce regions
-- **Default**: Produce regions default to all replication regions if not specified
-- **Validation**: Produce regions must be subset of replication regions
+### 2. produceConfigs as SSOT (shipped)
+Per-region `TopicState`, `produceIdx`, and `failOverRegion` in one map. Replaces per-region `internalTopics` and implicit region strings.
 
-### 3. Failover Configuration
-- **Rationale**: Users need control over automatic failover behavior
-- **Default**: `autoFailover = true` for high availability
-- **Opt-out**: Users can disable to prevent ordering loss during failover
+### 3. Explicit replication sets (proposed)
+Separate `replicationRegions` / `produceRegions` for clarity at create time; must stay consistent with `produceConfigs` when implemented.
 
-### 4. Topic Classification
-- **Rationale**: Operational management and capacity planning
-- **Tags**: PROD, NON_PROD, HIGH_PRIORITY
-- **Extensible**: Enum can be extended with more tags
+### 4. Failover (partially shipped)
+- **Shipped:** `autoFailover` on topic; per-region `failOverRegion` in `ProduceConfig`; `TopicResolver` follows failover to target region's `produceIdx`.
+- **Proposed:** controller-driven updates during region/topic failure; integration with `RegionStatus` / transition protocol.
+
+### 5. Topic classification (proposed)
+`TopicTag` on `VaradhiTopic` for capacity planning and operational policy.
+
+### 6. Ordering
+`grouped` only — no separate `ordered` field. Grouped ⇒ mostly ordered semantics; ungrouped ⇒ unordered.
 
 ---
 
 ## Migration Path
 
-### Backward Compatibility
+### Backward compatibility
 
-1. **Legacy Factory Methods**: Deprecated but still functional
-   - Create topics with empty replication regions
-   - Will be populated during migration phase
+1. **Wire shape** — new topics serialize `produceConfigs`. Legacy `internalTopics` JSON in metastore requires a one-time migration or deserializer backfill (**TBD**).
+2. **Single-region default** — `VaradhiTopicFactory` continues to create one `produceConfigs` entry until multi-region creation and `Project.replicationRegions` land.
+3. **`grouped`** — unchanged; ordering semantics unchanged.
 
-2. **Internal Topics Map**: Still uses `String` keys for region names
-   - Maintains compatibility with storage layer
-   - Can be migrated to `RegionName` keys in future
+### Migration steps (planned)
 
-3. **Grouped Field**: Maintained as-is
-   - No changes to existing behavior
-   - Used for ordering semantics
-
-### Migration Steps
-
-1. **Existing Topics**: Auto-migrated to Global Topics
-   - Replication regions populated from project defaults
-   - Legacy fields preserved
-
-2. **New Topics**: Must specify replication regions
-   - Use new factory methods with `Set<RegionName>`
-   - Default to project's replication regions
-
-3. **API Updates**: 
-   - Update topic creation APIs to accept `RegionName` sets
-   - Update queries to use type-safe region names
+1. **Existing topics** — backfill `produceConfigs` from legacy storage layout; set replication regions from project defaults when `Project.replicationRegions` exists.
+2. **New topics** — accept region sets on create API; build `produceConfigs` from replication/produce region policy.
+3. **Controller** — use `Region` / `RegionStatus` and transition types to update `ProduceConfig` state and `failOverRegion` during failover.
 
 ---
 
 ## Example Usage
 
-### Creating a Global Topic
+### Current: multi-region topic with failover (tests / manual construction)
 
 ```java
-// Create replication regions
-Set<RegionName> replicationRegions = Set.of(
-    RegionName.of("HYD"),
-    RegionName.of("CH2")
+Map<RegionName, ProduceConfig> configs = Map.of(
+    RegionName.of("CH"), ProduceConfig.producing(),
+    RegionName.of("HYD"), new ProduceConfig(TopicState.Blocked, 0, RegionName.of("CH")),
+    RegionName.of("SIN"), ProduceConfig.producing()
 );
 
-// Create topic with default config
 VaradhiTopic topic = VaradhiTopic.of(
-    "project1",
-    "topic1",
-    false,  // not grouped (unordered)
+    "project1", "topic1",
+    false,
     new TopicCapacityPolicy(100, 1000, 2),
     LifecycleStatus.ActionCode.USER_ACTION,
-    replicationRegions
+    null,
+    VaradhiTopic.TopicCategory.TOPIC,
+    null, null, null,
+    new SegmentedStorageTopic(new StorageTopic[] { /* ... */ }),
+    true,   // autoFailover
+    configs
 );
+
+// Produce routing (HTTP path)
+Optional<ProduceKey> key = TopicResolver.resolve(topic, RegionName.of("HYD"), true);
 ```
 
-### Creating a Topic with Full Configuration
+### Current: topic creation via factory (single deployment region)
 
 ```java
-Set<RegionName> replicationRegions = Set.of(
-    RegionName.of("HYD"),
-    RegionName.of("CH2")
-);
+// VaradhiTopicFactory.planDeployment — one region today
+Map.of(RegionName.of(deploymentRegion), ProduceConfig.producing())
+```
 
-Set<RegionName> produceRegions = Set.of(RegionName.of("HYD")); // Restrict to HYD
+### Proposed: global topic create API (future)
 
+```java
+Set<RegionName> replicationRegions = Set.of(RegionName.of("HYD"), RegionName.of("CH2"));
+Set<RegionName> produceRegions = Set.of(RegionName.of("HYD"));
 Set<TopicTag> tags = Set.of(TopicTag.PROD, TopicTag.HIGH_PRIORITY);
-
-VaradhiTopic topic = VaradhiTopic.of(
-    "project1",
-    "topic1",
-    true,  // grouped (ordered)
-    new TopicCapacityPolicy(200, 2000, 3),
-    LifecycleStatus.ActionCode.USER_ACTION,
-    null,  // no NFR filter
-    replicationRegions,
-    produceRegions,
-    true,  // auto-failover enabled
-    tags
-);
-```
-
-### Querying Topic Properties
-
-```java
-// Check if topic is global
-if (topic.isGlobalTopic()) {
-    // Handle global topic logic
-}
-
-// Check if produce is allowed in a region
-RegionName region = RegionName.of("HYD");
-if (topic.canProduceInRegion(region)) {
-    // Produce to this region
-}
-
-// Get ordering semantics
-String semantics = topic.getOrderingSemantics(); 
-// Returns "Mostly Ordered" if grouped, "Unordered" otherwise
+// Factory TBD — would build produceConfigs + storage from project + region sets
 ```
 
 ---
 
-## Summary of Changes
+## Summary
 
 | Aspect | Current | Proposed |
-|--------|--------|----------|
-| **Region Management** | String-based, implicit | Type-safe `RegionName`, explicit sets |
-| **Replication** | Single region or basic | Multi-region with explicit configuration |
-| **Failover** | Not supported | Configurable auto-failover |
-| **Classification** | None | Topic tags (PROD, NON_PROD, etc.) |
-| **Ordering** | `grouped` + `ordered` (redundant) | `grouped` only |
-| **Type Safety** | String regions | `RegionName` value objects |
-
----
-
-## Benefits
-
-1. **Type Safety**: `RegionName` prevents invalid region strings
-2. **Clarity**: Explicit region configuration makes behavior clear
-3. **Flexibility**: Configurable produce regions and failover
-4. **Operational**: Tags enable better capacity planning and management
-5. **Simplicity**: Removed redundant `ordered` field
-6. **Extensibility**: Easy to add more regions, tags, or failover strategies
+|--------|---------|----------|
+| **Region IDs** | `RegionName` in `produceConfigs` | Same + project/topic region sets |
+| **Region admin** | `Region`, `/v1/regions`, `MemberInfo.region` | Wired into failover controller |
+| **Replication** | Implicit via `produceConfigs` keys | Explicit `replicationRegions` on project/topic |
+| **Produce policy** | `produceConfigs` + `TopicState` | Optional `produceRegions` subset at create |
+| **Failover** | `failOverRegion` + `autoFailover` + `TopicResolver` | Controller updates + transition protocol |
+| **Classification** | None on topic | `Set<TopicTag>` on `VaradhiTopic` |
+| **Ordering** | `grouped` only | Same |
+| **Topic helpers** | `TopicResolver`, `getProduceConfig` | `isGlobalTopic()`, `canProduceInRegion()`, etc. |
 
 ---
 
 ## Next Steps
 
-1. **Review**: Get feedback on proposed structure
-2. **Implementation**: Update topic creation/update APIs
-3. **Migration**: Plan migration of existing topics
-4. **Testing**: Validate failover behavior
-5. **Documentation**: Update API documentation with new fields
+1. `Project.replicationRegions` and multi-region topic creation API.
+2. `TopicTag` (and optional query helpers) on `VaradhiTopic`.
+3. Controller + pod wiring for transition protocol and automatic failover.
+4. Tests for end-to-end failover across regions.
