@@ -54,12 +54,15 @@ class VaradhiTopicFactoryTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
         assertNotNull(varadhiTopic);
-        SegmentedStorageTopic internalTopic = varadhiTopic.getSegmentedStorage(RegionName.of(REGION)).orElseThrow();
+        SegmentedStorageTopic internalTopic = VaradhiTopicTestUtils.getSegmentedStorage(
+            varadhiTopic,
+            RegionName.of(REGION)
+        ).orElseThrow();
         assertEquals(
             TopicState.Producing,
             varadhiTopic.getProduceConfig(RegionName.of(REGION)).orElseThrow().getState()
         );
-        assertNotNull(internalTopic.getTopicAtIndex(0));
+        assertNotNull(internalTopic.getTopic(0));
 
         verify(storageTopicFactory, times(1)).getTopic(
             0,
@@ -80,8 +83,11 @@ class VaradhiTopicFactoryTest {
             "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
-        SegmentedStorageTopic internalTopic = varadhiTopic.getSegmentedStorage(RegionName.of(REGION)).orElseThrow();
-        PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicAtIndex(0);
+        SegmentedStorageTopic internalTopic = VaradhiTopicTestUtils.getSegmentedStorage(
+            varadhiTopic,
+            RegionName.of(REGION)
+        ).orElseThrow();
+        PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopic(0);
 
         assertNotNull(storageTopic);
         assertEquals(CAPACITY_POLICY, varadhiTopic.getCapacity());
@@ -98,11 +104,13 @@ class VaradhiTopicFactoryTest {
         );
         VaradhiTopic deployed = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
-        SegmentedStorageTopic internalCompositeTopic = deployed.getSegmentedStorage(RegionName.of(REGION))
-                                                               .orElseThrow();
+        SegmentedStorageTopic internalCompositeTopic = VaradhiTopicTestUtils.getSegmentedStorage(
+            deployed,
+            RegionName.of(REGION)
+        ).orElseThrow();
         assertNotNull(internalCompositeTopic);
         assertEquals(TopicState.Producing, deployed.getProduceConfig(RegionName.of(REGION)).orElseThrow().getState());
-        assertNotNull(internalCompositeTopic.getTopicAtIndex(0));
+        assertNotNull(internalCompositeTopic.getTopic(0));
 
         verify(storageTopicFactory, times(1)).getTopic(
             0,

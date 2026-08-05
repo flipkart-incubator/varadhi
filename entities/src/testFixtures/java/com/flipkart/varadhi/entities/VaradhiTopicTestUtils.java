@@ -2,6 +2,7 @@ package com.flipkart.varadhi.entities;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public final class VaradhiTopicTestUtils {
 
@@ -18,20 +19,32 @@ public final class VaradhiTopicTestUtils {
     }
 
     /** Topic with shared storage and per-region produce policy. */
-    public static VaradhiTopic topicWithStorageAndProduceConfigs(Map<RegionName, ProduceConfig> configs) {
-        return topicWithStorageAndProduceConfigs(configs, false);
+    public static VaradhiTopic getNewTopic(Map<RegionName, ProduceConfig> configs) {
+        return getNewTopic(configs, false);
     }
 
-    public static VaradhiTopic topicWithStorageAndProduceConfigs(
-        Map<RegionName, ProduceConfig> configs,
-        boolean autoFailover
-    ) {
+    public static VaradhiTopic getNewTopic(Map<RegionName, ProduceConfig> configs, boolean autoFailover) {
         return topic(testStorage(), autoFailover, configs);
     }
 
-    /** Topic with produce policy and default test storage. */
-    public static VaradhiTopic topicWithProduceConfigs(Map<RegionName, ProduceConfig> configs) {
-        return topic(testStorage(), false, configs);
+    /**
+     * Returns the shared {@link VaradhiTopic#getSegmentedStorageTopic()} when {@code region} participates
+     * in the topic and failover routing is consistent.
+     *
+     * <p>Checks {@code region} is registered via {@link VaradhiTopic#getProduceConfig(RegionName)}. When
+     * {@link ProduceConfig#getFailOverRegion()} is set, the failover target must also be registered —
+     * same rule as {@link TopicResolver}.
+     */
+    public static Optional<SegmentedStorageTopic> getSegmentedStorage(VaradhiTopic topic, RegionName region) {
+        Optional<ProduceConfig> config = topic.getProduceConfig(region);
+        if (config.isEmpty()) {
+            return Optional.empty();
+        }
+        RegionName effectiveRegion = config.get().getFailOverRegion().orElse(region);
+        if (topic.getProduceConfig(effectiveRegion).isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(topic.getSegmentedStorageTopic());
     }
 
     private static VaradhiTopic topic(

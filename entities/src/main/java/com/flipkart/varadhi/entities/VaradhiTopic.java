@@ -163,22 +163,14 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     /**
      * Sets the shared {@link #segmentedStorageTopic}. Replaces any previous value.
      */
-    public VaradhiTopic withSegmentedStorageTopic(SegmentedStorageTopic storageTopic) {
-        return copyWith(
-            Objects.requireNonNull(storageTopic, "storageTopic must not be null"),
-            produceConfigs,
-            autoFailover
-        );
+    public VaradhiTopic with(SegmentedStorageTopic storageTopic) {
+        return copyWith(storageTopic, produceConfigs, autoFailover);
     }
 
     /**
      * Sets shared storage and per-region produce policy in one copy.
      */
-    public VaradhiTopic withSegmentedStorageTopicAndProduceConfig(
-        SegmentedStorageTopic storageTopic,
-        RegionName region,
-        ProduceConfig config
-    ) {
+    public VaradhiTopic with(SegmentedStorageTopic storageTopic, RegionName region, ProduceConfig config) {
         Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
         updated.put(region, config);
         return copyWith(storageTopic, updated, autoFailover);
@@ -186,9 +178,9 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
 
     /**
      * Sets or registers per-region produce policy for {@code region}.
-     * Does not change {@link #segmentedStorageTopic} — call {@link #withSegmentedStorageTopic} separately.
+     * Does not change {@link #segmentedStorageTopic} — call {@link #with} separately.
      */
-    public VaradhiTopic withProduceConfig(RegionName region, ProduceConfig config) {
+    public VaradhiTopic with(RegionName region, ProduceConfig config) {
         Map<RegionName, ProduceConfig> updated = new HashMap<>(produceConfigs);
         updated.put(region, config);
         return copyWith(updated, autoFailover);
@@ -199,29 +191,6 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
     @JsonIgnore
     public Optional<ProduceConfig> getProduceConfig(RegionName region) {
         return Optional.ofNullable(produceConfigs.get(region));
-    }
-
-    /**
-     * Returns the shared {@link #segmentedStorageTopic} when {@code region} participates in this
-     * topic and failover routing is consistent. Assumes storage is provisioned.
-     *
-     * <p>Checks {@code region} is in {@link #produceConfigs}. When {@link ProduceConfig#getFailOverRegion()}
-     * is set (post-failover or mid-SWITCH), the failover target must also be registered — same rule as
-     * {@link TopicResolver}. Storage is still the single shared {@link #segmentedStorageTopic};
-     * failover changes produce authority, not a per-region storage map. For produce routing and segment
-     * id use {@link TopicResolver}.
-     */
-    @JsonIgnore
-    public Optional<SegmentedStorageTopic> getSegmentedStorage(RegionName region) {
-        Optional<ProduceConfig> config = getProduceConfig(region);
-        if (config.isEmpty()) {
-            return Optional.empty();
-        }
-        RegionName effectiveRegion = config.get().getFailOverRegion().orElse(region);
-        if (getProduceConfig(effectiveRegion).isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(segmentedStorageTopic);
     }
 
     /**

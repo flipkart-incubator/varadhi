@@ -76,7 +76,7 @@ public final class TopicResolver {
                     .map(
                         produceRegionConfig -> new ProduceTarget(
                             produceRegion,
-                            topic.getSegmentedStorageTopic().getTopicAtIndex(produceRegionConfig.getProduceIdx())
+                            topic.getSegmentedStorageTopic().getTopic(produceRegionConfig.getProduceIdx())
                         )
                     );
     }

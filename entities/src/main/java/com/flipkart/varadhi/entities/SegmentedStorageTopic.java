@@ -27,11 +27,6 @@ public class SegmentedStorageTopic {
     }
 
     @JsonIgnore
-    public StorageTopic getTopicAtIndex(int index) {
-        return storageTopics[index];
-    }
-
-    @JsonIgnore
     public StorageTopic getTopic(int id) {
         return Arrays.stream(storageTopics)
                      .filter(topic -> topic.getId() == id)

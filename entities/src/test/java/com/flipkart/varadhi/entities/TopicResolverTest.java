@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TopicResolverTest {
@@ -13,20 +14,46 @@ class TopicResolverTest {
     private static final String TOPIC_NAME = "topic1";
 
     @Test
-    void resolveForProduce_emptyWhenBlocked() {
-        VaradhiTopic topic = VaradhiTopicTestUtils.topicWithStorageAndProduceConfigs(
-            Map.of(RegionName.of("r1"), ProduceConfig.blocked())
+    void resolve_emptyWhenRegionUnknown() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(Map.of(RegionName.of("r1"), ProduceConfig.producing()));
+
+        assertTrue(TopicResolver.resolve(topic, RegionName.of("unknown")).isEmpty());
+    }
+
+    @Test
+    void resolve_emptyWhenFailoverRegionNotConfigured() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2")))
         );
 
+        assertTrue(TopicResolver.resolve(topic, RegionName.of("r1")).isEmpty());
+    }
+
+    @Test
+    void resolve_stillResolvesWhenBlockedForCacheWarm() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(Map.of(RegionName.of("r1"), ProduceConfig.blocked()));
+
         assertTrue(TopicResolver.resolve(topic, RegionName.of("r1"), true).isEmpty());
+        ProduceKey key = TopicResolver.resolve(topic, RegionName.of("r1")).orElseThrow();
+        assertEquals(RegionName.of("r1"), key.produceRegion());
+        assertEquals(0, key.storageTopicId());
+    }
+
+    @Test
+    void resolve_throwsWhenStorageSegmentIdMissing() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), new ProduceConfig(TopicState.Producing, 99, null))
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> TopicResolver.resolve(topic, RegionName.of("r1")));
     }
 
     @Test
     void resolve_stillResolvesWhenFenced() {
-        VaradhiTopic topic = VaradhiTopicTestUtils.topicWithStorageAndProduceConfigs(
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
             Map.of(
                 RegionName.of("r1"),
-                new ProduceConfig(TopicState.Fenced, RegionName.of("r2"), 0),
+                new ProduceConfig(TopicState.Fenced, 0, RegionName.of("r2")),
                 RegionName.of("r2"),
                 ProduceConfig.producing()
             )
@@ -41,10 +68,10 @@ class TopicResolverTest {
 
     @Test
     void resolveForProduce_usesFailOverRegionAsProduceKey() {
-        VaradhiTopic topic = VaradhiTopicTestUtils.topicWithStorageAndProduceConfigs(
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
             Map.of(
                 RegionName.of("r1"),
-                new ProduceConfig(TopicState.Producing, RegionName.of("r2"), 0),
+                new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2")),
                 RegionName.of("r2"),
                 ProduceConfig.producing()
             )

@@ -18,7 +18,7 @@ class VaradhiTopicSerializationTest {
             RegionName.of("CH"),
             ProduceConfig.producing(),
             RegionName.of("HYD"),
-            new ProduceConfig(TopicState.Blocked, RegionName.of("CH"), 0),
+            new ProduceConfig(TopicState.Blocked, 0, RegionName.of("CH")),
             RegionName.of("SIN"),
             ProduceConfig.producing()
         );
@@ -85,7 +85,7 @@ class VaradhiTopicSerializationTest {
                 RegionName.of("CH"),
                 ProduceConfig.producing(),
                 RegionName.of("HYD"),
-                new ProduceConfig(TopicState.Blocked, RegionName.of("CH"), 0)
+                new ProduceConfig(TopicState.Blocked, 0, RegionName.of("CH"))
             )
         );
 

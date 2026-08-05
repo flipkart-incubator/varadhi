@@ -143,6 +143,22 @@ class ProducerServiceTests {
     }
 
     @Test
+    void produceToTopicWhenDeployedRegionNotConfigured() {
+        Message msg1 = getMessage(0, 1, null, 0);
+        VaradhiTopic vt = getTopic(TopicState.Producing, topic, project, "region2");
+        String topicName = VaradhiTopic.fqn(project.getName(), topic);
+        when(topicReadCache.get(topicName)).thenReturn(Optional.of(Resource.of(vt, ResourceType.TOPIC)));
+
+        ResourceNotFoundException ex = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> service.produceToTopic(msg1, topicName)
+        );
+
+        Assertions.assertEquals("Topic(project1.topic1) is not available in region(region1).", ex.getMessage());
+        verify(producer, never()).produceAsync(any());
+    }
+
+    @Test
     void produceToBlockedTopic() throws InterruptedException {
         produceNotAllowedTopicState(
             TopicState.Blocked,
@@ -293,7 +309,7 @@ class ProducerServiceTests {
         StorageTopic st = new DummyStorageTopic(VaradhiTopic.fqn(project.getName(), name));
         ProduceConfig config = state == TopicState.Producing ?
             ProduceConfig.producing() :
-            new ProduceConfig(state, null, 0);
+            new ProduceConfig(state, 0, null);
         VaradhiTopic topic = VaradhiTopic.of(
             project.getName(),
             name,
