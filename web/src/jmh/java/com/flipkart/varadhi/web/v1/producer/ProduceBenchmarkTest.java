@@ -11,10 +11,11 @@ import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.entities.OrgDetails;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.Project;
-import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -36,11 +37,11 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.concurrent.TimeUnit;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.flipkart.varadhi.common.Constants.USER_ID_HEADER;
 import static java.util.Arrays.asList;
@@ -315,31 +316,35 @@ public class ProduceBenchmarkTest {
 
         for (int i = 0; i < NUM_TOPICS; i++) {
             String topicName = "topic" + (i + 1);
-            VaradhiTopic topic = VaradhiTopic.of(
-                project.getName(),
-                topicName,
-                i % 2 == 0, // alternate grouped/ungrouped
-                policy,
-                LifecycleStatus.ActionCode.USER_ACTION
-            );
-            topic.markCreated(); // Set state to active
+            String topicFqn = VaradhiTopic.fqn(project.getName(), topicName);
 
-            // Create storage topic using messaging stack provider
             StorageTopic storageTopic = messagingStackProvider.getStorageTopicFactory()
                                                               .getTopic(
                                                                   i,
-                                                                  topic.getName(),
+                                                                  topicFqn,
                                                                   project,
                                                                   policy,
                                                                   InternalQueueCategory.MAIN
                                                               );
 
-            // Create the topic in the messaging stack
             messagingStackProvider.getStorageTopicService().create(project, storageTopic, policy);
 
-            // Add as internal topic for the deployment region.
-            SegmentedStorageTopic segmentedTopic = SegmentedStorageTopic.of(storageTopic);
-            topic = topic.withStorageTopic(segmentedTopic).withProduceRegion(RegionName.BOOTSTRAP_REGION);
+            VaradhiTopic topic = VaradhiTopic.of(
+                project.getName(),
+                topicName,
+                i % 2 == 0,
+                policy,
+                LifecycleStatus.ActionCode.USER_ACTION,
+                null,
+                VaradhiTopic.TopicCategory.TOPIC,
+                null,
+                null,
+                null,
+                SegmentedStorageTopic.of(storageTopic),
+                false,
+                Map.of(RegionName.of("default"), ProduceConfig.producing())
+            );
+            topic.markCreated();
 
             topics.add(Resource.of(topic, ResourceType.TOPIC));
         }

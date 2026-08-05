@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.failover;
 
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -8,18 +9,14 @@ import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import lombok.EqualsAndHashCode;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Builds multi-region {@link VaradhiTopic} fixtures for topic-failover integration tests.
- *
- * <p>The normal create path ({@code VaradhiTopicFactory.planDeployment}) only provisions the single
- * deployment region, so a topic produced that way cannot be failed over (failover validation requires
- * both a source and a target region to exist). This fixture seeds the multi-region shape directly so
- * integration / E2E tests can exercise the failover stages until the factory grows native multi-region
- * provisioning.
  */
 public final class FailoverTestTopicFixture {
 
-    /** Minimal concrete {@link StorageTopic} for tests (no real messaging stack). */
     @EqualsAndHashCode (callSuper = true)
     public static final class FixtureStorageTopic extends StorageTopic {
         public FixtureStorageTopic(String name) {
@@ -30,27 +27,28 @@ public final class FailoverTestTopicFixture {
     private FailoverTestTopicFixture() {
     }
 
-    /**
-     * Builds a topic {@code <project>.<topicName>} with a storage segment in each of {@code regions}.
-     *
-     * @param regions at least two regions (a failover needs a distinct source and target)
-     */
     public static VaradhiTopic create(String project, String topicName, String... regions) {
         if (regions.length < 2) {
             throw new IllegalArgumentException("a multi-region topic needs at least 2 regions");
         }
-        VaradhiTopic topic = VaradhiTopic.of(
+        Map<RegionName, ProduceConfig> configs = new HashMap<>();
+        for (int i = 0; i < regions.length; i++) {
+            configs.put(RegionName.of(regions[i]), i == 0 ? ProduceConfig.producing() : ProduceConfig.blocked());
+        }
+        return VaradhiTopic.of(
             project,
             topicName,
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(new FixtureStorageTopic(VaradhiTopic.fqn(project, topicName))),
+            false,
+            configs
         );
-        SegmentedStorageTopic segmented = SegmentedStorageTopic.of(new FixtureStorageTopic(topic.getName()));
-        topic = topic.withStorageTopic(segmented);
-        for (String region : regions) {
-            topic = topic.withProduceRegion(RegionName.of(region));
-        }
-        return topic;
     }
 }

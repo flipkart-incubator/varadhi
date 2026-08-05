@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import java.util.Map;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -96,7 +98,7 @@ class TopicHandlersTest extends WebTestBase {
     @Test
     void createTopic_WithValidRequest_ShouldCreateTopicSuccessfully() throws InterruptedException {
         TopicResource topicResource = getTopicResource(project);
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
 
         doReturn(varadhiTopic).when(varadhiTopicFactory).get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
@@ -130,7 +132,7 @@ class TopicHandlersTest extends WebTestBase {
     @Test
     void getTopic_WithValidRequest_ShouldReturnTopicSuccessfully() throws InterruptedException {
         TopicResource topicResource = getTopicResource(project);
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         String varadhiTopicName = String.join(".", project.getName(), TOPIC_NAME);
 
         doReturn(varadhiTopic).when(varadhiTopicService).get(varadhiTopicName);

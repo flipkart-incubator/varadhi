@@ -3,7 +3,10 @@ package com.flipkart.varadhi.entities.web;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicTestUtils;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,7 +60,15 @@ class TopicResourceTest {
             "topicName",
             true,
             new TopicCapacityPolicy(),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
         TopicResource topicResource = TopicResource.from(varadhiTopic);
         assertAll(
@@ -105,14 +116,15 @@ class TopicResourceTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         assertAll(
             () -> assertEquals("topicName", varadhiTopic.getTopicName()),
             () -> assertEquals("projectName", varadhiTopic.getProjectName()),
             () -> assertTrue(varadhiTopic.isGrouped()),
             () -> assertNotNull(varadhiTopic.getCapacity()),
             () -> assertEquals(LifecycleStatus.ActionCode.SYSTEM_ACTION, varadhiTopic.getStatus().getActionCode()),
-            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory())
+            () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory()),
+            () -> assertNotNull(varadhiTopic.getSegmentedStorageTopic())
         );
     }
 
@@ -125,7 +137,11 @@ class TopicResourceTest {
             LifecycleStatus.ActionCode.USER_ACTION,
             "test"
         );
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(VaradhiTopic.TopicCategory.QUEUE);
+        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(
+            VaradhiTopic.TopicCategory.QUEUE,
+            VaradhiTopicTestUtils.testStorage(),
+            Map.of()
+        );
         assertEquals(VaradhiTopic.TopicCategory.QUEUE, varadhiTopic.getTopicCategory());
     }
 }

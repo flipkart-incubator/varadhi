@@ -6,6 +6,7 @@ import com.flipkart.varadhi.core.cluster.events.EventType;
 import com.flipkart.varadhi.core.cluster.events.ResourceEvent;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -120,10 +122,17 @@ class ProduceTransitionMsgHandlerTest {
             TOPIC,
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(new StorageTopic(0, FQN) {
+            }),
+            false,
+            Map.of(RegionName.of(DEPLOYED_REGION), ProduceConfig.producing())
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new StorageTopic(0, FQN) {
-        })).withProduceRegion(RegionName.of(DEPLOYED_REGION));
         topic.setVersion(version);
         topicCache.onChange(
             new ResourceEvent<>(

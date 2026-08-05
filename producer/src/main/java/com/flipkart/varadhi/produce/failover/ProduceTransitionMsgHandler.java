@@ -8,6 +8,8 @@ import com.flipkart.varadhi.core.cluster.MsgHandler;
 import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.Resource;
+import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.TopicResolver;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
@@ -232,15 +234,15 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     /** True when the producer cache holds the active produce key for this pod's deployed region. */
     private boolean hasActiveProducer(VaradhiTopic topic) {
-        return topic.resolveProduceTarget(producerService.deployedRegion())
-                    .map(
-                        target -> producerService.hasProducer(
-                            topic.getName(),
-                            target.storageTopic().getId(),
-                            target.produceRegion().value()
-                        )
-                    )
-                    .orElse(false);
+        return TopicResolver.resolve(topic, RegionName.of(producerService.deployedRegion()), false)
+                            .map(
+                                key -> producerService.hasProducer(
+                                    topic.getName(),
+                                    key.storageTopicId(),
+                                    key.produceRegion().value()
+                                )
+                            )
+                            .orElse(false);
     }
 
     private void clearParticipationIfTerminal(TransitionEvent event) {

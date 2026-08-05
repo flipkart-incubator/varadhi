@@ -2,6 +2,7 @@ package com.flipkart.varadhi.core.topic;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.MessageSizeProfile;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.RegionName;
@@ -104,27 +105,31 @@ public class VaradhiTopicFactory {
             resolvePerRegionQuotaWeights(topicResource.getPerRegionQuotaWeights(), Set.of(deploymentRegion))
         );
 
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic(category);
-        return planDeployment(project, varadhiTopic);
+        return planDeployment(project, topicResource, category);
     }
 
     /**
-     * Plans the deployment of the VaradhiTopic by creating and associating an internal storage topic.
-     *
-     * @param project      the project associated with the topic
-     * @param varadhiTopic the VaradhiTopic instance to be deployed
+     * Plans the deployment of the VaradhiTopic by creating storage and building the topic in one shot.
      */
-    private VaradhiTopic planDeployment(Project project, VaradhiTopic varadhiTopic) {
+    private VaradhiTopic planDeployment(
+        Project project,
+        TopicResource topicResource,
+        VaradhiTopic.TopicCategory category
+    ) {
+        String topicFqn = VaradhiTopic.fqn(project.getName(), topicResource.getName());
         StorageTopic storageTopic = topicFactory.getTopic(
             0,
-            varadhiTopic.getName(),
+            topicFqn,
             project,
-            varadhiTopic.getCapacity(),
+            topicResource.getCapacity(),
             InternalQueueCategory.MAIN
         );
 
-        return varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                           .withProduceRegion(RegionName.of(deploymentRegion));
+        return topicResource.toVaradhiTopic(
+            category,
+            SegmentedStorageTopic.of(storageTopic),
+            Map.of(RegionName.of(deploymentRegion), ProduceConfig.producing())
+        );
     }
 
     private static void warnIfCapacityTightForAverageMessageSizes(

@@ -1,7 +1,5 @@
 package com.flipkart.varadhi.core.topic;
 
-import java.lang.reflect.Method;
-
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
@@ -56,9 +54,15 @@ class VaradhiTopicFactoryTest {
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
         assertNotNull(varadhiTopic);
-        SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
-        assertEquals(TopicState.Producing, varadhiTopic.getProduceConfig(RegionName.of(REGION)).orElseThrow().state());
-        assertNotNull(internalTopic.getTopicToProduce());
+        SegmentedStorageTopic internalTopic = VaradhiTopicTestUtils.getSegmentedStorage(
+            varadhiTopic,
+            RegionName.of(REGION)
+        ).orElseThrow();
+        assertEquals(
+            TopicState.Producing,
+            varadhiTopic.getProduceConfig(RegionName.of(REGION)).orElseThrow().getState()
+        );
+        assertNotNull(internalTopic.getTopic(0));
 
         verify(storageTopicFactory, times(1)).getTopic(
             0,
@@ -79,15 +83,18 @@ class VaradhiTopicFactoryTest {
             "test"
         );
         VaradhiTopic varadhiTopic = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
-        SegmentedStorageTopic internalTopic = varadhiTopic.getProduceTopicForRegion(REGION);
-        PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopicToProduce();
+        SegmentedStorageTopic internalTopic = VaradhiTopicTestUtils.getSegmentedStorage(
+            varadhiTopic,
+            RegionName.of(REGION)
+        ).orElseThrow();
+        PulsarStorageTopic storageTopic = (PulsarStorageTopic)internalTopic.getTopic(0);
 
         assertNotNull(storageTopic);
         assertEquals(CAPACITY_POLICY, varadhiTopic.getCapacity());
     }
 
     @Test
-    void planDeployment_ValidVaradhiTopic_ShouldInvokeStorageTopicCreation() throws Exception {
+    void planDeployment_ValidVaradhiTopic_ShouldInvokeStorageTopicCreation() {
         TopicResource topicResource = TopicResource.grouped(
             TOPIC_NAME,
             project.getName(),
@@ -95,21 +102,15 @@ class VaradhiTopicFactoryTest {
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             "test"
         );
-        VaradhiTopic varadhiTopic = topicResource.toVaradhiTopic();
+        VaradhiTopic deployed = varadhiTopicFactory.get(project, topicResource, VaradhiTopic.TopicCategory.TOPIC);
 
-        Method planDeploymentMethod = VaradhiTopicFactory.class.getDeclaredMethod(
-            "planDeployment",
-            Project.class,
-            VaradhiTopic.class
-        );
-        planDeploymentMethod.setAccessible(true);
-
-        VaradhiTopic deployed = (VaradhiTopic)planDeploymentMethod.invoke(varadhiTopicFactory, project, varadhiTopic);
-
-        SegmentedStorageTopic internalCompositeTopic = deployed.getProduceTopicForRegion(REGION);
+        SegmentedStorageTopic internalCompositeTopic = VaradhiTopicTestUtils.getSegmentedStorage(
+            deployed,
+            RegionName.of(REGION)
+        ).orElseThrow();
         assertNotNull(internalCompositeTopic);
-        assertEquals(TopicState.Producing, deployed.getProduceConfig(RegionName.of(REGION)).orElseThrow().state());
-        assertNotNull(internalCompositeTopic.getTopicToProduce());
+        assertEquals(TopicState.Producing, deployed.getProduceConfig(RegionName.of(REGION)).orElseThrow().getState());
+        assertNotNull(internalCompositeTopic.getTopic(0));
 
         verify(storageTopicFactory, times(1)).getTopic(
             0,

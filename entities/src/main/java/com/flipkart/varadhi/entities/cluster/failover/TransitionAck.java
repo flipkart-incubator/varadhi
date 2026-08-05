@@ -3,6 +3,8 @@ package com.flipkart.varadhi.entities.cluster.failover;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 
+import java.util.Objects;
+
 /**
  * Immutable pod-to-controller acknowledgment for a single {@link TransitionStage} of a
  * topic transition. Sent by each pod after it has applied (or failed to apply) the stage
@@ -37,7 +39,7 @@ public record TransitionAck(
     /** Whether this ack represents success — derived solely from {@link #errorMsg()}. */
     @JsonIgnore
     public boolean isSuccess() {
-        return errorMsg == null || errorMsg.isEmpty();
+        return errorMsg == null || errorMsg.isBlank();
     }
 
     /** Whether this ack represents failure — the inverse of {@link #isSuccess()}. */
@@ -66,6 +68,10 @@ public record TransitionAck(
         TransitionStage stage,
         String errorMsg
     ) {
+        Objects.requireNonNull(errorMsg, "errorMsg");
+        if (errorMsg.isBlank()) {
+            throw new IllegalArgumentException("errorMsg must not be blank on failure");
+        }
         return new TransitionAck(opId, topicFqn, transitionType, participation, hostname, stage, errorMsg);
     }
 }
