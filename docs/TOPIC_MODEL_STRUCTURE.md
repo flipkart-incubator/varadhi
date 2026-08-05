@@ -8,89 +8,66 @@ This document summarizes the current topic model structure and proposes changes 
 
 ## Current Topic Model Structure
 
-### Class Hierarchy
+> **As of PR #332** (producer-side entity changes). Controller failover orchestration and legacy JSON backfill are not fully wired in this PR; see grooming docs under `docs/topic-failover-*.md` for future work.
+
+### Class hierarchy
 
 ```
 AbstractTopic (interface)
     │
-    │ Methods:
-    │   - String getName()
+    ├── StorageTopic (abstract) — id, name; PulsarStorageTopic adds partitionCount
     │
-    ├─── StorageTopic (abstract class)
-    │       │
-    │       Fields:
-    │       - int id
-    │       - String name
-    │       │
-    │       └─── PulsarStorageTopic (concrete implementation)
-    │               │
-    │               Fields:
-    │               - int partitionCount
-    │
-    └─── VaradhiTopic (concrete class) extends LifecycleEntity
-            │
-            Fields:
-            - Map<String, SegmentedStorageTopic> internalTopics
-            - boolean grouped
-            - TopicCapacityPolicy capacity
-            - String nfrFilterName
-            - [NEW] Set<RegionName> replicationRegions
-            - [NEW] Set<RegionName> produceRegions
-            - [NEW] boolean autoFailover
-            - [NEW] Set<TopicTag> tags
-            - [NEW] Map<RegionName, RegionName> failoverRegion  // failed region → target region
+    └── VaradhiTopic extends LifecycleEntity
+            ├── SegmentedStorageTopic segmentedStorageTopic   // shared across regions
+            ├── Map<RegionName, ProduceConfig> produceConfigs // per-region produce policy (SSOT)
+            ├── boolean autoFailover
+            └── capacity, grouped, topicCategory, rateLimiterMode, …
 ```
 
-### Current VaradhiTopic Structure
+### VaradhiTopic (implemented)
 
-**Inherited Fields (from LifecycleEntity):**
-- `name` (String) - Fully qualified topic name (e.g., "project.topic")
-- `version` (int) - Version of the topic
-- `status` (LifecycleStatus) - Current lifecycle state
+**Inherited:** `name`, `version`, `status` (from `LifecycleEntity`).
 
-**Core Fields:**
-- `internalTopics` (Map<String, SegmentedStorageTopic>) - Maps region names to storage topics
-- `grouped` (boolean) - Whether messages are grouped/ordered
-- `capacity` (TopicCapacityPolicy) - Capacity limits (QPS, throughput, read fan-out)
-- `nfrFilterName` (String) - NFR filter name (nullable)
+**Core fields:**
+- `segmentedStorageTopic` — single shared storage segment for the topic (not a per-region map).
+- `produceConfigs` — `Map<RegionName, ProduceConfig>`; wire JSON key `produceConfigs`. Region membership here gates produce access.
+- `autoFailover` — controller may auto-failover on region degradation.
+- `grouped`, `capacity`, `nfrFilterName`, `topicCategory`, `perRegionQuotaWeights`, `messageSizeProfile`, `rateLimiterMode`.
 
-**Current Limitations:**
-- Single region or basic replication only
-- No explicit region management
-- No failover capabilities
-- No topic classification/tags
-- Region names stored as plain strings (no type safety)
+**Immutable updates:** overloaded `with(...)` copies (storage, per-region config).
 
-### Storage Topic Abstraction
+**Removed from entity surface:** per-region `internalTopics` map, `getSegmentedStorage(region)` (tests use `VaradhiTopicTestUtils`).
 
-**StorageTopic** - Abstract class representing topics in underlying messaging systems (Pulsar, etc.)
-- **Fields:**
-  - `id` (int) - Unique identifier
-  - `name` (String) - Storage topic name
-- **Methods:**
-  - `String getName()` - Returns the topic name
+### ProduceConfig (per region)
 
-**PulsarStorageTopic** - Pulsar-specific implementation
-- **Extends:** `StorageTopic`
-- **Fields:**
-  - `id` (int) - Inherited from StorageTopic
-  - `name` (String) - Inherited from StorageTopic
-  - `partitionCount` (int) - Number of partitions for the Pulsar topic
+| Field | Role |
+|-------|------|
+| `state` (`TopicState`) | `Producing`, `Blocked`, `Fenced` — whether this region accepts produce |
+| `produceIdx` | Storage segment id for this region's produce path (partition growth / migration) |
+| `failOverRegion` | Optional; when set, produce from this region routes to that region's config |
 
-**SegmentedStorageTopic** - Wrapper for partition scaling
-- **Fields:**
-  - `storageTopics` (StorageTopic[]) - Array of storage topics
-  - `activeStorageTopicId` (int) - ID of the currently active storage topic
-  - `produceIndex` (int) - Index of the topic to use for producing
-  - `topicState` (TopicState) - Current state (Producing, Blocked, Throttled, Replicating)
-- **Methods:**
-  - `StorageTopic getTopicToProduce()` - Returns the topic to use for producing
-  - `StorageTopic getTopic(int id)` - Retrieves a topic by ID
-  - `List<StorageTopic> getActiveTopics()` - Returns all active topics
+Factories: `ProduceConfig.producing()`, `ProduceConfig.blocked()`.
+
+### Produce routing
+
+- **`TopicResolver`** — resolves `ProduceKey(topicFqn, produceRegion, storageTopicId)` from `VaradhiTopic` + deployed region.
+- **Ungated** `resolve(topic, region)` — cache warm / PREPARE while source is `Fenced`.
+- **Gated** `resolve(topic, region, true)` — HTTP produce; empty when source `Blocked`/`Fenced` or failover target missing.
+- **`ProducerService`** — uses gated resolve; `ResourceNotFoundException` when deployed region not in `produceConfigs`.
+
+### SegmentedStorageTopic
+
+- `storageTopics[]` — backing segments.
+- `getTopic(int id)` — public lookup by `StorageTopic.id` (used after resolve).
+- Active slot per region comes from `ProduceConfig.produceIdx` on the resolved produce region.
+
+### Transition wire types (entities only in PR #332)
+
+Under `entities/.../cluster/failover/`: `TransitionEvent`, `TransitionAck`, `TransitionStage`, `TransitionType`, participation enums. Pod/controller wiring is follow-up work — no `docs/topic-transition-pod-protocol.md` in tree.
 
 ---
 
-## Proposed: Global Topics Support
+## Proposed (not yet fully implemented)
 
 ### New Fields for VaradhiTopic
 
