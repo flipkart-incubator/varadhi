@@ -19,6 +19,7 @@ import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicTestUtils;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
 import com.flipkart.varadhi.entities.web.QueueResource;
 import com.flipkart.varadhi.entities.web.SubscriptionResource;
@@ -535,7 +536,7 @@ class QueueHandlersTest extends WebTestBase {
             LifecycleStatus.ActionCode.USER_ACTION,
             "test"
         );
-        return tr.toVaradhiTopic();
+        return tr.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
     }
 
     private VaradhiSubscription subscriptionForQueue(VaradhiTopic topic) {

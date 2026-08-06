@@ -3,6 +3,7 @@ package com.flipkart.varadhi.core;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.entities.ResourceDeletionType;
@@ -136,11 +137,8 @@ public class VaradhiTopicService {
     private void createStorageTopics(VaradhiTopic varadhiTopic, Project project) {
         // Ensure StorageTopicService.create() is idempotent, allowing reuse of pre-existing topics.
         TopicCapacityPolicy capacity = varadhiTopic.getCapacity();
-        varadhiTopic.getInternalTopics()
-                    .forEach(
-                        (region, it) -> it.getActiveTopics()
-                                          .forEach(st -> storageTopicService.create(project, st, capacity))
-                    );
+        SegmentedStorageTopic storageTopic = varadhiTopic.getSegmentedStorageTopic();
+        storageTopic.getActiveTopics().forEach(st -> storageTopicService.create(project, st, capacity));
     }
 
     /**
@@ -199,11 +197,8 @@ public class VaradhiTopicService {
             varadhiTopic.markDeleting(actionRequest.actionCode(), "Starting Topic Deletion");
             topicStore.update(varadhiTopic);
 
-            varadhiTopic.getInternalTopics()
-                        .forEach(
-                            (region, it) -> it.getActiveTopics()
-                                              .forEach(st -> storageTopicService.delete(project, st.getName()))
-                        );
+            SegmentedStorageTopic storageSegment = varadhiTopic.getSegmentedStorageTopic();
+            storageSegment.getActiveTopics().forEach(st -> storageTopicService.delete(project, st.getName()));
             topicStore.delete(varadhiTopic.getName());
         } catch (Exception e) {
             varadhiTopic.markDeleteFailed(e.getMessage());

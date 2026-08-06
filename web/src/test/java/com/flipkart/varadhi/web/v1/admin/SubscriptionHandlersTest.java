@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import java.util.Map;
+
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.web.ErrorResponse;
@@ -104,7 +106,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
     void createSubscription_ValidInput_CreatesSubscriptionSuccessfully() throws InterruptedException {
         HttpRequest<Buffer> request = createRequest(HttpMethod.POST, buildSubscriptionsUrl(PROJECT_1));
         SubscriptionResource resource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
 
         doReturn(vTopic).when(topicService).get(U_TOPIC_RESOURCE_1.getProject() + "." + U_TOPIC_RESOURCE_1.getName());
@@ -267,7 +269,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         VaradhiSubscription subscription = createUngroupedSubscription(
             "sub12",
             PROJECT_1,
-            U_TOPIC_RESOURCE_1.toVaradhiTopic()
+            U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of())
         );
 
         when(varadhiSubscriptionService.getSubscription(anyString())).thenReturn(subscription);
@@ -424,7 +426,7 @@ class SubscriptionHandlersTest extends SubscriptionTestBase {
         HttpRequest<Buffer> request = createRequest(HttpMethod.PUT, buildSubscriptionUrl("sub1", PROJECT_1));
         SubscriptionResource resource = createSubscriptionResource("sub1", PROJECT_1, U_TOPIC_RESOURCE_1);
 
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         doReturn(vTopic).when(topicService).get(U_TOPIC_RESOURCE_1.getProject() + "." + U_TOPIC_RESOURCE_1.getName());
 
         VaradhiSubscription subscription = createUngroupedSubscription("sub1", PROJECT_1, vTopic);

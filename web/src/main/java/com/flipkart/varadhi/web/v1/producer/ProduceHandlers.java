@@ -181,7 +181,7 @@ public class ProduceHandlers implements RouteProvider {
      */
     private int getHttpStatusForProduceStatus(ProduceStatus produceStatus) {
         return switch (produceStatus) {
-            case Blocked, NotAllowed -> HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
+            case Fenced, NotAllowed -> HttpCodes.HTTP_UNPROCESSABLE_ENTITY;
             case Throttled -> HttpCodes.HTTP_RATE_LIMITED;
             case Failed -> HTTP_INTERNAL_ERROR;
             default -> {

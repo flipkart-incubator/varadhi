@@ -12,6 +12,7 @@ import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.ProduceStatus;
 import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.RateLimiterMode;
@@ -24,7 +25,6 @@ import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TestStdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
-import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
@@ -238,6 +238,7 @@ class ProducerServiceRateLimitIntegrationTest {
     }
 
     private static VaradhiTopic rateLimitTopic(RateLimiterMode mode, int qps, int throughputKBps) {
+        StorageTopic storageTopic = new DummyStorageTopic(VaradhiTopic.fqn(PROJECT.getName(), TOPIC));
         VaradhiTopic topic = VaradhiTopic.of(
             PROJECT.getName(),
             TOPIC,
@@ -248,13 +249,12 @@ class ProducerServiceRateLimitIntegrationTest {
             VaradhiTopic.TopicCategory.TOPIC,
             Map.of(REGION, 1.0),
             null,
-            mode
+            mode,
+            SegmentedStorageTopic.of(storageTopic),
+            false,
+            Map.of(RegionName.of(REGION), ProduceConfig.producing())
         );
         topic.markCreated();
-        StorageTopic storageTopic = new DummyStorageTopic(topic.getName());
-        SegmentedStorageTopic internal = SegmentedStorageTopic.of(storageTopic);
-        internal.setTopicState(TopicState.Producing);
-        topic.addInternalTopic(REGION, internal);
         return topic;
     }
 

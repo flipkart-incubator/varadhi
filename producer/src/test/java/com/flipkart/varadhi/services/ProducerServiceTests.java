@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -142,29 +143,36 @@ class ProducerServiceTests {
     }
 
     @Test
+    void produceToTopicWhenDeployedRegionNotConfigured() {
+        Message msg1 = getMessage(0, 1, null, 0);
+        VaradhiTopic vt = getTopic(TopicState.Producing, topic, project, "region2");
+        String topicName = VaradhiTopic.fqn(project.getName(), topic);
+        when(topicReadCache.get(topicName)).thenReturn(Optional.of(Resource.of(vt, ResourceType.TOPIC)));
+
+        ResourceNotFoundException ex = Assertions.assertThrows(
+            ResourceNotFoundException.class,
+            () -> service.produceToTopic(msg1, topicName)
+        );
+
+        Assertions.assertEquals("Topic(project1.topic1) is not available in region(region1).", ex.getMessage());
+        verify(producer, never()).produceAsync(any());
+    }
+
+    @Test
     void produceToBlockedTopic() throws InterruptedException {
         produceNotAllowedTopicState(
             TopicState.Blocked,
-            ProduceStatus.Blocked,
-            "Topic/Queue is blocked. Unblock the Topic/Queue before produce."
-        );
-    }
-
-    @Test
-    void produceToThrottledTopic() throws InterruptedException {
-        produceNotAllowedTopicState(
-            TopicState.Throttled,
-            ProduceStatus.Throttled,
-            "Produce to Topic/Queue is currently rate limited, try again after sometime."
-        );
-    }
-
-    @Test
-    void produceToReplicatingTopic() throws InterruptedException {
-        produceNotAllowedTopicState(
-            TopicState.Replicating,
             ProduceStatus.NotAllowed,
-            "Produce is not allowed for replicating Topic/Queue."
+            "Produce is not allowed in this region."
+        );
+    }
+
+    @Test
+    void produceToFencedTopic() throws InterruptedException {
+        produceNotAllowedTopicState(
+            TopicState.Fenced,
+            ProduceStatus.Fenced,
+            "Topic/Queue is fenced during failover. Retry after failover completes."
         );
     }
 
@@ -298,19 +306,26 @@ class ProducerServiceTests {
     }
 
     public VaradhiTopic getTopic(TopicState state, String name, Project project, String region) {
+        StorageTopic st = new DummyStorageTopic(VaradhiTopic.fqn(project.getName(), name));
+        ProduceConfig config = state == TopicState.Producing ?
+            ProduceConfig.producing() :
+            new ProduceConfig(state, 0, null);
         VaradhiTopic topic = VaradhiTopic.of(
             project.getName(),
             name,
             false,
             null,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(st),
+            false,
+            Map.of(RegionName.of(region), config)
         );
         topic.markCreated();
-
-        StorageTopic st = new DummyStorageTopic(topic.getName());
-        SegmentedStorageTopic ict = SegmentedStorageTopic.of(st);
-        ict.setTopicState(state);
-        topic.addInternalTopic(region, ict);
         return topic;
     }
 

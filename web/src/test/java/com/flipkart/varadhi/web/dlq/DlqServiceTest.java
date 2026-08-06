@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.dlq;
 
+import java.util.Map;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -49,7 +51,7 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testUnsideline() {
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         UnsidelineRequest unsidelineRequest = UnsidelineRequest.ofFailedAt(System.currentTimeMillis());
         String requestedBy = "testUser";
@@ -76,7 +78,7 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testUnsidelineInvalidState() {
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
@@ -166,7 +168,7 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     @Test
     void testGetMessagesInvalidState() {
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         when(subscription.isActive()).thenReturn(false);
         InvalidOperationForResourceException exception = assertThrows(
@@ -229,7 +231,7 @@ class DlqServiceTest extends SubscriptionTestBase {
 
     private VaradhiSubscription setupSubscriptionForGetMessages() {
         String consumerId = "consumerId";
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = Mockito.spy(createUngroupedSubscription("sub12", PROJECT_1, vTopic));
         SubscriptionShards shards = subscription.getShards();
         List<Assignment> assignments = new ArrayList<>();
