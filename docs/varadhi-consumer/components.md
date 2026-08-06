@@ -59,7 +59,7 @@ The consumer's inbound control surface — there is no HTTP. It registers event 
 
 #### Side Effects
 
-- Operation-state RPC → `varadhi-controller`. [ConsumerApiHandler](/consumer/src/main/java/com/flipkart/varadhi/consumer/ConsumerApiHandler.java)
+- Operation-state RPC → `varadhi-controller` via [SubscriptionApi#update](/core/src/main/java/com/flipkart/varadhi/core/cluster/controller/SubscriptionApi.java) ([ControllerRemoteClient](/core/src/main/java/com/flipkart/varadhi/core/cluster/controller/ControllerRemoteClient.java)). [ConsumerApiHandler](/consumer/src/main/java/com/flipkart/varadhi/consumer/ConsumerApiHandler.java)
 
 #### Notes for Coding Agents
 

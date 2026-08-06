@@ -37,8 +37,8 @@ Cluster RPC, the persistence/assignment/operation stores, and the process bootst
 ### varadhi-controller.controller-api — Controller API
 
 **Archetype**: Inbound Gateway
-**Packages**: `controller` (`ControllerVerticle`, `ControllerApiHandler`)
-**Public Interface**: [ControllerVerticle](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerVerticle.java) is the Controller-role verticle and composition root; [ControllerApiHandler](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerApiHandler.java) adapts inbound `ROUTE_CONTROLLER` cluster messages to the coordinator. Callers (server/consumer) reach the controller over the event bus through these.
+**Packages**: `controller` (`ControllerVerticle`, `ControllerHandler`)
+**Public Interface**: [ControllerVerticle](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerVerticle.java) is the Controller-role verticle and composition root; [ControllerHandler](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerHandler.java) adapts inbound `ROUTE_CONTROLLER` cluster messages to the coordinator. Callers (server/consumer) reach the controller over the event bus through these.
 
 #### Responsibility
 
@@ -74,8 +74,8 @@ The controller's inbound control surface and composition root. It hosts the vert
 ### varadhi-controller.subscription-coordinator — Subscription Coordinator
 
 **Archetype**: Application Service / Use-Case Coordinator
-**Packages**: `controller` (`ControllerApiMgr`)
-**Public Interface**: [ControllerApiMgr](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerApiMgr.java) is the boundary — it implements both the server-facing `ControllerApi` and the consumer-facing `ControllerConsumerApi`, so callers drive `concept.subscription` start/stop/state/unsideline and report shard-op updates through it.
+**Packages**: `controller` (`SubscriptionService`)
+**Public Interface**: [SubscriptionService](/controller/src/main/java/com/flipkart/varadhi/controller/SubscriptionService.java) implements [SubscriptionApi](/core/src/main/java/com/flipkart/varadhi/core/cluster/controller/SubscriptionApi.java) — the boundary for subscription lifecycle coordination. Server and consumer callers reach it through [ControllerRemoteClient](/core/src/main/java/com/flipkart/varadhi/core/cluster/controller/ControllerRemoteClient.java) (cluster bus); the controller wires [ControllerHandler](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerHandler.java) as the inbound adapter.
 
 #### Responsibility
 
@@ -98,8 +98,8 @@ The coordination hub. It validates `concept.subscription` state (rejecting e.g. 
 
 #### Runtime Characteristics
 
-- **Consistency (state read)**: `getSubscriptionState` fans out to every shard's assigned consumer and merges the results; an unreachable consumer yields an empty per-shard state rather than failing the whole read. [ControllerApiMgr](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerApiMgr.java)
-- **Contention**: `update` (consumer shard-op callback) runs **inline on the dispatcher thread** — keep it cheap; heavy work there stalls cluster-message dispatch. [ControllerApiMgr](/controller/src/main/java/com/flipkart/varadhi/controller/ControllerApiMgr.java)
+- **Consistency (state read)**: `getSubscriptionState` fans out to every shard's assigned consumer and merges the results; an unreachable consumer yields an empty per-shard state rather than failing the whole read. [SubscriptionService](/controller/src/main/java/com/flipkart/varadhi/controller/SubscriptionService.java)
+- **Contention**: `update` (consumer shard-op callback) runs **inline on the dispatcher thread** — keep it cheap; heavy work there stalls cluster-message dispatch. [SubscriptionService](/controller/src/main/java/com/flipkart/varadhi/controller/SubscriptionService.java)
 
 #### Notes for Coding Agents
 

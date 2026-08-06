@@ -176,9 +176,9 @@ public class ControllerVerticle extends AbstractVerticle {
      * Assumes leadership for controller operations by setting up API handlers,
      * registering membership listeners, and restoring controller state.
      *
-     * @param subscriptionService the controller API manager
-     * @param handler          the controller API handler
-     * @param messageRouter    the message router for handling API requests
+     * @param subscriptionService the subscription coordinator
+     * @param handler             the controller bus handler
+     * @param messageRouter       the message router for handling API requests
      * @return a Future that completes when leadership is established
      */
     private Future<Void> onLeaderElected(
@@ -208,7 +208,7 @@ public class ControllerVerticle extends AbstractVerticle {
      * Initializes consumer nodes from the list of cluster members.
      *
      * @param allMembers       the list of all cluster members
-     * @param subscriptionService the controller API manager
+     * @param subscriptionService the subscription coordinator
      * @return a Future that completes with the list of initialized consumer IDs
      */
     private Future<List<String>> initializeConsumerNodes(
@@ -252,8 +252,8 @@ public class ControllerVerticle extends AbstractVerticle {
      * Restores the controller state by removing unavailable consumers and
      * requeuing in-progress operations.
      *
-     * @param subscriptionService the controller API manager
-     * @param consumerIds      the list of active consumer IDs
+     * @param subscriptionService the subscription coordinator
+     * @param consumerIds         the list of active consumer IDs
      */
     private void restoreControllerState(SubscriptionService subscriptionService, List<String> consumerIds) {
         // Remove unavailable consumers
@@ -269,8 +269,8 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Removes consumers that are no longer available in the cluster.
      *
-     * @param subscriptionService the controller API manager
-     * @param consumerIds      the list of active consumer IDs
+     * @param subscriptionService the subscription coordinator
+     * @param consumerIds         the list of active consumer IDs
      */
     private void removeUnavailableConsumers(SubscriptionService subscriptionService, List<String> consumerIds) {
         Set<String> activeConsumerSet = Set.copyOf(consumerIds);
@@ -284,8 +284,8 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Gets the list of consumer IDs that are no longer available in the cluster.
      *
-     * @param subscriptionService the controller API manager
-     * @param activeConsumers  the set of active consumer IDs
+     * @param subscriptionService the subscription coordinator
+     * @param activeConsumers     the set of active consumer IDs
      * @return the list of unavailable consumer IDs
      */
     private List<String> getUnavailableConsumers(SubscriptionService subscriptionService, Set<String> activeConsumers) {
@@ -305,7 +305,7 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Requeues in-progress operations to ensure they are completed.
      *
-     * @param subscriptionService the controller API manager
+     * @param subscriptionService the subscription coordinator
      */
     private void requeueInProgressOperations(SubscriptionService subscriptionService) {
         List<SubscriptionOperation> pendingOps = subscriptionService.getPendingSubOps();
@@ -336,7 +336,7 @@ public class ControllerVerticle extends AbstractVerticle {
      * Sets up API handlers for controller operations.
      *
      * @param messageRouter the message router
-     * @param handler       the controller API handler
+     * @param handler       the controller bus handler
      */
     private void setupApiHandlers(MessageRouter messageRouter, ControllerHandler handler) {
         // Register request handlers for different controller operations
@@ -356,7 +356,7 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Sets up a membership listener to handle consumer node joins and leaves.
      *
-     * @param subscriptionService the controller API manager
+     * @param subscriptionService the subscription coordinator
      */
     private void setupMembershipListener(SubscriptionService subscriptionService) {
         clusterManager.addMembershipListener(new MembershipListener() {
