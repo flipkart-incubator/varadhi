@@ -132,14 +132,30 @@ class VaradhiSubscriptionServiceTest {
             project1.getName(),
             false,
             null,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
         groupedTopic = VaradhiTopic.of(
             "GroupedTopic",
             project2.getName(),
             true,
             null,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
 
         subscription1 = createUngroupedSubscription("Sub1", project1, unGroupedTopic);
@@ -198,21 +214,43 @@ class VaradhiSubscriptionServiceTest {
         StorageTopicFactory<PulsarStorageTopic> topicFactory = new PulsarTopicFactory(planner);
         StorageTopicService topicService = new PulsarTopicService(null, planner);
 
+        VaradhiTopic bare = VaradhiTopic.of(
+            "GroupedTopic",
+            project2.getName(),
+            true,
+            capacity,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
+        );
+        StorageTopic storageTopic = topicFactory.getTopic(
+            0,
+            bare.getName(),
+            project2,
+            capacity,
+            InternalQueueCategory.MAIN
+        );
         VaradhiTopic topic = VaradhiTopic.of(
             "GroupedTopic",
             project2.getName(),
             true,
             capacity,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(storageTopic),
+            false,
+            Map.of(RegionName.of(region), ProduceConfig.producing())
         );
-        StorageTopic storageTopic = topicFactory.getTopic(
-            0,
-            topic.getName(),
-            project2,
-            capacity,
-            InternalQueueCategory.MAIN
-        );
-        topic.addInternalTopic(region, SegmentedStorageTopic.of(storageTopic));
 
         SubscriptionResource subscriptionResource = SubscriptionResource.of(
             "SubscriptionResource",

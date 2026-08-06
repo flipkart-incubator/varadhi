@@ -12,6 +12,7 @@ import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.RateLimiterMode;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicTestUtils;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetricsImpl;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -112,7 +113,10 @@ class RateLimitTelemetryTest {
             VaradhiTopic.TopicCategory.TOPIC,
             Map.of(REGION, 1.0),
             null,
-            mode
+            mode,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
     }
 
