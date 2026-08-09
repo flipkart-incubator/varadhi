@@ -35,27 +35,34 @@ class TransitionMetricsTest {
     }
 
     @Test
-    void stageAcked_incrementsCounterWithSuccessTags() {
-        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true);
+    void stageAcked_successIncrementsCounterAndClearsFailureGauge() {
         metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, false);
+        assertEquals(
+            1.0,
+            registry.find("topic.transition.stage.ack.failed")
+                    .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "SWITCH")
+                    .gauge()
+                    .value()
+        );
+
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true);
 
         assertEquals(
             1.0,
             registry.find("topic.transition.stage.acked")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "SWITCH")
-                    .tag("success", "true")
                     .counter()
                     .count()
         );
         assertEquals(
-            1.0,
-            registry.find("topic.transition.stage.acked")
+            0.0,
+            registry.find("topic.transition.stage.ack.failed")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "SWITCH")
-                    .tag("success", "false")
-                    .counter()
-                    .count()
+                    .gauge()
+                    .value()
         );
     }
 
@@ -93,16 +100,25 @@ class TransitionMetricsTest {
     }
 
     @Test
-    void ackSendFailed_incrementsCounter() {
+    void ackSendFailed_setsGaugeUntilSucceeded() {
         metrics.ackSendFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
-
         assertEquals(
             1.0,
             registry.find("topic.transition.ack.send.failed")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
-                    .counter()
-                    .count()
+                    .gauge()
+                    .value()
+        );
+
+        metrics.ackSendSucceeded(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+        assertEquals(
+            0.0,
+            registry.find("topic.transition.ack.send.failed")
+                    .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "PREPARE")
+                    .gauge()
+                    .value()
         );
     }
 
@@ -120,12 +136,14 @@ class TransitionMetricsTest {
     @Test
     void close_removesRegisteredMeters() {
         metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, false);
         metrics.versionWaitStarted();
         metrics.setParticipation(TransitionType.TOPIC_FAILOVER, TransitionParticipation.INVOLVED);
 
         metrics.close();
 
         assertEquals(0, registry.find("topic.transition.stage.received").counters().size());
+        assertEquals(0, registry.find("topic.transition.stage.ack.failed").gauges().size());
         assertEquals(0, registry.find("topic.transition.version_waits.in_flight").gauges().size());
         assertEquals(0, registry.find("topic.transition.participation").gauges().size());
     }

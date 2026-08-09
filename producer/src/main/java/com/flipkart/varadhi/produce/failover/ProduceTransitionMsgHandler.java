@@ -1,15 +1,13 @@
 package com.flipkart.varadhi.produce.failover;
 
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.common.utils.RetryUtils;
 import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.core.cluster.MsgHandler;
-import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
-import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import com.flipkart.varadhi.core.cluster.controller.TransitionAckApi;
+import com.flipkart.varadhi.core.cluster.failover.TransitionEventListener;
 import com.flipkart.varadhi.entities.Resource;
-import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.TopicResolver;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
@@ -53,31 +51,36 @@ import java.util.concurrent.ScheduledExecutorService;
  *   <li><b>PENDING / COMPLETED / ABORTED</b> ({@code awaitVersion} = false) — no version to
  *       await; ack immediately so the controller knows the pod processed the stage.</li>
  * </ul>
+ *
+ * <p>Version wait uses exceptions as control flow ({@code <} retry, {@code =} success,
+ * {@code >} fail). Acks are applied once at the end of the async chain ({@code thenAccept} /
+ * {@code exceptionally}), not from every helper.
  */
 @Slf4j
-public final class ProduceTransitionMsgHandler implements MsgHandler {
+public final class ProduceTransitionMsgHandler implements TransitionEventListener {
 
-    /** Failsafe probe outcome: {@link Pending} keeps polling; {@link Done} stops with the observed version. */
-    private sealed interface VersionProbe permits VersionProbe.Pending, VersionProbe.Done {
-        record Pending() implements VersionProbe {
-        }
-
-        record Done(long version) implements VersionProbe {
+    /**
+     * Probe signal: TopicCache is still behind the coordinated version. Failsafe retries until
+     * the version catches up or attempts are exhausted ({@link java.util.concurrent.TimeoutException}).
+     */
+    static final class VersionPendingException extends RuntimeException {
+        VersionPendingException(long current, long target) {
+            super("topic version " + current + " < target " + target);
         }
     }
 
     private final String hostname;
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
-    private final TransitionApi transitionApi;
+    private final TransitionAckApi transitionAckApi;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
-    private final FailsafeExecutor<VersionProbe> versionWaitExecutor;
+    private final FailsafeExecutor<TransitionEvent> versionWaitExecutor;
     private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
 
     public ProduceTransitionMsgHandler(
         String hostname,
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
-        TransitionApi transitionApi,
+        TransitionAckApi transitionAckApi,
         ProducerService producerService,
         PodTransitionConfig config,
         ScheduledExecutorService scheduler,
@@ -85,128 +88,101 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     ) {
         this.hostname = hostname;
         this.topicCache = topicCache;
-        this.transitionApi = transitionApi;
+        this.transitionAckApi = transitionAckApi;
         this.producerService = producerService;
         this.metrics = metrics;
         this.versionWaitExecutor = RetryUtils.newPollingExecutor(
             scheduler,
             config.versionWaitMaxAttempts(),
             config.podPollIntervalMs(),
-            probe -> probe instanceof VersionProbe.Pending
+            VersionPendingException.class
         );
     }
 
     @Override
-    public void handle(ClusterMessage message) {
-        TransitionEvent event = message.getData(TransitionEvent.class);
+    public void onTransition(TransitionEvent event) {
         metrics.stageReceived(event.transitionType(), event.stage());
-        // Non-version-gated stages ack immediately on receipt.
         if (!event.awaitVersion()) {
             ackOk(event);
             return;
         }
-        // handle() runs on the event-bus thread that delivered this publish. The version wait (and
-        // the PREPARE pre-warm it triggers) runs on the transition scheduler via a reusable
-        // FailsafeExecutor from RetryUtils so the event bus is never stalled and the retry policy
-        // is not rebuilt per event. Polling uses a fixed interval (not exponential backoff): cache
-        // convergence within a deadline, not failure retry.
+        // Event-bus thread only schedules work; polling + PREPARE warm run on the transition scheduler.
         String topicFqn = event.topicFqn().toFqn();
         metrics.versionWaitStarted();
-        long targetVersion = event.topicVersionToAwait();
-        versionWaitExecutor.getAsync(() -> probeVersion(topicFqn, targetVersion)).whenComplete((outcome, t) -> {
-            metrics.versionWaitFinished();
-            if (t != null) {
-                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
-                ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
-                return;
-            }
-            onVersionResolved(event, ((VersionProbe.Done)outcome).version());
-        });
+        versionWaitExecutor.getAsync(() -> probeVersion(event))
+                           .whenComplete((ignored, t) -> metrics.versionWaitFinished())
+                           .thenCompose(this::onVersionReached)
+                           .thenAccept(this::ackOk)
+                           .exceptionally(t -> {
+                               log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
+                               ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
+                               return null;
+                           });
     }
 
     /**
-     * {@link VersionProbe.Pending} while the cache is still behind the coordinated version (keep
-     * polling). {@link VersionProbe.Done} when at or past the target. Topic missing from the cache
-     * aborts immediately (Failsafe {@code abortOn}).
+     * Exact-version gate: {@code <} → retry, {@code =} → return event, {@code >} → fail loud.
      */
-    private VersionProbe probeVersion(String topicFqn, long targetVersion) {
+    private TransitionEvent probeVersion(TransitionEvent event) {
+        String topicFqn = event.topicFqn().toFqn();
         Optional<Resource.EntityResource<VaradhiTopic>> cached = topicCache.get(topicFqn);
         if (cached.isEmpty()) {
             throw new ResourceNotFoundException("Topic(%s) does not exist in topic cache.".formatted(topicFqn));
         }
         long version = cached.get().getVersion();
-        if (version < targetVersion) {
-            return new VersionProbe.Pending();
+        long target = event.topicVersionToAwait();
+        if (version < target) {
+            throw new VersionPendingException(version, target);
         }
-        return new VersionProbe.Done(version);
-    }
-
-    private void onVersionResolved(TransitionEvent event, long current) {
-        if (current > event.topicVersionToAwait()) {
-            // The cache jumped past the version the controller coordinated: the topic was modified
-            // concurrently during the transition. Fail so the controller can abort/retry rather than
-            // act on a version it never coordinated.
-            ackFail(
-                event,
-                "topic version overshot target " + event.topicVersionToAwait() + " (current " + current
-                       + "), concurrent modification"
+        if (version > target) {
+            throw new VaradhiException(
+                "topic version overshot target " + target + " (current " + version + "), concurrent modification"
             );
-            return;
         }
-        Optional<Resource.EntityResource<VaradhiTopic>> cached = topicCache.get(event.topicFqn().toFqn());
-        if (cached.isEmpty()) {
-            ackFail(event, "topic absent from cache after version convergence");
-            return;
-        }
-        onVersionReached(event, cached.get().getEntity());
+        return event;
     }
 
-    private void onVersionReached(TransitionEvent event, VaradhiTopic topic) {
-        // Only PREPARE runs participant work; every other version-gated stage just acks on convergence.
+    private CompletableFuture<TransitionEvent> onVersionReached(TransitionEvent event) {
         if (event.stage() != TransitionStage.PREPARE) {
-            ackOk(event);
-            return;
+            return CompletableFuture.completedFuture(event);
         }
-        if (!hasActiveProducer(topic)) {
-            TransitionParticipation participation = TransitionParticipation.NOT_INVOLVED;
-            recordParticipation(event, participation);
+        VaradhiTopic topic = topicCache.get(event.topicFqn().toFqn())
+                                       .map(Resource.EntityResource::getEntity)
+                                       .orElseThrow(
+                                           () -> new ResourceNotFoundException(
+                                               "Topic(%s) does not exist in topic cache.".formatted(
+                                                   event.topicFqn().toFqn()
+                                               )
+                                           )
+                                       );
+        TransitionParticipation participation = producerService.hasActiveProducer(topic) ?
+            TransitionParticipation.INVOLVED :
+            TransitionParticipation.NOT_INVOLVED;
+        recordParticipation(event, participation);
+        if (participation == TransitionParticipation.NOT_INVOLVED) {
             log.debug(
                 "Transition: pod not involved for {} op={} type={}; skipping participant work",
                 event.topicFqn().toFqn(),
                 event.opId(),
                 event.transitionType()
             );
-            ackOk(event, participation);
-            return;
+            return CompletableFuture.completedFuture(event);
         }
-        TransitionParticipation participation = TransitionParticipation.INVOLVED;
-        recordParticipation(event, participation);
-        createTarget(event, topic).whenComplete((ignored, t) -> {
-            if (t != null) {
-                log.warn(
-                    "Transition PREPARE warm failed for {} op={} type={}",
-                    event.topicFqn().toFqn(),
-                    event.opId(),
-                    event.transitionType(),
-                    t
-                );
-                ackFail(event, participation, "prepare warm failed: " + ThrowableUtils.rootMessage(t));
-                return;
-            }
-            ackOk(event, participation);
-        });
+        return createTarget(event, topic);
     }
 
     /**
      * Type-specific PREPARE warm for an {@link TransitionParticipation#INVOLVED} pod.
      */
-    private CompletableFuture<Void> createTarget(TransitionEvent event, VaradhiTopic topic) {
+    private CompletableFuture<TransitionEvent> createTarget(TransitionEvent event, VaradhiTopic topic) {
         TransitionEvent.Target target = event.target();
+        // TODO: Spotless removeUnusedImports can't parse nested record patterns.
         if (target instanceof TransitionEvent.Target.Region regionTarget) {
-            return producerService.getProducerForRegion(topic, regionTarget.region()).thenAccept(producer -> {});
+            return producerService.getProducerForRegion(topic, regionTarget.region()).thenApply(producer -> event);
         }
         if (target instanceof TransitionEvent.Target.StorageTopic storageTarget) {
-            return producerService.loadProducer(event.topicFqn(), storageTarget.storageTopicId());
+            return producerService.loadProducer(event.topicFqn(), storageTarget.storageTopicId())
+                                  .thenApply(producer -> event);
         }
         return CompletableFuture.failedFuture(new IllegalStateException("PREPARE target missing"));
     }
@@ -227,22 +203,9 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     private TransitionParticipation deriveParticipation(VaradhiTopicName topicFqn) {
         return topicCache.get(topicFqn.toFqn())
                          .map(Resource.EntityResource::getEntity)
-                         .filter(this::hasActiveProducer)
+                         .filter(producerService::hasActiveProducer)
                          .map(ignored -> TransitionParticipation.INVOLVED)
                          .orElse(TransitionParticipation.NOT_INVOLVED);
-    }
-
-    /** True when the producer cache holds the active produce key for this pod's deployed region. */
-    private boolean hasActiveProducer(VaradhiTopic topic) {
-        return TopicResolver.resolve(topic, RegionName.of(producerService.deployedRegion()), false)
-                            .map(
-                                key -> producerService.hasProducer(
-                                    topic.getName(),
-                                    key.storageTopicId(),
-                                    key.produceRegion().value()
-                                )
-                            )
-                            .orElse(false);
     }
 
     private void clearParticipationIfTerminal(TransitionEvent event) {
@@ -253,10 +216,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackOk(TransitionEvent event) {
-        ackOk(event, resolveParticipation(event));
-    }
-
-    private void ackOk(TransitionEvent event, TransitionParticipation participation) {
+        TransitionParticipation participation = resolveParticipation(event);
         metrics.stageAcked(event.transitionType(), event.stage(), true);
         sendAck(
             TransitionAck.success(
@@ -272,10 +232,7 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
     }
 
     private void ackFail(TransitionEvent event, String errorMsg) {
-        ackFail(event, resolveParticipation(event), errorMsg);
-    }
-
-    private void ackFail(TransitionEvent event, TransitionParticipation participation, String errorMsg) {
+        TransitionParticipation participation = resolveParticipation(event);
         metrics.stageAcked(event.transitionType(), event.stage(), false);
         sendAck(
             TransitionAck.failure(
@@ -293,10 +250,13 @@ public final class ProduceTransitionMsgHandler implements MsgHandler {
 
     private void sendAck(TransitionAck ack) {
         // Best-effort: if delivery fails, the controller stage barrier times out and re-pushes.
-        transitionApi.ack(ack).exceptionally(t -> {
-            metrics.ackSendFailed(ack.transitionType(), ack.stage());
-            log.warn("Failed to deliver transition ack ack={}", ack, t);
-            return null;
+        transitionAckApi.ack(ack).whenComplete((ignored, t) -> {
+            if (t != null) {
+                metrics.ackSendFailed(ack.transitionType(), ack.stage());
+                log.warn("Failed to deliver transition ack ack={}", ack, t);
+            } else {
+                metrics.ackSendSucceeded(ack.transitionType(), ack.stage());
+            }
         });
     }
 }

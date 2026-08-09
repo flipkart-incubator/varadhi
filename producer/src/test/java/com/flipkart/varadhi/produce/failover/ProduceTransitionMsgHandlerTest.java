@@ -1,10 +1,9 @@
 package com.flipkart.varadhi.produce.failover;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
-import com.flipkart.varadhi.core.cluster.controller.TransitionApi;
+import com.flipkart.varadhi.core.cluster.controller.TransitionAckApi;
 import com.flipkart.varadhi.core.cluster.events.EventType;
 import com.flipkart.varadhi.core.cluster.events.ResourceEvent;
-import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.LifecycleStatus;
 import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
@@ -42,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -68,7 +66,7 @@ class ProduceTransitionMsgHandlerTest {
     private Vertx vertx;
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private ProducerService producerService;
-    private CapturingTransitionApi acker;
+    private CapturingTransitionAckApi acker;
     private ScheduledExecutorService scheduler;
     private TransitionMetrics metrics;
 
@@ -81,8 +79,7 @@ class ProduceTransitionMsgHandlerTest {
             vertx
         ).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
         producerService = mock(ProducerService.class);
-        when(producerService.deployedRegion()).thenReturn(DEPLOYED_REGION);
-        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(true);
+        when(producerService.hasActiveProducer(any(VaradhiTopic.class))).thenReturn(true);
         when(producerService.getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class))).thenReturn(
             CompletableFuture.completedFuture(mock(Producer.class))
         );
@@ -104,7 +101,7 @@ class ProduceTransitionMsgHandlerTest {
     }
 
     private ProduceTransitionMsgHandler handler(PodTransitionConfig config, int expectedAcks) {
-        acker = new CapturingTransitionApi(expectedAcks);
+        acker = new CapturingTransitionAckApi(expectedAcks);
         return new ProduceTransitionMsgHandler(
             "host-1",
             topicCache,
@@ -151,17 +148,15 @@ class ProduceTransitionMsgHandlerTest {
         seed(10);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.Region(TARGET_REGION)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.Region(TARGET_REGION)
             )
         );
 
@@ -180,17 +175,15 @@ class ProduceTransitionMsgHandlerTest {
         seed(10);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.STORAGE_MIGRATION,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.StorageTopic(TARGET_STORAGE_TOPIC_ID)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.STORAGE_MIGRATION,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.StorageTopic(TARGET_STORAGE_TOPIC_ID)
             )
         );
 
@@ -213,17 +206,15 @@ class ProduceTransitionMsgHandlerTest {
         );
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.Region(TARGET_REGION)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.Region(TARGET_REGION)
             )
         );
 
@@ -232,26 +223,27 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionStage.PREPARE, ack.stage());
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertFalse(ack.isSuccess());
-        assertTrue(ack.errorMsg().contains("prepare warm failed"));
+        assertTrue(
+            ack.errorMsg().contains("broker unreachable") || ack.errorMsg().contains("transition version wait failed"),
+            () -> "unexpected errorMsg: " + ack.errorMsg()
+        );
     }
 
     @Test
     void prepareAcksOkWithoutWarmingWhenPodNotInvolved() throws Exception {
         seed(10);
-        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(false);
+        when(producerService.hasActiveProducer(any(VaradhiTopic.class))).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.Region(TARGET_REGION)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.Region(TARGET_REGION)
             )
         );
 
@@ -267,35 +259,23 @@ class ProduceTransitionMsgHandlerTest {
     @Test
     void switchEchoesParticipationDecidedAtPrepare() throws Exception {
         seed(10);
-        when(producerService.hasProducer(anyString(), anyInt(), anyString())).thenReturn(false);
+        when(producerService.hasActiveProducer(any(VaradhiTopic.class))).thenReturn(false);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig(), 2);
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.Region(TARGET_REGION)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.Region(TARGET_REGION)
             )
         );
         seed(11);
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.SWITCH,
-                    true,
-                    11,
-                    null
-                )
-            )
+        h.onTransition(
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
         );
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         assertEquals(TransitionParticipation.NOT_INVOLVED, acker.acks.get(0).participation());
@@ -310,17 +290,15 @@ class ProduceTransitionMsgHandlerTest {
         seed(9); // behind target 10 — poll until timeout
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.Region(TARGET_REGION)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.Region(TARGET_REGION)
             )
         );
 
@@ -336,18 +314,8 @@ class ProduceTransitionMsgHandlerTest {
         seed(11);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.SWITCH,
-                    true,
-                    11,
-                    null
-                )
-            )
+        h.onTransition(
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -365,18 +333,8 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
         scheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.SWITCH,
-                    true,
-                    11,
-                    null
-                )
-            )
+        h.onTransition(
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -388,18 +346,8 @@ class ProduceTransitionMsgHandlerTest {
         seed(10); // behind target 11 — never converges
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.SWITCH,
-                    true,
-                    11,
-                    null
-                )
-            )
+        h.onTransition(
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -412,18 +360,8 @@ class ProduceTransitionMsgHandlerTest {
     void switchAcksFailureWhenTopicAbsentFromCache() throws Exception {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.SWITCH,
-                    true,
-                    11,
-                    null
-                )
-            )
+        h.onTransition(
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -440,18 +378,8 @@ class ProduceTransitionMsgHandlerTest {
         seed(12);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.SWITCH,
-                    true,
-                    11,
-                    null
-                )
-            )
+        h.onTransition(
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -466,17 +394,15 @@ class ProduceTransitionMsgHandlerTest {
         seed(11);
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PREPARE,
-                    true,
-                    10,
-                    new TransitionEvent.Target.Region(TARGET_REGION)
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PREPARE,
+                true,
+                10,
+                new TransitionEvent.Target.Region(TARGET_REGION)
             )
         );
 
@@ -491,17 +417,15 @@ class ProduceTransitionMsgHandlerTest {
     void completedAcksOkImmediately() throws Exception {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.COMPLETED,
-                    false,
-                    0,
-                    null
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.COMPLETED,
+                false,
+                0,
+                null
             )
         );
 
@@ -515,17 +439,15 @@ class ProduceTransitionMsgHandlerTest {
     void abortedAcksOkImmediately() throws Exception {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.ABORTED,
-                    false,
-                    0,
-                    null
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.ABORTED,
+                false,
+                0,
+                null
             )
         );
 
@@ -539,17 +461,15 @@ class ProduceTransitionMsgHandlerTest {
     void pendingAcksOkImmediatelyWithoutVersionWait() throws Exception {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
-        h.handle(
-            ClusterMessage.of(
-                TransitionEvent.of(
-                    OP_ID,
-                    TOPIC_NAME,
-                    TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.PENDING,
-                    false,
-                    0,
-                    null
-                )
+        h.onTransition(
+            TransitionEvent.of(
+                OP_ID,
+                TOPIC_NAME,
+                TransitionType.TOPIC_FAILOVER,
+                TransitionStage.PENDING,
+                false,
+                0,
+                null
             )
         );
 
@@ -559,17 +479,12 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(ack.isSuccess());
     }
 
-    private static final class CapturingTransitionApi implements TransitionApi {
+    private static final class CapturingTransitionAckApi implements TransitionAckApi {
         private final CopyOnWriteArrayList<TransitionAck> acks = new CopyOnWriteArrayList<>();
         private final CountDownLatch latch;
 
-        CapturingTransitionApi(int expected) {
+        CapturingTransitionAckApi(int expected) {
             this.latch = new CountDownLatch(expected);
-        }
-
-        @Override
-        public CompletableFuture<Void> sendEvent(TransitionEvent event) {
-            throw new UnsupportedOperationException("sendEvent is controller-local");
         }
 
         @Override

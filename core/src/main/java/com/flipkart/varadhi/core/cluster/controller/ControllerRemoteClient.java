@@ -12,7 +12,6 @@ import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -21,8 +20,8 @@ import static com.flipkart.varadhi.core.cluster.controller.ControllerApi.ROUTE_C
 /**
  * Remote stub for {@link ControllerApi} over {@link MessageExchange}.
  *
- * <p>{@link #sendEvent} is unsupported — transition broadcasts originate on the controller and use
- * {@code TransitionService} in-process.
+ * <p>Pods use this for subscription RPCs and transition acks. Stage-event broadcast is
+ * controller-local ({@link TransitionPublisher}) and is not exposed here.
  */
 public class ControllerRemoteClient implements ControllerApi {
 
@@ -72,11 +71,6 @@ public class ControllerRemoteClient implements ControllerApi {
         ClusterMessage message = ClusterMessage.of(subscriptionId);
         return exchange.request(ROUTE_CONTROLLER, "getShards", message)
                        .thenApply(rm -> rm.getResponse(ShardAssignments.class));
-    }
-
-    @Override
-    public CompletableFuture<Void> sendEvent(TransitionEvent event) {
-        throw new UnsupportedOperationException("sendEvent is controller-local; call TransitionService in-process");
     }
 
     @Override

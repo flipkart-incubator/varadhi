@@ -11,13 +11,13 @@ import lombok.experimental.UtilityClass;
  * predictably alongside other routes ({@code <route>.<api>.<method>}):
  *
  * <ul>
- *   <li><b>Forward leg (controller → all pods):</b> {@code TransitionService#sendEvent}
- *       publishes a {@code TransitionEvent} to
+ *   <li><b>Forward leg (controller → all pods):</b> {@code TransitionPublisher#broadcastEvent}
+ *       ({@code TransitionService}) publishes a {@code TransitionEvent} to
  *       {@code ROUTE_TOPIC_TRANSITION + "." + EVENT_PUBLISH_API + ".publish"}; every pod
- *       registers a {@code registerPublishReceiveHandler} there. Remote clients do not
- *       publish — {@code ControllerRemoteClient#sendEvent} throws.</li>
+ *       registers via {@code TransitionBus.subscribe}. Not part of
+ *       {@code ControllerRemoteClient}.</li>
  *   <li><b>Back leg (pod → controller):</b> a pod sends a {@code TransitionAck} via
- *       {@code ControllerRemoteClient#ack} to
+ *       {@code TransitionAckApi#ack} ({@code ControllerRemoteClient}) to
  *       {@code <controllerRoute>." + STAGE_ACK_API + ".send"} (the controller route is
  *       {@code ControllerApi.ROUTE_CONTROLLER}).</li>
  * </ul>

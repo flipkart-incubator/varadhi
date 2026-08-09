@@ -17,13 +17,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Micrometer metrics for the pod-side topic-transition handler.
  *
- * <p>Low-cardinality tags only ({@code type}, {@code stage}, {@code success}, {@code participation}).
+ * <p>Low-cardinality tags only ({@code type}, {@code stage}, {@code participation}).
  * Topic identity stays in logs.
+ *
+ * <p>Throughput stays on counters; recoverable failure state is a gauge (0/1) so alerts clear
+ * when the next attempt succeeds.
  */
 public final class TransitionMetrics {
 
     private static final String STAGE_RECEIVED = "topic.transition.stage.received";
     private static final String STAGE_ACKED = "topic.transition.stage.acked";
+    private static final String STAGE_ACK_FAILED = "topic.transition.stage.ack.failed";
     private static final String PARTICIPATION = "topic.transition.participation";
     private static final String ACK_SEND_FAILED = "topic.transition.ack.send.failed";
     private static final String VERSION_WAITS_IN_FLIGHT = "topic.transition.version_waits.in_flight";
@@ -33,6 +37,8 @@ public final class TransitionMetrics {
     private final AtomicInteger versionWaitsInFlight = new AtomicInteger();
     private final ConcurrentMap<TransitionType, TransitionParticipation> participationByType =
         new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, AtomicInteger> stageAckFailedByKey = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, AtomicInteger> ackSendFailedByKey = new ConcurrentHashMap<>();
 
     public TransitionMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -59,10 +65,17 @@ public final class TransitionMetrics {
         counter(STAGE_RECEIVED, Tags.of("type", type.name(), "stage", stage.name())).increment();
     }
 
-    /** This pod acked a stage; {@code success} is the ack outcome. */
+    /**
+     * This pod finished acking a stage. Success increments a throughput counter and clears the
+     * failure gauge; failure sets the gauge to {@code 1} (alert-friendly, auto-clears on success).
+     */
     public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
-        counter(STAGE_ACKED, Tags.of("type", type.name(), "stage", stage.name(), "success", Boolean.toString(success)))
-                                                                                                                       .increment();
+        if (success) {
+            counter(STAGE_ACKED, Tags.of("type", type.name(), "stage", stage.name())).increment();
+            failureGauge(STAGE_ACK_FAILED, stageAckFailedByKey, type, stage).set(0);
+        } else {
+            failureGauge(STAGE_ACK_FAILED, stageAckFailedByKey, type, stage).set(1);
+        }
     }
 
     /**
@@ -78,9 +91,14 @@ public final class TransitionMetrics {
         participationByType.remove(type);
     }
 
-    /** Failed to deliver a {@code TransitionAck} to the controller. */
+    /** Failed to deliver a {@code TransitionAck} to the controller (gauge = 1 until a send succeeds). */
     public void ackSendFailed(TransitionType type, TransitionStage stage) {
-        counter(ACK_SEND_FAILED, Tags.of("type", type.name(), "stage", stage.name())).increment();
+        failureGauge(ACK_SEND_FAILED, ackSendFailedByKey, type, stage).set(1);
+    }
+
+    /** Delivered a {@code TransitionAck} successfully — clears {@link #ackSendFailed}. */
+    public void ackSendSucceeded(TransitionType type, TransitionStage stage) {
+        failureGauge(ACK_SEND_FAILED, ackSendFailedByKey, type, stage).set(0);
     }
 
     /** A version-gated wait started on this pod. */
@@ -98,7 +116,27 @@ public final class TransitionMetrics {
         registeredMeters.forEach(registry::remove);
         registeredMeters.clear();
         participationByType.clear();
+        stageAckFailedByKey.clear();
+        ackSendFailedByKey.clear();
         versionWaitsInFlight.set(0);
+    }
+
+    private AtomicInteger failureGauge(
+        String name,
+        ConcurrentMap<String, AtomicInteger> byKey,
+        TransitionType type,
+        TransitionStage stage
+    ) {
+        String key = type.name() + "|" + stage.name();
+        return byKey.computeIfAbsent(key, ignored -> {
+            AtomicInteger value = new AtomicInteger(0);
+            track(
+                Gauge.builder(name, value, AtomicInteger::get)
+                     .tags(Tags.of("type", type.name(), "stage", stage.name()))
+                     .register(registry)
+            );
+            return value;
+        });
     }
 
     private Counter counter(String name, Tags tags) {

@@ -7,7 +7,7 @@ import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.controller.ControllerRemoteClient;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBus;
 import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -28,22 +28,22 @@ import java.util.concurrent.ScheduledExecutorService;
  * version-wait scheduler it creates.
  */
 @Slf4j
-public final class TopicTransitionPodWiring implements AutoCloseable {
+public final class TopicTransitionManager implements AutoCloseable {
 
     private final ScheduledExecutorService scheduler;
     private final TransitionMetrics metrics;
 
-    private TopicTransitionPodWiring(ScheduledExecutorService scheduler, TransitionMetrics metrics) {
+    private TopicTransitionManager(ScheduledExecutorService scheduler, TransitionMetrics metrics) {
         this.scheduler = scheduler;
         this.metrics = metrics;
     }
 
     /**
-     * Wires {@link ProduceTransitionMsgHandler} on the cluster broadcast bus.
+     * Subscribes {@link ProduceTransitionMsgHandler} via {@link TransitionBus}.
      *
      * @return a closeable wiring handle that owns the version-wait scheduler and metrics
      */
-    public static TopicTransitionPodWiring wire(
+    public static TopicTransitionManager wire(
         VaradhiClusterManager clusterManager,
         Vertx vertx,
         ResourceReadCacheRegistry cacheRegistry,
@@ -72,13 +72,9 @@ public final class TopicTransitionPodWiring implements AutoCloseable {
             scheduler,
             metrics
         );
-        messageRouter.registerPublishReceiveHandler(
-            TransitionBusAddress.ROUTE_TOPIC_TRANSITION,
-            TransitionBusAddress.EVENT_PUBLISH_API,
-            handler
-        );
+        TransitionBus.subscribe(messageRouter, handler);
         log.info("Wired topic-transition stage handler");
-        return new TopicTransitionPodWiring(scheduler, metrics);
+        return new TopicTransitionManager(scheduler, metrics);
     }
 
     @Override

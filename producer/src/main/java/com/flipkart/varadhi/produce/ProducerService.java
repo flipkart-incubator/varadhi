@@ -274,11 +274,6 @@ public final class ProducerService {
         }
     }
 
-    /** This pod's deployed region — produce target resolution key. */
-    public String deployedRegion() {
-        return produceRegion;
-    }
-
     /**
      * Pre-warms the producer for {@code region} (ungated resolve). Used by topic-failover PREPARE.
      */
@@ -292,6 +287,17 @@ public final class ProducerService {
             );
         }
         return getProducer(key.get());
+    }
+
+    /**
+     * Whether this pod already has a cached producer for the topic's active produce path in
+     * {@code produceRegion}. Uses <em>ungated</em> resolve (same as PREPARE warm) so fencing does
+     * not hide an existing producer when deciding transition participation.
+     */
+    public boolean hasActiveProducer(VaradhiTopic topic) {
+        return TopicResolver.resolve(topic, RegionName.of(produceRegion), false)
+                            .map(key -> hasProducer(topic.getName(), key.storageTopicId(), key.produceRegion().value()))
+                            .orElse(false);
     }
 
     /**
