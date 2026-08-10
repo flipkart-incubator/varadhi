@@ -71,3 +71,24 @@ Module dependency diagram: `docs/module-structure.png`.
 ## Docs workflow
 
 Do not edit `docs/` during feature implementation; sync separately (codescope `update-docs` skill). Honor judgments in [`docs/.codescope.memory`](docs/.codescope.memory).
+<!-- codescope:start -->
+## Architecture docs (codescope)
+
+This project keeps [C4](https://c4model.com/)-inspired architecture docs under **`docs/`** (relative to this repo).
+
+| Doc | Level | Role |
+|---|---|---|
+| `system-context.md` | L1 | Actors, boundaries, externals |
+| `containers.md` | L2 | Deployable units and how they connect |
+| `**/components.md` | L3 | Internals per container |
+| `flows.md` | — | Cross-container behavior |
+
+**When the codescope MCP server is wired** (`.cursor/mcp.json` for Cursor, `.mcp.json` for Claude), prefer:
+
+- **`codescope_explore`** — architecture context for keywords, a node id, or a file path; omit `query` to list documented service / architecture vocabulary.
+- **`codescope_show`** — verbatim sections when you already know the node id.
+
+**CLI fallback** (same data): `codescope explore` and `codescope show`.
+
+Reach for these before grepping `docs/` or inventing architecture names.
+<!-- codescope:end -->
