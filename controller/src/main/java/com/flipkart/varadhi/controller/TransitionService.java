@@ -3,7 +3,7 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.controller.TransitionAckApi;
 import com.flipkart.varadhi.core.cluster.controller.TransitionPublisher;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBus;
+import com.flipkart.varadhi.core.cluster.failover.TransitionEventBroadcaster;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi 
     @Override
     public CompletableFuture<Void> broadcastEvent(TransitionEvent event) {
         try {
-            TransitionBus.publish(messageExchange, event);
+            TransitionEventBroadcaster.publish(messageExchange, event);
             return CompletableFuture.completedFuture(null);
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);

@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -55,6 +56,11 @@ import java.util.concurrent.ScheduledExecutorService;
  * <p>Version wait uses exceptions as control flow ({@code <} retry, {@code =} success,
  * {@code >} fail). Acks are applied once at the end of the async chain ({@code thenAccept} /
  * {@code exceptionally}), not from every helper.
+ *
+ * <p>Threading: Failsafe version polls run on the <em>retry</em> scheduler; orchestration
+ * (metrics, PREPARE decision, ack) hops to the dedicated <em>transition</em> executor.
+ * Producer warm may complete on the producer path; {@code thenAcceptAsync}/{@code exceptionallyAsync}
+ * switch back to the transition executor before ack.
  */
 @Slf4j
 public final class ProduceTransitionMsgHandler implements TransitionEventListener {
@@ -75,6 +81,7 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
     private final FailsafeExecutor<TransitionEvent> versionWaitExecutor;
+    private final Executor transitionExecutor;
     private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
 
     public ProduceTransitionMsgHandler(
@@ -83,7 +90,8 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         TransitionAckApi transitionAckApi,
         ProducerService producerService,
         PodTransitionConfig config,
-        ScheduledExecutorService scheduler,
+        ScheduledExecutorService versionWaitScheduler,
+        Executor transitionExecutor,
         TransitionMetrics metrics
     ) {
         this.hostname = hostname;
@@ -91,8 +99,9 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         this.transitionAckApi = transitionAckApi;
         this.producerService = producerService;
         this.metrics = metrics;
+        this.transitionExecutor = transitionExecutor;
         this.versionWaitExecutor = RetryUtils.newPollingExecutor(
-            scheduler,
+            versionWaitScheduler,
             config.versionWaitMaxAttempts(),
             config.podPollIntervalMs(),
             VersionPendingException.class
@@ -103,21 +112,22 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     public void onTransition(TransitionEvent event) {
         metrics.stageReceived(event.transitionType(), event.stage());
         if (!event.awaitVersion()) {
-            ackOk(event);
+            // Keep event-bus thread free; ack on transition executor.
+            CompletableFuture.runAsync(() -> ackOk(event), transitionExecutor);
             return;
         }
-        // Event-bus thread only schedules work; polling + PREPARE warm run on the transition scheduler.
         String topicFqn = event.topicFqn().toFqn();
         metrics.versionWaitStarted();
+        // probe → retry TP; metrics / PREPARE / ack → transition TP (warm may leave briefly then hop back).
         versionWaitExecutor.getAsync(() -> probeVersion(event))
-                           .whenComplete((ignored, t) -> metrics.versionWaitFinished())
-                           .thenCompose(this::onVersionReached)
-                           .thenAccept(this::ackOk)
-                           .exceptionally(t -> {
+                           .whenCompleteAsync((ignored, t) -> metrics.versionWaitFinished(), transitionExecutor)
+                           .thenComposeAsync(this::onVersionReached, transitionExecutor)
+                           .thenAcceptAsync(this::ackOk, transitionExecutor)
+                           .exceptionallyAsync(t -> {
                                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
                                ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
                                return null;
-                           });
+                           }, transitionExecutor);
     }
 
     /**

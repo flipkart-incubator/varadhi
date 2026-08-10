@@ -35,6 +35,28 @@ class TransitionMetricsTest {
     }
 
     @Test
+    void failureGauges_preRegisteredAndReadLiveMap() {
+        assertEquals(
+            0.0,
+            registry.find("topic.transition.stage.ack.failed")
+                    .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "PREPARE")
+                    .gauge()
+                    .value()
+        );
+
+        metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, false);
+        assertEquals(
+            1.0,
+            registry.find("topic.transition.stage.ack.failed")
+                    .tag("type", "TOPIC_FAILOVER")
+                    .tag("stage", "PREPARE")
+                    .gauge()
+                    .value()
+        );
+    }
+
+    @Test
     void stageAcked_successIncrementsCounterAndClearsFailureGauge() {
         metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, false);
         assertEquals(

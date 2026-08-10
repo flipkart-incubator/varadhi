@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -67,7 +68,8 @@ class ProduceTransitionMsgHandlerTest {
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private ProducerService producerService;
     private CapturingTransitionAckApi acker;
-    private ScheduledExecutorService scheduler;
+    private ScheduledExecutorService versionWaitScheduler;
+    private ExecutorService transitionExecutor;
     private TransitionMetrics metrics;
 
     @BeforeEach
@@ -86,13 +88,16 @@ class ProduceTransitionMsgHandlerTest {
         when(producerService.loadProducer(any(VaradhiTopicName.class), anyInt())).thenReturn(
             CompletableFuture.completedFuture(null)
         );
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+        versionWaitScheduler = Executors.newSingleThreadScheduledExecutor();
+        transitionExecutor = Executors.newSingleThreadExecutor();
         metrics = new TransitionMetrics(new SimpleMeterRegistry());
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        scheduler.shutdownNow();
+        versionWaitScheduler.shutdownNow();
+        transitionExecutor.shutdownNow();
+        metrics.close();
         vertx.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
     }
 
@@ -108,7 +113,8 @@ class ProduceTransitionMsgHandlerTest {
             acker,
             producerService,
             config,
-            scheduler,
+            versionWaitScheduler,
+            transitionExecutor,
             metrics
         );
     }
@@ -331,7 +337,7 @@ class ProduceTransitionMsgHandlerTest {
     void switchAcksOkWhenVersionArrivesLater() throws Exception {
         seed(10); // behind target — keep polling until seed(11)
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
-        scheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
+        versionWaitScheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
 
         h.onTransition(
             TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)

@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>Low-cardinality tags only ({@code type}, {@code stage}, {@code participation}).
  * Topic identity stays in logs.
  *
- * <p>Throughput stays on counters; recoverable failure state is a gauge (0/1) so alerts clear
- * when the next attempt succeeds.
+ * <p>Throughput stays on counters; recoverable failure / participation state is exposed as
+ * gauges bound to suppliers over live maps so scrapers always read current state.
  */
 public final class TransitionMetrics {
 
@@ -37,8 +37,8 @@ public final class TransitionMetrics {
     private final AtomicInteger versionWaitsInFlight = new AtomicInteger();
     private final ConcurrentMap<TransitionType, TransitionParticipation> participationByType =
         new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, AtomicInteger> stageAckFailedByKey = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, AtomicInteger> ackSendFailedByKey = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Boolean> stageAckFailedByKey = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Boolean> ackSendFailedByKey = new ConcurrentHashMap<>();
 
     public TransitionMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -57,6 +57,25 @@ public final class TransitionMetrics {
                          .register(registry)
                 );
             }
+            for (TransitionStage stage : TransitionStage.values()) {
+                String key = key(type, stage);
+                TransitionType transitionType = type;
+                TransitionStage transitionStage = stage;
+                track(
+                    Gauge.builder(
+                        STAGE_ACK_FAILED,
+                        stageAckFailedByKey,
+                        map -> Boolean.TRUE.equals(map.get(key)) ? 1.0 : 0.0
+                    ).tags(Tags.of("type", transitionType.name(), "stage", transitionStage.name())).register(registry)
+                );
+                track(
+                    Gauge.builder(
+                        ACK_SEND_FAILED,
+                        ackSendFailedByKey,
+                        map -> Boolean.TRUE.equals(map.get(key)) ? 1.0 : 0.0
+                    ).tags(Tags.of("type", transitionType.name(), "stage", transitionStage.name())).register(registry)
+                );
+            }
         }
     }
 
@@ -67,14 +86,14 @@ public final class TransitionMetrics {
 
     /**
      * This pod finished acking a stage. Success increments a throughput counter and clears the
-     * failure gauge; failure sets the gauge to {@code 1} (alert-friendly, auto-clears on success).
+     * failure gauge; failure marks the gauge {@code 1} (alert-friendly, clears on next success).
      */
     public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
         if (success) {
             counter(STAGE_ACKED, Tags.of("type", type.name(), "stage", stage.name())).increment();
-            failureGauge(STAGE_ACK_FAILED, stageAckFailedByKey, type, stage).set(0);
+            stageAckFailedByKey.put(key(type, stage), false);
         } else {
-            failureGauge(STAGE_ACK_FAILED, stageAckFailedByKey, type, stage).set(1);
+            stageAckFailedByKey.put(key(type, stage), true);
         }
     }
 
@@ -93,12 +112,12 @@ public final class TransitionMetrics {
 
     /** Failed to deliver a {@code TransitionAck} to the controller (gauge = 1 until a send succeeds). */
     public void ackSendFailed(TransitionType type, TransitionStage stage) {
-        failureGauge(ACK_SEND_FAILED, ackSendFailedByKey, type, stage).set(1);
+        ackSendFailedByKey.put(key(type, stage), true);
     }
 
     /** Delivered a {@code TransitionAck} successfully — clears {@link #ackSendFailed}. */
     public void ackSendSucceeded(TransitionType type, TransitionStage stage) {
-        failureGauge(ACK_SEND_FAILED, ackSendFailedByKey, type, stage).set(0);
+        ackSendFailedByKey.put(key(type, stage), false);
     }
 
     /** A version-gated wait started on this pod. */
@@ -121,22 +140,8 @@ public final class TransitionMetrics {
         versionWaitsInFlight.set(0);
     }
 
-    private AtomicInteger failureGauge(
-        String name,
-        ConcurrentMap<String, AtomicInteger> byKey,
-        TransitionType type,
-        TransitionStage stage
-    ) {
-        String key = type.name() + "|" + stage.name();
-        return byKey.computeIfAbsent(key, ignored -> {
-            AtomicInteger value = new AtomicInteger(0);
-            track(
-                Gauge.builder(name, value, AtomicInteger::get)
-                     .tags(Tags.of("type", type.name(), "stage", stage.name()))
-                     .register(registry)
-            );
-            return value;
-        });
+    private static String key(TransitionType type, TransitionStage stage) {
+        return type.name() + "|" + stage.name();
     }
 
     private Counter counter(String name, Tags tags) {
