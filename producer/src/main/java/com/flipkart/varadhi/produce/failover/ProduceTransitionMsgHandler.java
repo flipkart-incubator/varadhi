@@ -69,8 +69,8 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
      * Probe signal: TopicCache is still behind the coordinated version. Failsafe retries until
      * the version catches up or attempts are exhausted ({@link java.util.concurrent.TimeoutException}).
      */
-    static final class VersionPendingException extends RuntimeException {
-        VersionPendingException(long current, long target) {
+    static final class StaleVersionException extends RuntimeException {
+        StaleVersionException(long current, long target) {
             super("topic version " + current + " < target " + target);
         }
     }
@@ -104,13 +104,14 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
             versionWaitScheduler,
             config.versionWaitMaxAttempts(),
             config.podPollIntervalMs(),
-            VersionPendingException.class
+            StaleVersionException.class
         );
     }
 
     @Override
     public void onTransition(TransitionEvent event) {
         metrics.stageReceived(event.transitionType(), event.stage());
+        metrics.setTopicStage(event.topicFqn().toFqn(), event.stage());
         if (!event.awaitVersion()) {
             // Keep event-bus thread free; ack on transition executor.
             CompletableFuture.runAsync(() -> ackOk(event), transitionExecutor);
@@ -142,7 +143,7 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         long version = cached.get().getVersion();
         long target = event.topicVersionToAwait();
         if (version < target) {
-            throw new VersionPendingException(version, target);
+            throw new StaleVersionException(version, target);
         }
         if (version > target) {
             throw new VaradhiException(
@@ -222,12 +223,13 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         if (event.stage() == TransitionStage.COMPLETED || event.stage() == TransitionStage.ABORTED) {
             participationByOpId.remove(event.opId());
             metrics.clearParticipation(event.transitionType());
+            metrics.clearTopicStage(event.topicFqn().toFqn());
         }
     }
 
     private void ackOk(TransitionEvent event) {
         TransitionParticipation participation = resolveParticipation(event);
-        metrics.stageAcked(event.transitionType(), event.stage(), true);
+        metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn().toFqn(), true);
         sendAck(
             TransitionAck.success(
                 event.opId(),
@@ -243,7 +245,7 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
 
     private void ackFail(TransitionEvent event, String errorMsg) {
         TransitionParticipation participation = resolveParticipation(event);
-        metrics.stageAcked(event.transitionType(), event.stage(), false);
+        metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn().toFqn(), false);
         sendAck(
             TransitionAck.failure(
                 event.opId(),
