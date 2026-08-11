@@ -2,6 +2,7 @@ package com.flipkart.varadhi.spi.db;
 
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 
 import java.util.List;
 
@@ -29,4 +30,12 @@ public interface OpStore {
     boolean shardOpExists(String shardOpId);
 
     void updateShardOp(ShardOperation operation);
+
+    void createTopicFailoverOp(TopicFailoverOperation operation);
+
+    TopicFailoverOperation getTopicFailoverOp(String operationId);
+
+    List<TopicFailoverOperation> getPendingTopicFailoverOps();
+
+    void updateTopicFailoverOp(TopicFailoverOperation operation);
 }

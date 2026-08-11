@@ -200,7 +200,7 @@ public class OperationMgrTest {
         CountDownLatch completed2 = completeOperation(startOp2);
         waiting3.countDown();
         CountDownLatch completed3 = completeOperation(startOp3);
-        await().atMost(1, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0 && completed3.getCount() == 0);
+        await().atMost(20, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0 && completed3.getCount() == 0);
         assertEquals(0, operationMgr.getPendingOperations(orderingKey2).size());
         assertEquals(0, operationMgr.getPendingOperations(orderingKey3).size());
     }

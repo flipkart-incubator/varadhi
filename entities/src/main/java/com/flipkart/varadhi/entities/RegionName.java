@@ -9,7 +9,10 @@ import java.util.Objects;
 /**
  * Represents a region name as a value object.
  * <p>
- * This class provides type safety for region names and ensures they are not null or blank.
+ * This class provides type safety for region names and ensures they are not null or blank. It is
+ * used as the typed key for per-region {@code produceConfigs} on {@link VaradhiTopic} and for the
+ * source/target region fields on the topic-failover APIs, instead of a raw {@link String}, so those
+ * call sites cannot accidentally mix region names with other string identifiers.
  */
 public record RegionName(@JsonValue String value) {
 

@@ -12,6 +12,9 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Controller-local topic-transition service: broadcast stage events and accept pod acks.
+ *
+ * <p>Live ack barrier handling is in {@link SubscriptionService#recordFailoverAck}; this
+ * {@link #ack} implementation is a no-op for the publisher/ack API surface.
  */
 @Slf4j
 public class TransitionService implements TransitionPublisher, TransitionAckApi {
@@ -34,8 +37,7 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi 
 
     @Override
     public CompletableFuture<Void> ack(TransitionAck ack) {
-        // Delivery is accepted here; stage-barrier orchestration will consume these acks when wired.
-        log.debug("Received topic-transition ack: {}", ack);
+        log.debug("Received topic-transition ack (barrier handled elsewhere): {}", ack);
         return CompletableFuture.completedFuture(null);
     }
 }
