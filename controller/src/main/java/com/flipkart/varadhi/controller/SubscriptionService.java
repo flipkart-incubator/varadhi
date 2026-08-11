@@ -14,7 +14,6 @@ import com.flipkart.varadhi.core.cluster.ConsumerInfo;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
-import com.flipkart.varadhi.core.cluster.controller.ConsumerCallbackApi;
 import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
@@ -54,7 +53,7 @@ import static com.flipkart.varadhi.common.Constants.SYSTEM_IDENTITY;
  * Controller-side subscription lifecycle + consumer membership / shard-op callbacks.
  */
 @Slf4j
-public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi {
+public class SubscriptionService implements SubscriptionApi {
 
     private final AssignmentManager assignmentManager;
     private final ConsumerClientFactory consumerClientFactory;
@@ -466,7 +465,9 @@ public class SubscriptionService implements SubscriptionApi, ConsumerCallbackApi
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
-        if (topic.getStorageTopic() == null) {
+        if (topic.getSegmentedStorageTopic() == null
+            || topic.getSegmentedStorageTopic().getStorageTopics() == null
+            || topic.getSegmentedStorageTopic().getStorageTopics().length == 0) {
             throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }
         RegionName producing = TopicProduceConfigs.findActiveProducingRegion(topic).orElse(null);

@@ -4,7 +4,6 @@ import dev.failsafe.FailsafeExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -16,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RetryUtilsTest {
 
@@ -30,42 +28,66 @@ class RetryUtilsTest {
     }
 
     @Test
-    void newResultPollingExecutor_completesWhenProbeStopsRetrying() throws Exception {
+    void newPollingExecutor_retriesThenSucceeds() throws Exception {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newResultPollingExecutor(
+        FailsafeExecutor<String> executor = RetryUtils.newPollingExecutor(
             scheduler,
             5,
             5L,
-            Optional::isEmpty
+            IllegalStateException.class
         );
         AtomicInteger attempts = new AtomicInteger();
 
-        CompletableFuture<Optional<Long>> future = executor.getAsync(
-            () -> attempts.incrementAndGet() >= 2 ? Optional.of(42L) : Optional.empty()
-        );
+        CompletableFuture<String> future = executor.getAsync(() -> {
+            if (attempts.incrementAndGet() < 3) {
+                throw new IllegalStateException("not yet");
+            }
+            return "ok";
+        });
 
-        assertEquals(Optional.of(42L), future.get(2, TimeUnit.SECONDS));
-        assertTrue(attempts.get() >= 2);
+        assertEquals("ok", future.get(2, TimeUnit.SECONDS));
+        assertEquals(3, attempts.get());
     }
 
     @Test
-    void newResultPollingExecutor_stopsAfterMaxAttempts() {
+    void newPollingExecutor_exhaustionIsTimeout() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        FailsafeExecutor<Optional<Long>> executor = RetryUtils.newResultPollingExecutor(
+        FailsafeExecutor<String> executor = RetryUtils.newPollingExecutor(
             scheduler,
             3,
             5L,
-            Optional::isEmpty
+            IllegalStateException.class
         );
         AtomicInteger attempts = new AtomicInteger();
 
-        CompletableFuture<Optional<Long>> future = executor.getAsync(() -> {
+        CompletableFuture<String> future = executor.getAsync(() -> {
             attempts.getAndIncrement();
-            return Optional.empty();
+            throw new IllegalStateException("not yet");
         });
 
         ExecutionException thrown = assertThrows(ExecutionException.class, () -> future.get(2, TimeUnit.SECONDS));
         assertInstanceOf(TimeoutException.class, thrown.getCause());
         assertEquals(3, attempts.get());
+    }
+
+    @Test
+    void newPollingExecutor_nonRetryableFailsImmediately() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        FailsafeExecutor<String> executor = RetryUtils.newPollingExecutor(
+            scheduler,
+            5,
+            5L,
+            IllegalStateException.class
+        );
+        AtomicInteger attempts = new AtomicInteger();
+
+        CompletableFuture<String> future = executor.getAsync(() -> {
+            attempts.getAndIncrement();
+            throw new IllegalArgumentException("hard fail");
+        });
+
+        ExecutionException thrown = assertThrows(ExecutionException.class, () -> future.get(2, TimeUnit.SECONDS));
+        assertInstanceOf(IllegalArgumentException.class, thrown.getCause());
+        assertEquals(1, attempts.get());
     }
 }

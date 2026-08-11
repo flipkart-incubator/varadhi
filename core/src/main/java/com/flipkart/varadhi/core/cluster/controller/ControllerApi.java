@@ -8,10 +8,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Cluster-facing controller API: subscription lifecycle + topic-transition coordination.
- * Consumer shard callbacks live on {@link ConsumerCallbackApi}.
+ * Cluster-facing controller API: subscription lifecycle + topic-transition acks + failover RPCs.
+ * Consumer shard callbacks live on {@link SubscriptionApi#update}.
+ *
+ * <p>Broadcast of transition stage events is controller-local ({@link TransitionPublisher}),
+ * not part of this remote-callable surface.
  */
-public interface ControllerApi extends SubscriptionApi, TransitionApi {
+public interface ControllerApi extends SubscriptionApi, TransitionAckApi {
     String ROUTE_CONTROLLER = "controller";
 
     CompletableFuture<TopicFailoverOperation> createTopicFailover(

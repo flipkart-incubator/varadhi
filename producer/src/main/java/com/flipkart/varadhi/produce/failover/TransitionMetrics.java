@@ -1,105 +1,131 @@
 package com.flipkart.varadhi.produce.failover;
 
-import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.*;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Micrometer metrics for the pod-side topic-transition handler.
  *
- * <p>Low-cardinality tags only ({@code type}, {@code stage}, {@code success}, {@code participation}).
- * Topic identity stays in logs.
+ * <p><b>Counters</b> (low-cardinality {@code type}/{@code stage}): produce ↔ controller traffic
+ * — stages received/acked, ack-send outcomes.
+ *
+ * <p><b>Gauges</b> bind suppliers over live collections (same pattern as oncall
+ * {@code SqArchivalStats}): the meter holds a ref to the set/map; scrapers call
+ * {@code size()}/{@code get} — events only mutate the collection.
+ * <ul>
+ *   <li>Sticky produce/stage failure alert — set of topic FQNs; gauge = set size</li>
+ *   <li>In-flight topic stage — map topic → stage; gauge = map size + per-stage counts</li>
+ * </ul>
  */
 public final class TransitionMetrics {
 
-    private static final String STAGE_RECEIVED = "topic.transition.stage.received";
-    private static final String STAGE_ACKED = "topic.transition.stage.acked";
-    private static final String PARTICIPATION = "topic.transition.participation";
-    private static final String ACK_SEND_FAILED = "topic.transition.ack.send.failed";
-    private static final String VERSION_WAITS_IN_FLIGHT = "topic.transition.version_waits.in_flight";
+    /** Bus Metrics */
+    private static final String STAGE_RECEIVED = "topic.transition.event.received";
+    private static final String STAGE_ACKED = "topic.transition.event.acked";
+    private static final String ACK_SEND_FAILED = STAGE_ACKED + ".failed";
+
+    /** Transition Metrics */
+    private static final String TOPICS_IN_STAGE = "topic.transition.active";
+    private static final String STAGE_FAILURE_TOPICS = "topic.transition.failure";
 
     private final MeterRegistry registry;
     private final Set<Meter> registeredMeters = ConcurrentHashMap.newKeySet();
-    private final AtomicInteger versionWaitsInFlight = new AtomicInteger();
-    private final ConcurrentMap<TransitionType, TransitionParticipation> participationByType =
-        new ConcurrentHashMap<>();
+
+    /** Sticky: topic FQNs with a stage/produce failure until a later success clears them. */
+    private final Set<String> topicsWithStageFailure = ConcurrentHashMap.newKeySet();
+    /** Live stage per topic FQN on this pod. */
+    private final ConcurrentMap<String, TransitionStage> topicStage = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Boolean> ackSendFailedByKey = new ConcurrentHashMap<>();
 
     public TransitionMetrics(MeterRegistry registry) {
         this.registry = registry;
-        track(Gauge.builder(VERSION_WAITS_IN_FLIGHT, versionWaitsInFlight, AtomicInteger::get).register(registry));
+        // Gauge holds a ref to the set/map; scrapers read size
+        track(Gauge.builder(STAGE_FAILURE_TOPICS, topicsWithStageFailure, Set::size).register(registry));
+        for (TransitionStage stage : TransitionStage.values()) {
+            track(
+                Gauge.builder(TOPICS_IN_STAGE, () -> topicStage.values().stream().filter(s -> s == stage).count())
+                     .tags(Tags.of("stage", stage.name()))
+                     .register(registry)
+            );
+        }
         for (TransitionType type : TransitionType.values()) {
-            for (TransitionParticipation participation : TransitionParticipation.values()) {
-                TransitionType transitionType = type;
-                TransitionParticipation participationValue = participation;
+            for (TransitionStage stage : TransitionStage.values()) {
+                String key = key(type, stage);
                 track(
                     Gauge.builder(
-                        PARTICIPATION,
-                        participationByType,
-                        map -> map.get(transitionType) == participationValue ? 1.0 : 0.0
-                    )
-                         .tags(Tags.of("type", transitionType.name(), "participation", participationValue.name()))
-                         .register(registry)
+                        ACK_SEND_FAILED,
+                        ackSendFailedByKey,
+                        map -> Boolean.TRUE.equals(map.get(key)) ? 1.0 : 0.0
+                    ).tags(Tags.of("type", type.name(), "stage", stage.name())).register(registry)
                 );
             }
         }
     }
 
-    /** A stage broadcast was received by this pod. */
+    /** A stage broadcast was received by this pod (produce ↔ controller traffic). */
     public void stageReceived(TransitionType type, TransitionStage stage) {
         counter(STAGE_RECEIVED, Tags.of("type", type.name(), "stage", stage.name())).increment();
     }
 
-    /** This pod acked a stage; {@code success} is the ack outcome. */
-    public void stageAcked(TransitionType type, TransitionStage stage, boolean success) {
-        counter(STAGE_ACKED, Tags.of("type", type.name(), "stage", stage.name(), "success", Boolean.toString(success)))
-                                                                                                                       .increment();
+    /**
+     * Records that this pod is handling {@code topicFqn} at {@code stage}
+     * (gauge suppliers read {@link #topicStage}).
+     */
+    public void setTopicStage(String topicFqn, TransitionStage stage) {
+        topicStage.put(topicFqn, stage);
+    }
+
+    /** Drops in-flight stage tracking for {@code topicFqn} (terminal stages). */
+    public void clearTopicStage(String topicFqn) {
+        topicStage.remove(topicFqn);
     }
 
     /**
-     * Records this pod's participation for an in-flight op ({@code 1} on the active value,
-     * {@code 0} on the other). Cleared via {@link #clearParticipation(TransitionType)}.
+     * Stage ack outcome. Success increments a counter and clears sticky topic failure;
+     * failure adds {@code topicFqn} to the sticky set (alert on set size &gt; 0).
+     * Does <em>not</em> clear the sticky set on ABORTED alone — only success removes.
      */
-    public void setParticipation(TransitionType type, TransitionParticipation participation) {
-        participationByType.put(type, participation);
+    public void stageAcked(TransitionType type, TransitionStage stage, String topicFqn, boolean success) {
+        if (success) {
+            counter(STAGE_ACKED, Tags.of("type", type.name(), "stage", stage.name())).increment();
+            topicsWithStageFailure.remove(topicFqn);
+        } else {
+            topicsWithStageFailure.add(topicFqn);
+        }
     }
 
-    /** Clears participation gauges when the op reaches a terminal stage. */
-    public void clearParticipation(TransitionType type) {
-        participationByType.remove(type);
-    }
 
-    /** Failed to deliver a {@code TransitionAck} to the controller. */
+    /** Failed to deliver a {@code TransitionAck} to the controller (gauge = 1 until a send succeeds). */
     public void ackSendFailed(TransitionType type, TransitionStage stage) {
-        counter(ACK_SEND_FAILED, Tags.of("type", type.name(), "stage", stage.name())).increment();
+        ackSendFailedByKey.put(key(type, stage), true);
     }
 
-    /** A version-gated wait started on this pod. */
-    public void versionWaitStarted() {
-        versionWaitsInFlight.incrementAndGet();
+    /** Delivered a {@code TransitionAck} successfully — clears {@link #ackSendFailed}. */
+    public void ackSendSucceeded(TransitionType type, TransitionStage stage) {
+        ackSendFailedByKey.put(key(type, stage), false);
     }
 
-    /** A version-gated wait finished (success, failure, or timeout). */
-    public void versionWaitFinished() {
-        versionWaitsInFlight.decrementAndGet();
+    /** Snapshot of topic FQNs currently sticky-failed (for tests / diagnostics). */
+    public Set<String> getTopicsWithStageFailure() {
+        return Set.copyOf(topicsWithStageFailure);
     }
 
     /** Removes all meters this instance registered from the {@link MeterRegistry}. */
     public void close() {
         registeredMeters.forEach(registry::remove);
         registeredMeters.clear();
-        participationByType.clear();
-        versionWaitsInFlight.set(0);
+        topicsWithStageFailure.clear();
+        topicStage.clear();
+        ackSendFailedByKey.clear();
+    }
+
+    private static String key(TransitionType type, TransitionStage stage) {
+        return type.name() + "|" + stage.name();
     }
 
     private Counter counter(String name, Tags tags) {
@@ -110,7 +136,4 @@ public final class TransitionMetrics {
         registeredMeters.add(meter);
         return meter;
     }
-
-    /** No-op instance for use in tests. */
-    public static final TransitionMetrics NOOP = new TransitionMetrics(new SimpleMeterRegistry());
 }

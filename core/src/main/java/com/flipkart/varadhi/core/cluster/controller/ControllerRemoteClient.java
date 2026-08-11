@@ -16,19 +16,21 @@ import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.flipkart.varadhi.core.cluster.controller.ControllerApi.ROUTE_CONTROLLER;
+
 /**
- * Remote stub for {@link ControllerApi} + {@link ConsumerCallbackApi} over {@link MessageExchange}.
+ * Remote stub for {@link ControllerApi} over {@link MessageExchange}.
  *
- * <p>{@link #sendEvent} is unsupported — transition broadcasts originate on the controller and use
- * {@code TransitionService} in-process.
+ * <p>Pods use this for subscription RPCs and transition acks. Stage-event broadcast is
+ * controller-local ({@link TransitionPublisher}) and is not exposed here. Web uses the
+ * failover request methods against the controller route.
  */
-public class ControllerRemoteClient implements ControllerApi, ConsumerCallbackApi {
+public class ControllerRemoteClient implements ControllerApi {
 
     private final MessageExchange exchange;
 
@@ -118,14 +120,9 @@ public class ControllerRemoteClient implements ControllerApi, ConsumerCallbackAp
     }
 
     @Override
-    public CompletableFuture<Void> sendEvent(TransitionEvent event) {
-        throw new UnsupportedOperationException("sendEvent is controller-local; call TransitionService in-process");
-    }
-
-    @Override
     public CompletableFuture<Void> ack(TransitionAck ack) {
         ClusterMessage message = ClusterMessage.of(ack);
-        return exchange.send(ROUTE_CONTROLLER, TransitionBusAddress.STAGE_ACK_API, message);
+        return exchange.send(ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, message);
     }
 
     @Override

@@ -11,15 +11,13 @@ import lombok.experimental.UtilityClass;
  * predictably alongside other routes ({@code <route>.<api>.<method>}):
  *
  * <ul>
- *   <li><b>Forward leg (controller → all pods):</b> {@code TransitionService#sendEvent}
+ *   <li><b>Forward leg (controller → all pods):</b> {@code TransitionPublisher#broadcastEvent}
  *       publishes a {@code TransitionEvent} to
  *       {@code ROUTE_TOPIC_TRANSITION + "." + EVENT_PUBLISH_API + ".publish"}; every pod
- *       registers a {@code registerPublishReceiveHandler} there. Remote clients do not
- *       publish — {@code ControllerRemoteClient#sendEvent} throws.</li>
+ *       registers via {@code TransitionEventSubscriber.subscribe}.</li>
  *   <li><b>Back leg (pod → controller):</b> a pod sends a {@code TransitionAck} via
- *       {@code ControllerRemoteClient#ack} to
- *       {@code <controllerRoute>." + TRANSITION_EVENT_ACK_API + ".send"} (the controller route is
- *       {@code ControllerApi.ROUTE_CONTROLLER}).</li>
+ *       {@code TransitionAckApi#ack} ({@code ControllerRemoteClient}) to
+ *       {@code <controllerRoute>." + TRANSITION_EVENT_ACK_API + ".send"}.</li>
  * </ul>
  */
 @UtilityClass
@@ -34,8 +32,14 @@ public final class TransitionBusAddress {
     /** Alias for {@link #EVENT_PUBLISH_API}; used on the controller broadcast path. */
     public final String STAGE_BROADCAST_API = EVENT_PUBLISH_API;
 
-    /** Api (under the controller route) for the pod-to-controller per-stage acknowledgement. */
-    public final String STAGE_ACK_API = "stage.ack";
+    /**
+     * Api (under the controller route) for the pod-to-controller per-stage acknowledgement.
+     * Must match what {@code ControllerRemoteClient} sends.
+     */
+    public final String TRANSITION_EVENT_ACK_API = "topic.transition.event.ack";
+
+    /** Alias used by controller handler registration. */
+    public final String STAGE_ACK_API = TRANSITION_EVENT_ACK_API;
 
     /** Controller request APIs (web → controller) for the failover lifecycle. */
     public final String CREATE_FAILOVER_API = "createFailover";

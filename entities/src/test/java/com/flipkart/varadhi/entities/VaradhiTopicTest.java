@@ -3,11 +3,14 @@ package com.flipkart.varadhi.entities;
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VaradhiTopicTest {
@@ -29,9 +32,19 @@ class VaradhiTopicTest {
             TOPIC_NAME,
             grouped,
             TOPIC_CAPACITY,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
     }
+
+    // --- Factory ---
 
     @Test
     void of_WithValidInputs_CreatesVaradhiTopic() {
@@ -46,7 +59,7 @@ class VaradhiTopicTest {
             () -> assertTrue(varadhiTopic.isActive(), "Active status mismatch"),
             () -> assertEquals(VaradhiTopic.TopicCategory.TOPIC, varadhiTopic.getTopicCategory()),
             () -> assertFalse(varadhiTopic.isAutoFailover()),
-            () -> assertTrue(varadhiTopic.getProduceConfigs().isEmpty())
+            () -> assertTrue(varadhiTopic.getProduceConfig(RegionName.of("unknown")).isEmpty())
         );
     }
 
@@ -64,66 +77,251 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void fqn_ReturnsExpectedFormat() {
-        String expected = "project1.topic1";
-        String actual = VaradhiTopic.fqn(PROJECT_NAME, TOPIC_NAME);
+    void of_fullFactory_setsStorageAutoFailoverProduceConfigsAndAuxFields() {
+        SegmentedStorageTopic storage = SegmentedStorageTopic.of(new DummyStorageTopic("t"));
+        Map<RegionName, ProduceConfig> configs = Map.of(
+            RegionName.of("r1"),
+            ProduceConfig.producing(),
+            RegionName.of("r2"),
+            ProduceConfig.blocked()
+        );
+        MessageSizeProfile profile = new MessageSizeProfile(100, 1000);
+        Map<String, Double> weights = Map.of("r1", 0.6, "r2", 0.4);
 
-        assertEquals(expected, actual, "Topic name format mismatch");
-    }
+        VaradhiTopic topic = VaradhiTopic.of(
+            PROJECT_NAME,
+            TOPIC_NAME,
+            true,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActionCode.USER_ACTION,
+            "nfr-filter",
+            VaradhiTopic.TopicCategory.TOPIC,
+            weights,
+            profile,
+            RateLimiterMode.enforced,
+            storage,
+            true,
+            configs
+        );
 
-    @Test
-    void withProduceRegion_AddsTopicSuccessfully() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
-
-        varadhiTopic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                                   .withProduceRegion(RegionName.of("region1"));
-
-        assertEquals(
-            storageTopic.getName(),
-            varadhiTopic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
-            "Internal topic addition failed"
+        assertAll(
+            () -> assertEquals("project1.topic1", topic.getName()),
+            () -> assertTrue(topic.isGrouped()),
+            () -> assertEquals("nfr-filter", topic.getNfrFilterName()),
+            () -> assertEquals(weights, topic.getPerRegionQuotaWeights()),
+            () -> assertEquals(profile, topic.getMessageSizeProfile()),
+            () -> assertEquals(RateLimiterMode.enforced, topic.getRateLimiterMode()),
+            () -> assertEquals(storage, topic.getSegmentedStorageTopic()),
+            () -> assertTrue(topic.isAutoFailover()),
+            () -> assertEquals(
+                TopicState.Producing,
+                topic.getProduceConfig(RegionName.of("r1")).orElseThrow().getState()
+            ),
+            () -> assertEquals(
+                TopicState.Blocked,
+                topic.getProduceConfig(RegionName.of("r2")).orElseThrow().getState()
+            ),
+            () -> assertEquals(LifecycleStatus.State.CREATING, topic.getStatus().getState())
         );
     }
 
     @Test
-    void getProjectName_ReturnsCorrectProjectName() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
+    void of_emptyProduceConfigs_andNonNullStorage() {
+        VaradhiTopic topic = VaradhiTopic.of(
+            PROJECT_NAME,
+            TOPIC_NAME,
+            false,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
+        );
 
-        assertEquals(PROJECT_NAME, varadhiTopic.getProjectName(), "Project name mismatch");
+        assertAll(
+            () -> assertNotNull(topic.getSegmentedStorageTopic()),
+            () -> assertFalse(topic.isAutoFailover()),
+            () -> assertTrue(topic.getProduceConfig(RegionName.of("r1")).isEmpty()),
+            () -> assertTrue(topic.getPerRegionQuotaWeights().isEmpty())
+        );
+    }
+
+    @Test
+    void of_defensiveCopyOfProduceConfigs() {
+        Map<RegionName, ProduceConfig> configs = new HashMap<>();
+        configs.put(RegionName.of("r1"), ProduceConfig.producing());
+
+        VaradhiTopic topic = VaradhiTopic.of(
+            PROJECT_NAME,
+            TOPIC_NAME,
+            false,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(new DummyStorageTopic("t")),
+            false,
+            configs
+        );
+
+        configs.put(RegionName.of("r2"), ProduceConfig.blocked());
+
+        assertTrue(topic.getProduceConfig(RegionName.of("r1")).isPresent());
+        assertTrue(topic.getProduceConfig(RegionName.of("r2")).isEmpty());
+    }
+
+    @Test
+    void fqn_ReturnsExpectedFormat() {
+        assertEquals("project1.topic1", VaradhiTopic.fqn(PROJECT_NAME, TOPIC_NAME), "Topic name format mismatch");
+    }
+
+    // --- Read accessors ---
+
+    @Test
+    void getProjectName_ReturnsCorrectProjectName() {
+        assertEquals(PROJECT_NAME, createDefaultVaradhiTopic(false).getProjectName(), "Project name mismatch");
     }
 
     @Test
     void getTopicName_ReturnsCorrectLocalTopicName() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        assertEquals(TOPIC_NAME, varadhiTopic.getTopicName(), "Topic name segment mismatch");
+        assertEquals(TOPIC_NAME, createDefaultVaradhiTopic(false).getTopicName(), "Topic name segment mismatch");
     }
 
     @Test
-    void getProduceTopicForRegion_WithValidRegion_ReturnsCorrectTopic() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-        StorageTopic storageTopic = new DummyStorageTopic(varadhiTopic.getName());
-
-        VaradhiTopic topic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(storageTopic))
-                                         .withProduceRegion(RegionName.of("region1"));
+    void getSegmentedStorage_WithValidRegion_ReturnsCorrectTopic() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("region1"), ProduceConfig.producing())
+        );
 
         assertAll(
-            () -> assertNotNull(topic.getProduceTopicForRegion("region1"), "Region topic not found"),
+            () -> assertTrue(
+                VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("region1")).isPresent(),
+                "Region topic not found"
+            ),
             () -> assertEquals(
-                storageTopic.getName(),
-                topic.getProduceTopicForRegion("region1").getTopicToProduce().getName(),
+                "t",
+                VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("region1"))
+                                     .orElseThrow()
+                                     .getTopic(0)
+                                     .getName(),
                 "Region topic name mismatch"
             )
         );
     }
 
     @Test
-    void getProduceTopicForRegion_WithUnknownRegion_ReturnsNull() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        assertNull(varadhiTopic.getProduceTopicForRegion("unknownRegion"), "Unknown region should return null");
+    void getSegmentedStorage_WithUnknownRegion_ReturnsEmpty() {
+        assertTrue(
+            VaradhiTopicTestUtils.getSegmentedStorage(createDefaultVaradhiTopic(false), RegionName.of("unknownRegion"))
+                                 .isEmpty()
+        );
     }
+
+    @Test
+    void getSegmentedStorage_emptyWhenFailoverTargetNotRegistered() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2")))
+        );
+
+        assertTrue(VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("r1")).isEmpty());
+    }
+
+    @Test
+    void getSegmentedStorage_presentWhenFailoverTargetRegistered() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(
+                RegionName.of("r1"),
+                new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2")),
+                RegionName.of("r2"),
+                ProduceConfig.producing()
+            )
+        );
+
+        assertTrue(VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("r1")).isPresent());
+    }
+
+    @Test
+    void getSegmentedStorage_presentForBlockedOrFencedRegion() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(
+                RegionName.of("r1"),
+                ProduceConfig.blocked(),
+                RegionName.of("r2"),
+                new ProduceConfig(TopicState.Fenced, 0, null)
+            )
+        );
+
+        assertAll(
+            () -> assertTrue(VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("r1")).isPresent()),
+            () -> assertTrue(VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("r2")).isPresent()),
+            () -> assertEquals(
+                topic.getSegmentedStorageTopic(),
+                VaradhiTopicTestUtils.getSegmentedStorage(topic, RegionName.of("r1")).orElseThrow()
+            )
+        );
+    }
+
+    @Test
+    void getProduceConfig_returnsFailoverRegionWhenSet() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2")))
+        );
+
+        ProduceConfig config = topic.getProduceConfig(RegionName.of("r1")).orElseThrow();
+        assertAll(
+            () -> assertEquals(TopicState.Producing, config.getState()),
+            () -> assertEquals(RegionName.of("r2"), config.getFailOverRegion().orElseThrow())
+        );
+    }
+
+    @Test
+    void produceConfigs_emptyUntilProduceRegionAdded() {
+        assertTrue(createDefaultVaradhiTopic(false).getProduceConfig(RegionName.of("unknown")).isEmpty());
+    }
+
+    @Test
+    void isCategory_WithMatchingCategory_ReturnsTrue() {
+        assertTrue(createDefaultVaradhiTopic(false).isCategory(VaradhiTopic.TopicCategory.TOPIC));
+    }
+
+    @Test
+    void isCategory_WithDifferentCategory_ReturnsFalse() {
+        assertFalse(createDefaultVaradhiTopic(false).isCategory(VaradhiTopic.TopicCategory.QUEUE));
+    }
+
+    @Test
+    void isCategory_WithQueueTopic_MatchesQueueCategory() {
+        VaradhiTopic varadhiTopic = VaradhiTopic.of(
+            PROJECT_NAME,
+            TOPIC_NAME,
+            false,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.QUEUE,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
+        );
+
+        assertAll(
+            () -> assertTrue(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)),
+            () -> assertFalse(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.TOPIC))
+        );
+    }
+
+    // --- Lifecycle ---
 
     @Test
     void restore_ChangeStateToCreated() {
@@ -148,116 +346,6 @@ class VaradhiTopicTest {
     }
 
     @Test
-    void isCategory_WithMatchingCategory_ReturnsTrue() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        assertTrue(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.TOPIC));
-    }
-
-    @Test
-    void isCategory_WithDifferentCategory_ReturnsFalse() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        assertFalse(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE));
-    }
-
-    @Test
-    void isCategory_WithQueueTopic_MatchesQueueCategory() {
-        VaradhiTopic varadhiTopic = VaradhiTopic.of(
-            PROJECT_NAME,
-            TOPIC_NAME,
-            false,
-            TOPIC_CAPACITY,
-            LifecycleStatus.ActionCode.SYSTEM_ACTION,
-            null,
-            VaradhiTopic.TopicCategory.QUEUE
-        );
-
-        assertAll(
-            () -> assertTrue(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.QUEUE)),
-            () -> assertFalse(varadhiTopic.isCategory(VaradhiTopic.TopicCategory.TOPIC))
-        );
-    }
-
-    @Test
-    void getProduceTopic_emptyWhenBlocked() {
-        VaradhiTopic topic = createDefaultVaradhiTopic(false).withStorageTopic(
-            SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
-        ).withProduceRegion(RegionName.of("r1"));
-        topic = topic.withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked());
-
-        assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
-    }
-
-    @Test
-    void resolveProduceTarget_stillResolvesWhenFenced() {
-        VaradhiTopic topic = createDefaultVaradhiTopic(false).withStorageTopic(
-            SegmentedStorageTopic.of(new DummyStorageTopic("t"))
-        ).withProduceRegion(RegionName.of("r1")).withProduceRegion(RegionName.of("r2"));
-        topic = topic.withProduceConfig(RegionName.of("r1"), new ProduceConfig(TopicState.Fenced, RegionName.of("r2")));
-
-        assertTrue(topic.getProduceTopic(RegionName.of("r1")).isEmpty());
-        ProduceTarget target = topic.resolveProduceTarget(RegionName.of("r1")).orElseThrow();
-        assertEquals(RegionName.of("r2"), target.produceRegion());
-        assertEquals("t", target.storageTopic().getName());
-    }
-
-    @Test
-    void getProduceTopic_usesFailOverRegionAsProduceKey() {
-        VaradhiTopic topic = createDefaultVaradhiTopic(false);
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t")))
-                     .withProduceRegion(RegionName.of("r1"))
-                     .withProduceRegion(RegionName.of("r2"));
-        topic = topic.withProduceConfig(
-            RegionName.of("r1"),
-            new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
-        );
-
-        ProduceTarget target = topic.getProduceTopic(RegionName.of("r1")).orElseThrow();
-
-        assertEquals(RegionName.of("r2"), target.produceRegion());
-        assertEquals("t", target.storageTopic().getName());
-    }
-
-    @Test
-    void withProduceConfig_returnsCopyWithUpdatedRegionState() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false).withStorageTopic(
-            SegmentedStorageTopic.of(new DummyStorageTopic("t.r1"))
-        ).withProduceRegion(RegionName.of("r1"));
-
-        VaradhiTopic updated = varadhiTopic.withProduceConfig(
-            RegionName.of("r1"),
-            new ProduceConfig(TopicState.Fenced, null)
-        );
-
-        assertEquals(TopicState.Fenced, updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
-        assertEquals(
-            TopicState.Producing,
-            varadhiTopic.getProduceConfig(RegionName.of("r1")).orElseThrow().state(),
-            "original must be unchanged"
-        );
-    }
-
-    @Test
-    void withProduceRegion_setsProducingOnFirstRegionAndBlockedOnNext() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        varadhiTopic = varadhiTopic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic("t.r1")))
-                                   .withProduceRegion(RegionName.of("r1"))
-                                   .withProduceRegion(RegionName.of("r2"));
-
-        assertEquals(TopicState.Producing, varadhiTopic.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
-        assertEquals(TopicState.Blocked, varadhiTopic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
-    }
-
-    @Test
-    void produceConfigs_emptyUntilProduceRegionAdded() {
-        VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
-
-        assertTrue(varadhiTopic.getProduceConfigs().isEmpty());
-    }
-
-    @Test
     void markInactive_ChangesStatusToInactive() {
         VaradhiTopic varadhiTopic = createDefaultVaradhiTopic(false);
 
@@ -275,6 +363,176 @@ class VaradhiTopicTest {
                 varadhiTopic.getStatus().getActionCode(),
                 "Action code mismatch"
             )
+        );
+    }
+
+    // --- Clone APIs (with* under test) ---
+
+    @Test
+    void with_registersRegionAndLeavesOriginalUnchanged() {
+        VaradhiTopic original = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing())
+        );
+
+        VaradhiTopic updated = original.with(RegionName.of("r1"), new ProduceConfig(TopicState.Fenced, 0, null));
+
+        assertEquals(TopicState.Fenced, updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState());
+        assertEquals(
+            TopicState.Producing,
+            original.getProduceConfig(RegionName.of("r1")).orElseThrow().getState(),
+            "original must be unchanged"
+        );
+    }
+
+    @Test
+    void with_registersMultipleRegions() {
+        VaradhiTopic original = createDefaultVaradhiTopic(false);
+
+        VaradhiTopic updated = original.with(RegionName.of("r1"), ProduceConfig.producing())
+                                       .with(RegionName.of("r2"), ProduceConfig.blocked());
+
+        assertEquals(TopicState.Producing, updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState());
+        assertEquals(TopicState.Blocked, updated.getProduceConfig(RegionName.of("r2")).orElseThrow().getState());
+        assertTrue(original.getProduceConfig(RegionName.of("r1")).isEmpty(), "original must be unchanged");
+    }
+
+    @Test
+    void with_doesNotChangeStorage() {
+        SegmentedStorageTopic storage = SegmentedStorageTopic.of(new DummyStorageTopic("t"));
+        VaradhiTopic topic = VaradhiTopic.of(
+            PROJECT_NAME,
+            TOPIC_NAME,
+            false,
+            TOPIC_CAPACITY,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            storage,
+            false,
+            Map.of()
+        );
+
+        VaradhiTopic updated = topic.with(RegionName.of("r1"), ProduceConfig.producing());
+
+        assertEquals(storage, updated.getSegmentedStorageTopic());
+    }
+
+    @Test
+    void withSegmentedStorageTopic_replacesStoragePreservesProduceConfigs() {
+        VaradhiTopic original = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing())
+        );
+        SegmentedStorageTopic storage = SegmentedStorageTopic.of(new DummyStorageTopic("t"));
+
+        VaradhiTopic updated = original.with(storage);
+
+        assertAll(
+            () -> assertNotSame(original, updated),
+            () -> assertNotNull(original.getSegmentedStorageTopic()),
+            () -> assertEquals(storage, updated.getSegmentedStorageTopic()),
+            () -> assertEquals(
+                TopicState.Producing,
+                updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState()
+            ),
+            () -> assertFalse(updated.isAutoFailover())
+        );
+    }
+
+    @Test
+    void withAndProduceConfig_setsBothInOneCopy() {
+        SegmentedStorageTopic storage = SegmentedStorageTopic.of(new DummyStorageTopic("t"));
+
+        VaradhiTopic updated = createDefaultVaradhiTopic(false).with(
+            storage,
+            RegionName.of("r1"),
+            ProduceConfig.producing()
+        );
+
+        assertAll(
+            () -> assertEquals(storage, updated.getSegmentedStorageTopic()),
+            () -> assertEquals(
+                TopicState.Producing,
+                updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState()
+            ),
+            () -> assertTrue(VaradhiTopicTestUtils.getSegmentedStorage(updated, RegionName.of("r1")).isPresent())
+        );
+    }
+
+    @Test
+    void withAndProduceConfig_preservesOtherRegions() {
+        SegmentedStorageTopic storage = SegmentedStorageTopic.of(new DummyStorageTopic("t"));
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(Map.of(RegionName.of("r1"), ProduceConfig.producing()));
+
+        VaradhiTopic updated = topic.with(storage, RegionName.of("r2"), ProduceConfig.blocked());
+
+        assertAll(
+            () -> assertEquals(
+                TopicState.Producing,
+                updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState()
+            ),
+            () -> assertEquals(
+                TopicState.Blocked,
+                updated.getProduceConfig(RegionName.of("r2")).orElseThrow().getState()
+            ),
+            () -> assertTrue(topic.getProduceConfig(RegionName.of("r2")).isEmpty(), "original unchanged")
+        );
+    }
+
+    @Test
+    void copyWith_replacesProduceConfigsWithoutMutatingOriginal() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.blocked())
+        );
+
+        VaradhiTopic updated = topic.copyWith(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.producing()),
+            topic.isAutoFailover()
+        );
+
+        assertTrue(updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState().isProduceAllowed());
+        assertTrue(updated.getProduceConfig(RegionName.of("r2")).orElseThrow().getState().isProduceAllowed());
+        assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().getState());
+    }
+
+    @Test
+    void of_setsAutoFailover() {
+        Map<RegionName, ProduceConfig> configs = Map.of(RegionName.of("r1"), ProduceConfig.producing());
+
+        assertFalse(VaradhiTopicTestUtils.getNewTopic(configs).isAutoFailover());
+        assertTrue(VaradhiTopicTestUtils.getNewTopic(configs, true).isAutoFailover());
+    }
+
+    @Test
+    void withRegion_setsProducePolicy() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(Map.of(RegionName.of("r1"), ProduceConfig.producing()));
+        VaradhiTopic updated = topic.with(RegionName.of("r2"), ProduceConfig.blocked());
+
+        assertEquals(TopicState.Producing, updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState());
+        assertEquals(TopicState.Blocked, updated.getProduceConfig(RegionName.of("r2")).orElseThrow().getState());
+    }
+
+    @Test
+    void multipleProducingRegions_allowed() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.producing())
+        );
+
+        assertTrue(topic.getProduceConfig(RegionName.of("r1")).orElseThrow().getState().isProduceAllowed());
+        assertTrue(topic.getProduceConfig(RegionName.of("r2")).orElseThrow().getState().isProduceAllowed());
+    }
+
+    @Test
+    void produceConfig_factories() {
+        assertAll(
+            () -> assertEquals(TopicState.Producing, ProduceConfig.producing().getState()),
+            () -> assertTrue(ProduceConfig.producing().getFailOverRegion().isEmpty()),
+            () -> assertEquals(0, ProduceConfig.producing().getProduceIdx()),
+            () -> assertEquals(TopicState.Blocked, ProduceConfig.blocked().getState()),
+            () -> assertTrue(ProduceConfig.blocked().getFailOverRegion().isEmpty()),
+            () -> assertEquals(0, ProduceConfig.blocked().getProduceIdx())
         );
     }
 }

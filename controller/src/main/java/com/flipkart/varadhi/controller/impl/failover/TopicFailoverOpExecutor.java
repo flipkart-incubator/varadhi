@@ -10,6 +10,7 @@ import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicProduceConfigs;
 import com.flipkart.varadhi.entities.TopicState;
@@ -141,10 +142,12 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
 
     private void awaitLagCleared(TopicFailoverOperation op) {
         VaradhiTopic topic = topicStore.get(op.getTopicFqn());
-        if (topic.getStorageTopic() == null) {
+        SegmentedStorageTopic segmented = topic.getSegmentedStorageTopic();
+        if (segmented == null || segmented.getStorageTopics() == null || segmented.getStorageTopics().length == 0) {
             throw new FailoverAbortedException("DRAIN: topic " + op.getTopicFqn() + " has no storage topic");
         }
-        StorageTopic storage = topic.getStorageTopic().getTopicToProduce();
+        int produceIdx = topic.getProduceConfig(op.getSourceRegion()).map(ProduceConfig::getProduceIdx).orElse(0);
+        StorageTopic storage = segmented.getTopic(produceIdx);
         long deadline = System.currentTimeMillis() + config.drainTimeoutMs();
         long lastLag = -1;
         while (true) {
@@ -192,10 +195,15 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         if (!sourceFenced || !targetFenced) {
             VaradhiTopic next = topic;
             if (!sourceFenced) {
-                next = next.withProduceConfig(source, new ProduceConfig(TopicState.Fenced, target));
+                ProduceConfig prev = topic.getProduceConfig(source).orElse(ProduceConfig.producing());
+                next = next.with(
+                    source,
+                    new ProduceConfig(TopicState.Fenced, prev.getProduceIdx(), target)
+                );
             }
             if (!targetFenced) {
-                next = next.withProduceConfig(target, new ProduceConfig(TopicState.Fenced, null));
+                ProduceConfig prev = topic.getProduceConfig(target).orElse(ProduceConfig.blocked());
+                next = next.with(target, new ProduceConfig(TopicState.Fenced, prev.getProduceIdx(), null));
             }
             topicStore.update(next);
             topic = topicStore.get(op.getTopicFqn());
@@ -221,9 +229,11 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
         RegionName target = op.getTargetRegion();
         RegionName source = op.getSourceRegion();
         if (!isState(topic, target, TopicState.Producing) || !isState(topic, source, TopicState.Blocked)) {
+            ProduceConfig targetPrev = topic.getProduceConfig(target).orElse(ProduceConfig.blocked());
+            ProduceConfig sourcePrev = topic.getProduceConfig(source).orElse(ProduceConfig.producing());
             topicStore.update(
-                topic.withProduceConfig(target, ProduceConfig.producing())
-                     .withProduceConfig(source, ProduceConfig.blocked())
+                topic.with(target, new ProduceConfig(TopicState.Producing, targetPrev.getProduceIdx(), null))
+                     .with(source, new ProduceConfig(TopicState.Blocked, sourcePrev.getProduceIdx(), null))
             );
         }
         TransitionMaster transition = transitionStore.get(op.getTopicFqn());
@@ -311,6 +321,6 @@ public class TopicFailoverOpExecutor implements OpExecutor<OrderedOperation> {
     }
 
     private static boolean isState(VaradhiTopic topic, RegionName region, TopicState state) {
-        return topic.getProduceConfig(region).map(ProduceConfig::state).orElse(null) == state;
+        return topic.getProduceConfig(region).map(ProduceConfig::getState).orElse(null) == state;
     }
 }

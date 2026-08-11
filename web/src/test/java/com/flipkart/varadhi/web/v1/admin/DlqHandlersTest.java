@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.web.v1.admin;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -77,7 +79,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
         ArgumentCaptor<UnsidelineRequest> captor
     ) {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
         Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
         doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());
@@ -308,7 +310,7 @@ public class DlqHandlersTest extends SubscriptionTestBase {
 
     private VaradhiSubscription setupSubscriptionForListMessages() {
         SubscriptionResource subResource = createSubscriptionResource("sub12", PROJECT_1, U_TOPIC_RESOURCE_1);
-        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic();
+        VaradhiTopic vTopic = U_TOPIC_RESOURCE_1.toVaradhiTopic(VaradhiTopicTestUtils.testStorage(), Map.of());
         VaradhiSubscription subscription = createUngroupedSubscription("sub12", PROJECT_1, vTopic);
         Resource.EntityResource<Project> project = Resource.of(PROJECT_1, ResourceType.PROJECT);
         doReturn(project).when(projectCache).getOrThrow(PROJECT_1.getName());

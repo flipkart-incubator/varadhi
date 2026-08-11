@@ -378,7 +378,7 @@ public class ControllerVerticle extends AbstractVerticle {
      * Sets up API handlers for controller operations.
      *
      * @param messageRouter the message router
-     * @param handler       the controller API handler
+     * @param handler       the controller bus handler
      */
     private void setupApiHandlers(MessageRouter messageRouter, ControllerHandler handler) {
         // Register request handlers for different controller operations

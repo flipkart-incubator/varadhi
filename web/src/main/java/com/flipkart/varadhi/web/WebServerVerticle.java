@@ -13,7 +13,7 @@ import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
 import com.flipkart.varadhi.produce.ProducerService;
-import com.flipkart.varadhi.web.transition.TopicTransitionPodWiring;
+import com.flipkart.varadhi.web.transition.TopicTransitionManager;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
@@ -128,7 +128,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
-    private TopicTransitionPodWiring topicTransitionWiring;
+    private TopicTransitionManager topicTransitionWiring;
     private ClusterMembershipView clusterMembershipView;
 
     /**
@@ -268,8 +268,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 messagingStackProvider.getStorageTopicService(),
                 metaStore.topics(),
                 metaStore.subscriptions(),
-                metaStore.projects(),
-                transitionStore
+                metaStore.projects()
             )
         );
 
@@ -321,7 +320,7 @@ public class WebServerVerticle extends AbstractVerticle {
                 rateLimiter
             )
         );
-        this.topicTransitionWiring = TopicTransitionPodWiring.wire(
+        this.topicTransitionWiring = TopicTransitionManager.wire(
             clusterManager,
             vertx,
             cacheRegistry,

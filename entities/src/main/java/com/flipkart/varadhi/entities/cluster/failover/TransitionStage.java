@@ -10,20 +10,13 @@ package com.flipkart.varadhi.entities.cluster.failover;
  * <p>This enum is part of the pod-facing <b>wire contract</b> (it travels inside
  * {@link TransitionEvent} and {@link TransitionAck}). It carries no controller-only state.
  *
- * <p>Typical topic-failover order: {@link #PREPARE} → {@link #DRAIN} → {@link #SWITCH} →
- * {@link #COMPLETED} (see controller {@code TopicFailoverOpExecutor}):
+ * <p>Typical topic-failover order on the controller executor:
+ * {@link #PREPARE} → {@link #DRAIN} → {@link #SWITCH} → {@link #COMPLETED}:
  * <ul>
- *   <li>{@link #PREPARE} — readiness probe: pod confirms it is alive and caught up to
- *       the current topic version (N), and warms the target producer. Lets the controller
- *       abort before applying any change if a pod is unreachable or stale.</li>
- *   <li>{@link #DRAIN} — before SWITCH, while source may still produce: when
- *       {@code waitForReplicationLagToClear} is set the controller polls
- *       {@code StorageTopicService.getReplicationLag} until caught up (or times out).
- *       Broadcast as a fleet marker; lag is not a pod ack barrier.</li>
- *   <li>{@link #SWITCH} — fence + convergence: pod confirms it observed the new topic
- *       version (N+1) so produce re-gates.</li>
- *   <li>{@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED} — lifecycle markers;
- *       usually acked immediately on receipt.</li>
+ *   <li>{@link #PREPARE} — readiness: pod waits for topic version N and may warm the target.</li>
+ *   <li>{@link #DRAIN} — optional replication-lag wait (controller); broadcast as fleet marker.</li>
+ *   <li>{@link #SWITCH} — fence + convergence on topic version N′.</li>
+ *   <li>{@link #PENDING}, {@link #COMPLETED}, {@link #ABORTED} — lifecycle markers.</li>
  * </ul>
  */
 public enum TransitionStage {
@@ -33,9 +26,7 @@ public enum TransitionStage {
         return this == COMPLETED || this == ABORTED;
     }
 
-    /**
-     * Abort is honored only before SWITCH commits the tracked topic write.
-     */
+    /** Abort is honored only before SWITCH commits the tracked topic write. */
     public boolean isAbortable() {
         return this == PENDING || this == PREPARE || this == DRAIN;
     }

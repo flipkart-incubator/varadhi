@@ -6,7 +6,7 @@ level: L3
 okf_version: "0.1"
 format_version: "0.1"
 generated_by: component-doc-generation@0.2.0
-timestamp: 2026-06-21T05:29:58Z
+timestamp: 2026-08-05T10:00:00Z
 ---
 
 # varadhi-server — Components
@@ -150,7 +150,7 @@ Enforces authorization for control-plane and produce actions. The built-in provi
 
 #### Responsibility
 
-Owns the message-produce use case end to end: filter/normalize compliant headers and validate header semantics/size, build the `concept.message`, evaluate the org NFR (server-side) `concept.filter`, apply the per-pod produce rate-limit admission check (`varadhi-server.produce-rate-limiter`), resolve and cache the storage producer, publish asynchronously to the messaging stack, map produce status to an HTTP code, and record produce metrics. This is the container's hot path and its sole Outbound Gateway to the messaging stack.
+Owns the message-produce use case end to end: filter/normalize compliant headers and validate header semantics/size, build the `concept.message`, evaluate the org NFR (server-side) `concept.filter`, apply the per-pod produce rate-limit admission check (`varadhi-server.produce-rate-limiter`), resolve produce routing via [`TopicResolver`](/entities/src/main/java/com/flipkart/varadhi/entities/TopicResolver.java) into a [`ProduceKey`](/entities/src/main/java/com/flipkart/varadhi/entities/ProduceKey.java), resolve and cache the storage producer, publish asynchronously to the messaging stack, map produce status to an HTTP code, and record produce metrics. This is the container's hot path and its sole Outbound Gateway to the messaging stack.
 
 #### Collaborators
 
@@ -171,12 +171,12 @@ Owns the message-produce use case end to end: filter/normalize compliant headers
 
 - **Contention/blocking**: the produce route is the only **`nonBlocking` / event-loop** route. Any blocking work introduced on this path stalls the event loop — keep it async. [ProduceHandlers](/web/src/main/java/com/flipkart/varadhi/web/v1/producer/ProduceHandlers.java)
 - **Consistency**: producers are cached in a Caffeine cache with an access-based expiry (a tunable knob); a producer is reused until it expires. Topic/project/org reads come from eventually-consistent shared caches (`shared.resource-cache`), so very recent metadata changes may not be reflected immediately. [ProducerService](/producer/src/main/java/com/flipkart/varadhi/produce/ProducerService.java)
-- **Failure mode**: a missing/inactive `concept.topic` throws `ResourceNotFoundException`; produce outcomes map to HTTP codes (blocked/not-allowed, throttled, failed). Throttling (429) comes from `produce-rate-limiter` rejecting an over-quota message and is expected behaviour, not a fault. [ProducerService](/producer/src/main/java/com/flipkart/varadhi/produce/ProducerService.java)
+- **Failure mode**: a missing/inactive `concept.topic` throws `ResourceNotFoundException`; produce to a region not in the topic's `produceConfigs` throws `ResourceNotFoundException`; blocked/fenced regions return non-producing `ProduceResult` (HTTP 422). Throttling (429) comes from `produce-rate-limiter`. [ProducerService](/producer/src/main/java/com/flipkart/varadhi/produce/ProducerService.java)
 
 #### Notes for Coding Agents
 
 - Keep this path non-blocking. Do not add synchronous DB/metastore/HTTP calls in the produce handler or `ProducerService`.
-- The producer cache key is `(varadhiTopicFQN, storageTopicId)`; changing the key shape affects producer reuse and in-flight producers.
+- The producer cache key is [`ProduceKey`](/entities/src/main/java/com/flipkart/varadhi/entities/ProduceKey.java) `(topicFqn, produceRegion, storageTopicId)`; changing the key shape affects producer reuse and in-flight producers.
 - Header handling depends on deployment-configured names and non-compliant-header filtering; don't hardcode header names.
 - The org NFR filter is evaluated here on the produce path only — server-side filtering semantics live in this component.
 

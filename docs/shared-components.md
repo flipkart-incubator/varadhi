@@ -29,7 +29,7 @@ Cross-container, in-repo modules that Varadhi's app containers (`varadhi-server`
 - `varadhi-server` — calls the controller for subscription lifecycle ops and consumer shards for DLQ calls; dispatches `concept.entity-change-event`s for cache freshness; observes live membership/pod count (`PodCountProvider`) for produce rate limiting.
 - `varadhi-consumer` — registers inbound cluster-RPC handlers (keyed by consumerId) and reports shard-op completion/failure to the controller.
 - `varadhi-controller` — implements the controller RPC contracts, calls consumers, tracks membership, and fans `concept.entity-change-event`s to **all** nodes.
-**Runtime Characteristics**: `request` awaits a response bounded by the configured send timeout (a tunable knob); transport rides the clustered event bus, so availability is tied to the ZooKeeper cluster manager. Despite the `*RestClient` naming, transport is the event bus, not HTTP. [MessageExchange](/core/src/main/java/com/flipkart/varadhi/core/cluster/MessageExchange.java)
+**Runtime Characteristics**: `request` awaits a response bounded by the configured send timeout (a tunable knob); transport rides the clustered event bus, so availability is tied to the ZooKeeper cluster manager. Despite legacy `*RestClient` naming, the controller stub is [ControllerRemoteClient](/core/src/main/java/com/flipkart/varadhi/core/cluster/controller/ControllerRemoteClient.java) and transport is the event bus, not HTTP. [MessageExchange](/core/src/main/java/com/flipkart/varadhi/core/cluster/MessageExchange.java)
 
 ## shared.entity-services
 

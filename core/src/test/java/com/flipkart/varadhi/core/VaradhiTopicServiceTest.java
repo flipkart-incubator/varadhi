@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.core;
 
+import java.util.Map;
+
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.core.topic.VaradhiTopicFactory;
 import com.flipkart.varadhi.entities.InternalQueueCategory;
@@ -13,6 +15,7 @@ import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
+import com.flipkart.varadhi.entities.VaradhiTopicTestUtils;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
@@ -193,7 +196,13 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.TOPIC
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
         existing.markCreateFailed("previous failure");
 
@@ -204,7 +213,13 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.QUEUE
+            VaradhiTopic.TopicCategory.QUEUE,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
 
         when(topicStore.exists(vTopicName)).thenReturn(true);
@@ -226,7 +241,13 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.TOPIC
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
         existing.markCreateFailed("previous failure");
 
@@ -237,7 +258,13 @@ class VaradhiTopicServiceTest {
             DEFAULT_CAPACITY_POLICY,
             LifecycleStatus.ActionCode.SYSTEM_ACTION,
             null,
-            VaradhiTopic.TopicCategory.TOPIC
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            VaradhiTopicTestUtils.testStorage(),
+            false,
+            Map.of()
         );
 
         when(topicStore.exists(vTopicName)).thenReturn(true);
