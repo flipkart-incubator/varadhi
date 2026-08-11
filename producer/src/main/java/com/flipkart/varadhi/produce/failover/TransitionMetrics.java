@@ -44,7 +44,7 @@ public final class TransitionMetrics {
 
     public TransitionMetrics(MeterRegistry registry) {
         this.registry = registry;
-        // Gauge holds a ref to the set/map; scrapers read size — same as SqArchivalStats.
+        // Gauge holds a ref to the set/map; scrapers read size
         track(Gauge.builder(STAGE_FAILURE_TOPICS, topicsWithStageFailure, Set::size).register(registry));
         for (TransitionStage stage : TransitionStage.values()) {
             track(
