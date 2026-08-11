@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.core.cluster;
 
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -12,9 +13,14 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 
 @ExtendWith (VertxExtension.class)
@@ -23,6 +29,8 @@ public class MessageRouterTest {
     private TestingServer zkCuratorTestingServer;
     private CuratorFramework zkCuratorFramework;
     private VaradhiZkClusterManager vZkCm;
+    private SimpleMeterRegistry meterRegistry;
+    private final List<Vertx> clusteredVertxInstances = new CopyOnWriteArrayList<>();
 
     // TODO:: Tests needs to be added, so this will go under refactor
     @BeforeEach
@@ -33,22 +41,29 @@ public class MessageRouterTest {
             new ExponentialBackoffRetry(1000, 1)
         );
         zkCuratorFramework.start();
-        vZkCm = new VaradhiZkClusterManager(zkCuratorFramework, new DeliveryOptions(), "localhost");
+        meterRegistry = new SimpleMeterRegistry();
+        vZkCm = new VaradhiZkClusterManager(zkCuratorFramework, new DeliveryOptions(), "localhost", meterRegistry);
     }
 
     @AfterEach
     public void tearDown() throws Exception {
+        for (Vertx vertx : clusteredVertxInstances) {
+            vertx.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        }
+        clusteredVertxInstances.clear();
         zkCuratorFramework.close();
         zkCuratorTestingServer.close();
     }
 
     private Vertx createClusteredVertx() throws Exception {
-        return Vertx.builder()
-                    .withClusterManager(vZkCm)
-                    .buildClustered()
-                    .toCompletionStage()
-                    .toCompletableFuture()
-                    .get();
+        Vertx vertx = Vertx.builder()
+                           .withClusterManager(vZkCm)
+                           .buildClustered()
+                           .toCompletionStage()
+                           .toCompletableFuture()
+                           .get();
+        clusteredVertxInstances.add(vertx);
+        return vertx;
     }
 
     //    @Test
@@ -70,6 +85,74 @@ public class MessageRouterTest {
         ClusterMessage cm = getClusterMessage("foo");
         Future.fromCompletionStage(me.send("testAddress", "customApi", cm))
               .onComplete(testContext.succeeding(v -> checkpoint.flag()));
+    }
+
+    @Test
+    public void testSendHandlerReceivesExactPayload(VertxTestContext testContext) throws Exception {
+        // The handler must receive the same message id/data that was sent (round-trip integrity).
+        Checkpoint received = testContext.checkpoint(1);
+        Checkpoint delivered = testContext.checkpoint(1);
+        Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        ClusterMessage sent = getClusterMessage("payload-1");
+        mr.sendHandler("addr", "echo", message -> testContext.verify(() -> {
+            Assertions.assertEquals(sent.getId(), message.getId());
+            Assertions.assertEquals("payload-1", message.getData(String.class));
+            received.flag();
+        }));
+        Future.fromCompletionStage(me.send("addr", "echo", sent))
+              .onComplete(testContext.succeeding(v -> delivered.flag()));
+    }
+
+    @Test
+    public void testPublishMessageFansOutToAllHandlers(VertxTestContext testContext) throws Exception {
+        // publish fans out to every registered handler at the same address.
+        Checkpoint checkpoint = testContext.checkpoint(2);
+        Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        mr.registerPublishReceiveHandler("route", "api", message -> checkpoint.flag());
+        mr.registerPublishReceiveHandler("route", "api", message -> checkpoint.flag());
+        ClusterMessage cm = getClusterMessage("foo");
+        me.publish("route", "api", cm);
+    }
+
+    @Test
+    public void testPublishHandlerSwallowsHandlerExceptions(VertxTestContext testContext) throws Exception {
+        // A throwing publish handler must not prevent other handlers at the same address from
+        // receiving the message (publish is fire-and-forget; exceptions are only logged).
+        Checkpoint healthy = testContext.checkpoint(1);
+        Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        mr.registerPublishReceiveHandler("route", "api", message -> {
+            throw new RuntimeException("boom");
+        });
+        mr.registerPublishReceiveHandler("route", "api", message -> healthy.flag());
+        me.publish("route", "api", getClusterMessage("foo"));
+    }
+
+    @Test
+    public void testPublishHandlerRecordsFailureMetric(VertxTestContext testContext) throws Exception {
+        Vertx vertx = createClusteredVertx();
+        MessageExchange me = vZkCm.getExchange(vertx);
+        MessageRouter mr = vZkCm.getRouter(vertx);
+        mr.registerPublishReceiveHandler("route", "api", message -> {
+            throw new RuntimeException("boom");
+        });
+        mr.registerPublishReceiveHandler("route", "api", message -> testContext.verify(() -> {
+            Assertions.assertEquals(
+                1.0,
+                meterRegistry.find("cluster.message_router.publish.handler.failed")
+                             .tag("route", "route")
+                             .tag("api", "api")
+                             .counter()
+                             .count()
+            );
+            testContext.completeNow();
+        }));
+        me.publish("route", "api", getClusterMessage("foo"));
     }
 
     ClusterMessage getClusterMessage(String data) {

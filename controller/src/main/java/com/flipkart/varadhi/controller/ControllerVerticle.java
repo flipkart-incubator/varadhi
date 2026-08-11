@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
+import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MembershipListener;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
@@ -12,6 +13,7 @@ import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
@@ -71,7 +73,12 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
         SubscriptionService subscriptionService = createSubscriptionService(messageExchange);
-        ControllerHandler apiHandler = new ControllerHandler(subscriptionService);
+        TransitionService transitionService = new TransitionService(messageExchange);
+        ControllerHandler apiHandler = new ControllerHandler(
+            subscriptionService,
+            transitionService,
+            new TopicTransitionMetrics(meterRegistry)
+        );
 
         // Assume leadership and initialize event system
         onLeaderElected(subscriptionService, apiHandler, messageRouter).compose(v -> initializeEventSystem())
@@ -339,8 +346,9 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
 
-        // Register send handler for updates
+        // Register send handlers for pod → controller updates
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
+        messageRouter.sendHandler(ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, handler::ack);
 
         log.info("Controller API handlers registered successfully");
     }

@@ -4,6 +4,7 @@ package com.flipkart.varadhi.core.cluster;
 import com.flipkart.varadhi.core.cluster.messages.*;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.entities.JsonMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
@@ -26,13 +27,16 @@ import java.util.concurrent.ExecutionException;
 @Slf4j
 public class MessageRouter {
 
+    private static final String PUBLISH_HANDLER_FAILED = "cluster.message_router.publish.handler.failed";
+
     private final EventBus vertxEventBus;
     private final DeliveryOptions deliveryOptions;
+    private final MeterRegistry meterRegistry;
 
-
-    public MessageRouter(EventBus vertxEventBus, DeliveryOptions deliveryOptions) {
+    public MessageRouter(EventBus vertxEventBus, DeliveryOptions deliveryOptions, MeterRegistry meterRegistry) {
         this.vertxEventBus = vertxEventBus;
         this.deliveryOptions = deliveryOptions;
+        this.meterRegistry = meterRegistry;
     }
 
     public void sendHandler(String routeName, String apiName, MsgHandler handler) {
@@ -85,8 +89,34 @@ public class MessageRouter {
         });
     }
 
-    public void publishHandler(String routeName, String apiName, MsgHandler handler) {
-        throw new UnsupportedOperationException("handlePublish not implemented");
+    /**
+     * Registers a consumer for broadcast (publish) messages at
+     * {@code <routeName>.<apiName>.publish}. Vert.x {@code EventBus.publish} delivers the
+     * message to <em>all</em> pods registered on that address across the cluster (as
+     * opposed to {@code send}, which picks a single consumer round-robin); see the Vert.x
+     * Event Bus docs on publish/subscribe semantics. Publish is fire-and-forget, so unlike
+     * {@link #sendHandler} and {@link #requestHandler} no reply is sent back to the publisher.
+     */
+    public void registerPublishReceiveHandler(String routeName, String apiName, MsgHandler handler) {
+        String apiPath = getApiPath(routeName, apiName, RouteMethod.PUBLISH);
+        vertxEventBus.consumer(apiPath, message -> {
+            ClusterMessage msg = JsonMapper.jsonDeserialize((String)message.body(), ClusterMessage.class);
+            log.debug("Received msg via - publish({}, {})", apiPath, msg.getId());
+            try {
+                handler.handle(msg);
+            } catch (Exception e) {
+                // Publish has no transport-level reply (unlike send/request), so an unexpected
+                // exception here can only be logged. Any application-level acknowledgment is the
+                // handler's responsibility and is sent as a separate message, not a bus reply.
+                // Log the message id (not the full body) with the full stack trace for diagnosis.
+                recordPublishHandlerFailure(routeName, apiName);
+                log.error("publish handler.handle failed for {}/{} for msg {}", routeName, apiPath, msg.getId(), e);
+            }
+        });
+    }
+
+    private void recordPublishHandlerFailure(String routeName, String apiName) {
+        meterRegistry.counter(PUBLISH_HANDLER_FAILED, "route", routeName, "api", apiName).increment();
     }
 
     private String getApiPath(String routeName, String apiName, RouteMethod method) {

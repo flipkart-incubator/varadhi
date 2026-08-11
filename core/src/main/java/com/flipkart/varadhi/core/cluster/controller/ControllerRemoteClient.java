@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.core.cluster.controller;
 
 import com.flipkart.varadhi.core.cluster.MessageExchange;
+import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
@@ -10,6 +11,7 @@ import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -17,6 +19,9 @@ import static com.flipkart.varadhi.core.cluster.controller.ControllerApi.ROUTE_C
 
 /**
  * Remote stub for {@link ControllerApi} over {@link MessageExchange}.
+ *
+ * <p>Pods use this for subscription RPCs and transition acks. Stage-event broadcast is
+ * controller-local ({@link TransitionPublisher}) and is not exposed here.
  */
 public class ControllerRemoteClient implements ControllerApi {
 
@@ -66,6 +71,12 @@ public class ControllerRemoteClient implements ControllerApi {
         ClusterMessage message = ClusterMessage.of(subscriptionId);
         return exchange.request(ROUTE_CONTROLLER, "getShards", message)
                        .thenApply(rm -> rm.getResponse(ShardAssignments.class));
+    }
+
+    @Override
+    public CompletableFuture<Void> ack(TransitionAck ack) {
+        ClusterMessage message = ClusterMessage.of(ack);
+        return exchange.send(ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, message);
     }
 
     @Override

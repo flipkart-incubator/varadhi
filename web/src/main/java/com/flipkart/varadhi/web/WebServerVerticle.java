@@ -7,12 +7,13 @@ import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
 import com.flipkart.varadhi.entities.ResourceType;
-import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
+import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.core.cluster.ClusterMembershipView;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.PodCountProvider;
 import com.flipkart.varadhi.produce.ProducerService;
+import com.flipkart.varadhi.web.transition.TopicTransitionManager;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.produce.ratelimit.EvenSplitPerPodTopicQuotaProvider;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
@@ -126,6 +127,7 @@ public class WebServerVerticle extends AbstractVerticle {
     // Services initialized during startup
     private final ServiceRegistry serviceRegistry = new ServiceRegistry();
     private HttpServer httpServer;
+    private TopicTransitionManager topicTransitionWiring;
     private ClusterMembershipView clusterMembershipView;
 
     /**
@@ -230,6 +232,9 @@ public class WebServerVerticle extends AbstractVerticle {
         if (clusterMembershipView != null) {
             clusterMembershipView.stop();
         }
+        if (topicTransitionWiring != null) {
+            topicTransitionWiring.close();
+        }
         if (httpServer != null) {
             httpServer.close(stopPromise);
         } else {
@@ -311,6 +316,14 @@ public class WebServerVerticle extends AbstractVerticle {
                 configuration.getProducerOptions(),
                 rateLimiter
             )
+        );
+        this.topicTransitionWiring = TopicTransitionManager.wire(
+            clusterManager,
+            vertx,
+            cacheRegistry,
+            serviceRegistry.get(ProducerService.class),
+            configuration.getProducerOptions(),
+            meterRegistry
         );
     }
 

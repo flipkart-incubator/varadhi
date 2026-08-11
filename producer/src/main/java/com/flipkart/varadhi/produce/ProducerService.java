@@ -47,9 +47,9 @@ public final class ProducerService {
     private final LoadingCache<ProduceKey, Producer<? extends Offset>> producerCache;
 
     /**
-     * The region where messages are produced.
+     * The region this pod is deployed in (ingress / local region).
      */
-    private final String produceRegion;
+    private final String localRegion;
 
     /**
      * Cache for Varad
@@ -75,13 +75,13 @@ public final class ProducerService {
      * This constructor uses the default producer options, which include a TTL of 60 minutes
      * for cached producers.
      *
-     * @param produceRegion    the region where messages are produced
+     * @param localRegion      the region this pod is deployed in
      * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      */
     // TODO: fix the generic type parameters. See ProduceBenchmarkTest for the issue.
     public ProducerService(
-        String produceRegion,
+        String localRegion,
         ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
@@ -89,7 +89,7 @@ public final class ProducerService {
 
     ) {
         this(
-            produceRegion,
+            localRegion,
             producerFactory,
             orgCache,
             projectCache,
@@ -106,13 +106,13 @@ public final class ProducerService {
      * This constructor allows customization of producer options, such as the TTL for
      * cached producers.
      *
-     * @param produceRegion    the region where messages are produced
+     * @param localRegion      the region this pod is deployed in
      * @param producerFactory function to create producers for storage topics
      * @param topicCache       cache for VaradhiTopic resource
      * @param producerOptions  configuration options for producers
      */
     public ProducerService(
-        String produceRegion,
+        String localRegion,
         ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
@@ -121,7 +121,7 @@ public final class ProducerService {
         ProducerOptions producerOptions
     ) {
         this(
-            produceRegion,
+            localRegion,
             producerFactory,
             orgCache,
             projectCache,
@@ -133,7 +133,7 @@ public final class ProducerService {
     }
 
     public ProducerService(
-        String produceRegion,
+        String localRegion,
         ProducerFactory producerFactory,
         ResourceReadCache<OrgDetails> orgCache,
         ResourceReadCache<Resource.EntityResource<Project>> projectCache,
@@ -142,7 +142,7 @@ public final class ProducerService {
         ProducerOptions producerOptions,
         ProduceRateLimiter rateLimiter
     ) {
-        this.produceRegion = produceRegion;
+        this.localRegion = localRegion;
         this.topicCache = topicCache;
         this.projectCache = projectCache;
         this.orgCache = orgCache;
@@ -150,15 +150,11 @@ public final class ProducerService {
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(key -> loadProducerObject(produceRegion, producerFactory, key));
+                                     .build(key -> loadProducerObject(producerFactory, key));
         this.metricsProvider = metricsRecorderProvider;
     }
 
-    private Producer<? extends Offset> loadProducerObject(
-        String produceRegion,
-        ProducerFactory producerFactory,
-        ProduceKey key
-    ) {
+    private Producer<? extends Offset> loadProducerObject(ProducerFactory producerFactory, ProduceKey key) {
         var topicMaybe = topicCache.get(key.topicFqn().toFqn());
         if (topicMaybe.isEmpty()) {
             throw new ResourceNotFoundException(
@@ -224,7 +220,7 @@ public final class ProducerService {
      * @throws ProduceException          if production fails due to an internal error
      */
     private CompletableFuture<ProduceResult> produceToValidTopic(VaradhiTopic topic, Message message) {
-        RegionName deployed = RegionName.of(produceRegion);
+        RegionName deployed = RegionName.of(localRegion);
         Optional<ProduceKey> produceKey = TopicResolver.resolve(topic, deployed, true);
         if (produceKey.isEmpty()) {
             return topic.getProduceConfig(deployed)
@@ -235,7 +231,7 @@ public final class ProducerService {
                         )
                         .orElseThrow(
                             () -> new ResourceNotFoundException(
-                                "Topic(%s) is not available in region(%s).".formatted(topic.getName(), produceRegion)
+                                "Topic(%s) is not available in region(%s).".formatted(topic.getName(), localRegion)
                             )
                         );
         }
@@ -274,6 +270,46 @@ public final class ProducerService {
         }
     }
 
+    /**
+     * Pre-warms the producer for {@code region} (ungated resolve). Used by topic-failover PREPARE.
+     */
+    public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
+        Optional<ProduceKey> key = TopicResolver.resolve(topic, region, false);
+        if (key.isEmpty()) {
+            return CompletableFuture.failedFuture(
+                new ResourceNotFoundException(
+                    "Topic(%s) has no produce configuration for region(%s).".formatted(topic.getName(), region.value())
+                )
+            );
+        }
+        return getProducer(key.get());
+    }
+
+    /**
+     * Whether this pod already has a cached producer for the topic's active produce path in
+     * {@code localRegion}. Uses <em>ungated</em> resolve (same as PREPARE warm) so fencing does
+     * not hide an existing producer when deciding transition participation.
+     */
+    public boolean hasActiveProducer(VaradhiTopic topic) {
+        return TopicResolver.resolve(topic, RegionName.of(localRegion), false)
+                            .map(key -> hasProducer(topic.getName(), key.storageTopicId(), key.produceRegion().value()))
+                            .orElse(false);
+    }
+
+    /**
+     * Pre-warms the producer for {@code storageTopicId} in this pod's local region.
+     * Used by storage-migration PREPARE.
+     */
+    public CompletableFuture<Void> loadProducer(VaradhiTopicName topicName, int storageTopicId) {
+        ProduceKey key = new ProduceKey(topicName, RegionName.of(localRegion), storageTopicId);
+        return getProducer(key).thenRun(() -> {});
+    }
+
+    public boolean hasProducer(String topicFQN, int storageTopicId, String region) {
+        return producerCache.getIfPresent(
+            new ProduceKey(VaradhiTopicName.parse(topicFQN), RegionName.of(region), storageTopicId)
+        ) != null;
+    }
 
     /**
      * Produces a message to a storage topic using the specified producer.

@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.core.cluster;
 
+import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.entities.JsonMapper;
@@ -15,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
  * send(): dispatch message to one of handler registered at <routeName>.<apiName>.send, delivery can be tracked using
  * the future.
  * request(): dispatch message to one of handler registered at <routeName>.<apiName>.request and wait for a response.
- * publish(): would dispatch message to all handler registered at <routeName>.<apiName>.publish
+ * publish(): fire-and-forget fan-out to all handlers registered at <routeName>.<apiName>.publish
  */
 @Slf4j
 public class MessageExchange {
@@ -48,7 +49,14 @@ public class MessageExchange {
     }
 
     public void publish(String routeName, String apiName, ClusterMessage msg) {
-        throw new UnsupportedOperationException("publish not implemented");
+        String apiPath = getPath(routeName, apiName, RouteMethod.PUBLISH);
+        try {
+            vertxEventBus.publish(apiPath, JsonMapper.jsonSerialize(msg), deliveryOptions);
+            log.debug("publish({}, {}) sent.", apiPath, msg.getId());
+        } catch (Exception e) {
+            log.error("publish({}, {}) failed at send: {}", apiPath, msg.getId(), e.getMessage());
+            throw new VaradhiException("publish failed: " + e.getMessage(), e);
+        }
     }
 
     public CompletableFuture<ResponseMessage> request(String routeName, String apiName, ClusterMessage msg) {
