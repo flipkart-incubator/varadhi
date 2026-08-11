@@ -53,13 +53,12 @@ import java.util.concurrent.*;
  * {@code >} fail). Acks are applied once at the end of the async chain ({@code thenAccept} /
  * {@code exceptionally}), not from every helper.
  *
- * <p>Threading: Failsafe version polls run on the <em>retry</em> scheduler; orchestration
- * (metrics, PREPARE decision, ack) hops to the dedicated <em>transition</em> executor.
- * Producer warm may complete on the producer path; {@code thenAcceptAsync}/{@code exceptionallyAsync}
- * switch back to the transition executor before ack.
+ * <p>Threading: owns a version-wait {@link ScheduledExecutorService} and a transition
+ * {@link ExecutorService}; Failsafe polls run on the former, orchestration (PREPARE / ack) on
+ * the latter. {@link #close()} shuts both down.
  */
 @Slf4j
-public final class ProduceTransitionMsgHandler implements TransitionEventListener {
+public final class ProduceTransitionMsgHandler implements TransitionEventListener, AutoCloseable {
 
     /**
      * Probe signal: TopicCache is still behind the coordinated version. Failsafe retries until
@@ -76,8 +75,9 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     private final TransitionAckApi transitionAckApi;
     private final ProducerService producerService;
     private final TransitionMetrics metrics;
+    private final ScheduledExecutorService versionWaitScheduler;
+    private final ExecutorService transitionExecutor;
     private final FailsafeExecutor<TransitionEvent> versionWaitExecutor;
-    private final Executor transitionExecutor;
     private final ConcurrentMap<String, TransitionParticipation> participationByOpId = new ConcurrentHashMap<>();
 
     public ProduceTransitionMsgHandler(
@@ -86,8 +86,6 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         TransitionAckApi transitionAckApi,
         ProducerService producerService,
         PodTransitionConfig config,
-        ScheduledExecutorService versionWaitScheduler,
-        Executor transitionExecutor,
         TransitionMetrics metrics
     ) {
         this.hostname = hostname;
@@ -95,13 +93,22 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         this.transitionAckApi = transitionAckApi;
         this.producerService = producerService;
         this.metrics = metrics;
-        this.transitionExecutor = transitionExecutor;
+        this.versionWaitScheduler = Executors.newSingleThreadScheduledExecutor(
+            r -> new Thread(r, "topic-transition-version-wait")
+        );
+        this.transitionExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "topic-transition"));
         this.versionWaitExecutor = RetryUtils.newPollingExecutor(
             versionWaitScheduler,
             config.versionWaitMaxAttempts(),
             config.podPollIntervalMs(),
             StaleVersionException.class
         );
+    }
+
+    @Override
+    public void close() {
+        versionWaitScheduler.shutdownNow();
+        transitionExecutor.shutdownNow();
     }
 
     @Override

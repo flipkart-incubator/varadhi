@@ -1,6 +1,5 @@
 package com.flipkart.varadhi.produce.failover;
 
-import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -30,7 +29,7 @@ class TransitionMetricsTest {
 
         assertEquals(
             1.0,
-            registry.find("topic.transition.stage.received")
+            registry.find("topic.transition.event.received")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
                     .counter()
@@ -40,21 +39,21 @@ class TransitionMetricsTest {
 
     @Test
     void stageFailureTopics_stickySetSizeGauge() {
-        assertEquals(0.0, registry.find("topic.transition.stage.failure.topics").gauge().value());
+        assertEquals(0.0, registry.find("topic.transition.failure").gauge().value());
 
         metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC_A, false);
-        assertEquals(1.0, registry.find("topic.transition.stage.failure.topics").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.failure").gauge().value());
         assertTrue(metrics.getTopicsWithStageFailure().contains(TOPIC_A));
 
         metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC_B, false);
-        assertEquals(2.0, registry.find("topic.transition.stage.failure.topics").gauge().value());
+        assertEquals(2.0, registry.find("topic.transition.failure").gauge().value());
 
         // Success clears sticky entry for that topic only (SqArchivalStats pattern).
         metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC_A, true);
-        assertEquals(1.0, registry.find("topic.transition.stage.failure.topics").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.failure").gauge().value());
         assertEquals(
             1.0,
-            registry.find("topic.transition.stage.acked")
+            registry.find("topic.transition.event.acked")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
                     .counter()
@@ -63,42 +62,16 @@ class TransitionMetricsTest {
     }
 
     @Test
-    void topicStage_mapSizeAndPerStageCounts() {
+    void topicStage_perStageActiveCounts() {
         metrics.setTopicStage(TOPIC_A, TransitionStage.PREPARE);
         metrics.setTopicStage(TOPIC_B, TransitionStage.SWITCH);
 
-        assertEquals(2.0, registry.find("topic.transition.topics.in_flight").gauge().value());
-        assertEquals(1.0, registry.find("topic.transition.topics.in_stage").tag("stage", "PREPARE").gauge().value());
-        assertEquals(1.0, registry.find("topic.transition.topics.in_stage").tag("stage", "SWITCH").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "PREPARE").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "SWITCH").gauge().value());
 
         metrics.clearTopicStage(TOPIC_A);
-        assertEquals(1.0, registry.find("topic.transition.topics.in_flight").gauge().value());
-        assertEquals(0.0, registry.find("topic.transition.topics.in_stage").tag("stage", "PREPARE").gauge().value());
-    }
-
-    @Test
-    void participationGauge_setAndClear() {
-        metrics.setParticipation(TransitionType.STORAGE_MIGRATION, TransitionParticipation.INVOLVED);
-
-        assertEquals(
-            1.0,
-            registry.find("topic.transition.participation")
-                    .tag("type", "STORAGE_MIGRATION")
-                    .tag("participation", "INVOLVED")
-                    .gauge()
-                    .value()
-        );
-
-        metrics.clearParticipation(TransitionType.STORAGE_MIGRATION);
-
-        assertEquals(
-            0.0,
-            registry.find("topic.transition.participation")
-                    .tag("type", "STORAGE_MIGRATION")
-                    .tag("participation", "INVOLVED")
-                    .gauge()
-                    .value()
-        );
+        assertEquals(0.0, registry.find("topic.transition.active").tag("stage", "PREPARE").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "SWITCH").gauge().value());
     }
 
     @Test
@@ -106,7 +79,7 @@ class TransitionMetricsTest {
         metrics.ackSendFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
         assertEquals(
             1.0,
-            registry.find("topic.transition.ack.send.failed")
+            registry.find("topic.transition.event.acked.failed")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
                     .gauge()
@@ -116,7 +89,7 @@ class TransitionMetricsTest {
         metrics.ackSendSucceeded(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
         assertEquals(
             0.0,
-            registry.find("topic.transition.ack.send.failed")
+            registry.find("topic.transition.event.acked.failed")
                     .tag("type", "TOPIC_FAILOVER")
                     .tag("stage", "PREPARE")
                     .gauge()
@@ -125,30 +98,17 @@ class TransitionMetricsTest {
     }
 
     @Test
-    void versionWaitGauge_tracksGlobalInFlight() {
-        metrics.versionWaitStarted();
-        metrics.versionWaitStarted();
-
-        assertEquals(2.0, registry.find("topic.transition.version_waits.in_flight").gauge().value());
-
-        metrics.versionWaitFinished();
-        assertEquals(1.0, registry.find("topic.transition.version_waits.in_flight").gauge().value());
-    }
-
-    @Test
     void close_removesRegisteredMeters() {
         metrics.stageReceived(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
         metrics.stageAcked(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, TOPIC_A, false);
         metrics.setTopicStage(TOPIC_A, TransitionStage.PREPARE);
-        metrics.versionWaitStarted();
-        metrics.setParticipation(TransitionType.TOPIC_FAILOVER, TransitionParticipation.INVOLVED);
+        metrics.ackSendFailed(TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
 
         metrics.close();
 
-        assertEquals(0, registry.find("topic.transition.stage.received").counters().size());
-        assertEquals(0, registry.find("topic.transition.stage.failure.topics").gauges().size());
-        assertEquals(0, registry.find("topic.transition.topics.in_flight").gauges().size());
-        assertEquals(0, registry.find("topic.transition.version_waits.in_flight").gauges().size());
-        assertEquals(0, registry.find("topic.transition.participation").gauges().size());
+        assertEquals(0, registry.find("topic.transition.event.received").counters().size());
+        assertEquals(0, registry.find("topic.transition.failure").gauges().size());
+        assertEquals(0, registry.find("topic.transition.active").gauges().size());
+        assertEquals(0, registry.find("topic.transition.event.acked.failed").gauges().size());
     }
 }

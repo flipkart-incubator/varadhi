@@ -32,9 +32,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,9 +65,8 @@ class ProduceTransitionMsgHandlerTest {
     private ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
     private ProducerService producerService;
     private CapturingTransitionAckApi acker;
-    private ScheduledExecutorService versionWaitScheduler;
-    private ExecutorService transitionExecutor;
     private TransitionMetrics metrics;
+    private ProduceTransitionMsgHandler handler;
 
     @BeforeEach
     void setup() throws Exception {
@@ -88,15 +84,14 @@ class ProduceTransitionMsgHandlerTest {
         when(producerService.loadProducer(any(VaradhiTopicName.class), anyInt())).thenReturn(
             CompletableFuture.completedFuture(null)
         );
-        versionWaitScheduler = Executors.newSingleThreadScheduledExecutor();
-        transitionExecutor = Executors.newSingleThreadExecutor();
         metrics = new TransitionMetrics(new SimpleMeterRegistry());
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        versionWaitScheduler.shutdownNow();
-        transitionExecutor.shutdownNow();
+        if (handler != null) {
+            handler.close();
+        }
         metrics.close();
         vertx.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
     }
@@ -107,16 +102,8 @@ class ProduceTransitionMsgHandlerTest {
 
     private ProduceTransitionMsgHandler handler(PodTransitionConfig config, int expectedAcks) {
         acker = new CapturingTransitionAckApi(expectedAcks);
-        return new ProduceTransitionMsgHandler(
-            "host-1",
-            topicCache,
-            acker,
-            producerService,
-            config,
-            versionWaitScheduler,
-            transitionExecutor,
-            metrics
-        );
+        handler = new ProduceTransitionMsgHandler("host-1", topicCache, acker, producerService, config, metrics);
+        return handler;
     }
 
     private void seed(int version) {
@@ -337,7 +324,7 @@ class ProduceTransitionMsgHandlerTest {
     void switchAcksOkWhenVersionArrivesLater() throws Exception {
         seed(10); // behind target — keep polling until seed(11)
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
-        versionWaitScheduler.schedule(() -> seed(11), 40, TimeUnit.MILLISECONDS);
+        CompletableFuture.delayedExecutor(40, TimeUnit.MILLISECONDS).execute(() -> seed(11));
 
         h.onTransition(
             TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)

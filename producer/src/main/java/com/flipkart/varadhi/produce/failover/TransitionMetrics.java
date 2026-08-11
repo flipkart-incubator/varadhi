@@ -47,9 +47,10 @@ public final class TransitionMetrics {
         // Gauge holds a ref to the set/map; scrapers read size — same as SqArchivalStats.
         track(Gauge.builder(STAGE_FAILURE_TOPICS, topicsWithStageFailure, Set::size).register(registry));
         for (TransitionStage stage : TransitionStage.values()) {
-            track(Gauge.builder(TOPICS_IN_STAGE, () -> topicStage.values().stream().filter(s -> s == stage).count())
-                       .tags(Tags.of("stage", stage.name()))
-                       .register(registry)
+            track(
+                Gauge.builder(TOPICS_IN_STAGE, () -> topicStage.values().stream().filter(s -> s == stage).count())
+                     .tags(Tags.of("stage", stage.name()))
+                     .register(registry)
             );
         }
         for (TransitionType type : TransitionType.values()) {

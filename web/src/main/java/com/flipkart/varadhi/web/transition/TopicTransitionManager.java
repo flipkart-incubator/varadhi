@@ -20,35 +20,24 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 /**
- * Wires the pod-side topic-transition stage handler on the cluster broadcast bus and owns the
- * version-wait + transition executors it creates.
+ * Wires the pod-side topic-transition stage handler on the cluster broadcast bus.
  */
 @Slf4j
 public final class TopicTransitionManager implements AutoCloseable {
 
-    private final ScheduledExecutorService versionWaitScheduler;
-    private final ExecutorService transitionExecutor;
+    private final ProduceTransitionMsgHandler handler;
     private final TransitionMetrics metrics;
 
-    private TopicTransitionManager(
-        ScheduledExecutorService versionWaitScheduler,
-        ExecutorService transitionExecutor,
-        TransitionMetrics metrics
-    ) {
-        this.versionWaitScheduler = versionWaitScheduler;
-        this.transitionExecutor = transitionExecutor;
+    private TopicTransitionManager(ProduceTransitionMsgHandler handler, TransitionMetrics metrics) {
+        this.handler = handler;
         this.metrics = metrics;
     }
 
     /**
      * Subscribes {@link ProduceTransitionMsgHandler} via {@link TransitionEventSubscriber}.
      *
-     * @return a closeable wiring handle that owns the transition executors and metrics
+     * @return a closeable wiring handle that owns the handler (and its executors) and metrics
      */
     public static TopicTransitionManager wire(
         VaradhiClusterManager clusterManager,
@@ -63,10 +52,6 @@ public final class TopicTransitionManager implements AutoCloseable {
         ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache = cacheRegistry.getCache(
             ResourceType.TOPIC
         );
-        ScheduledExecutorService versionWaitScheduler = Executors.newSingleThreadScheduledExecutor(
-            r -> new Thread(r, "topic-transition-version-wait")
-        );
-        ExecutorService transitionExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "topic-transition"));
         TransitionMetrics metrics = new TransitionMetrics(meterRegistry);
         ProduceTransitionMsgHandler handler = new ProduceTransitionMsgHandler(
             HostUtils.getHostName(),
@@ -77,19 +62,16 @@ public final class TopicTransitionManager implements AutoCloseable {
                 producerOptions.getTransitionVersionWaitMs(),
                 producerOptions.getTransitionPollIntervalMs()
             ),
-            versionWaitScheduler,
-            transitionExecutor,
             metrics
         );
         TransitionEventSubscriber.subscribe(messageRouter, handler);
         log.info("Wired topic-transition stage handler");
-        return new TopicTransitionManager(versionWaitScheduler, transitionExecutor, metrics);
+        return new TopicTransitionManager(handler, metrics);
     }
 
     @Override
     public void close() {
-        versionWaitScheduler.shutdownNow();
-        transitionExecutor.shutdownNow();
+        handler.close();
         metrics.close();
     }
 }
