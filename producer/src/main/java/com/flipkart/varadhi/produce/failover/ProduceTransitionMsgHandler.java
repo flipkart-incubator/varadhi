@@ -19,11 +19,7 @@ import dev.failsafe.FailsafeExecutor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.*;
 
 /**
  * Minimal pod-side handler for topic-transition stage broadcasts (topic failover and
@@ -118,17 +114,15 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
             return;
         }
         String topicFqn = event.topicFqn().toFqn();
-        metrics.versionWaitStarted();
         // probe → retry TP; metrics / PREPARE / ack → transition TP (warm may leave briefly then hop back).
         versionWaitExecutor.getAsync(() -> probeVersion(event))
-                           .whenCompleteAsync((ignored, t) -> metrics.versionWaitFinished(), transitionExecutor)
                            .thenComposeAsync(this::onVersionReached, transitionExecutor)
-                           .thenAcceptAsync(this::ackOk, transitionExecutor)
-                           .exceptionallyAsync(t -> {
+                           .thenAccept(this::ackOk)
+                           .exceptionally(t -> {
                                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
                                ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
                                return null;
-                           }, transitionExecutor);
+                           });
     }
 
     /**
@@ -200,7 +194,6 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
 
     private void recordParticipation(TransitionEvent event, TransitionParticipation participation) {
         participationByOpId.put(event.opId(), participation);
-        metrics.setParticipation(event.transitionType(), participation);
     }
 
     /**
@@ -222,7 +215,6 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     private void clearParticipationIfTerminal(TransitionEvent event) {
         if (event.stage() == TransitionStage.COMPLETED || event.stage() == TransitionStage.ABORTED) {
             participationByOpId.remove(event.opId());
-            metrics.clearParticipation(event.transitionType());
             metrics.clearTopicStage(event.topicFqn().toFqn());
         }
     }
