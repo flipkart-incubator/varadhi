@@ -7,6 +7,7 @@ import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
 import com.flipkart.varadhi.entities.LifecycleStatus;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SegmentedStorageTopic;
 import com.flipkart.varadhi.entities.StorageTopic;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -85,11 +87,16 @@ class TopicFailoverOpExecutorTest {
             "topic",
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(new DummyStorageTopic(FQN)),
+            false,
+            Map.of(SOURCE, ProduceConfig.producing(), TARGET, ProduceConfig.blocked())
         );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(FQN)))
-                     .withProduceRegion(SOURCE)
-                     .withProduceRegion(TARGET);
         topic.setVersion(1);
 
         op = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
@@ -132,11 +139,11 @@ class TopicFailoverOpExecutorTest {
         ArgumentCaptor<VaradhiTopic> updated = ArgumentCaptor.forClass(VaradhiTopic.class);
         verify(topicStore, times(2)).update(updated.capture());
         VaradhiTopic afterSwitch = updated.getAllValues().get(0);
-        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(SOURCE).orElseThrow().state());
-        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(TARGET).orElseThrow().state());
+        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(SOURCE).orElseThrow().getState());
+        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(TARGET).orElseThrow().getState());
         VaradhiTopic afterComplete = updated.getAllValues().get(1);
-        assertEquals(TopicState.Blocked, afterComplete.getProduceConfig(SOURCE).orElseThrow().state());
-        assertEquals(TopicState.Producing, afterComplete.getProduceConfig(TARGET).orElseThrow().state());
+        assertEquals(TopicState.Blocked, afterComplete.getProduceConfig(SOURCE).orElseThrow().getState());
+        assertEquals(TopicState.Producing, afterComplete.getProduceConfig(TARGET).orElseThrow().getState());
         assertEquals(TransitionStage.COMPLETED, transition.getCurrentStage());
         verify(transitionStore).delete(FQN);
 

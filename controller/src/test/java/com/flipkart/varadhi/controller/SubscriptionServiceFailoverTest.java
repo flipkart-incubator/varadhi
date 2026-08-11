@@ -83,16 +83,21 @@ class SubscriptionServiceFailoverTest {
     }
 
     private VaradhiTopic topicWithRegions() {
-        VaradhiTopic topic = VaradhiTopic.of(
+        return VaradhiTopic.of(
             "proj",
             "topic",
             false,
             new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            SegmentedStorageTopic.of(new DummyStorageTopic(FQN)),
+            false,
+            java.util.Map.of(SOURCE, com.flipkart.varadhi.entities.ProduceConfig.producing(), TARGET, com.flipkart.varadhi.entities.ProduceConfig.blocked())
         );
-        return topic.withStorageTopic(SegmentedStorageTopic.of(new DummyStorageTopic(FQN)))
-                    .withProduceRegion(SOURCE)
-                    .withProduceRegion(TARGET);
     }
 
     @Test
