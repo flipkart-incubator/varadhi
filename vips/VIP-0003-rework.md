@@ -95,7 +95,7 @@ Shipped and reusable:
 | `TopicResolver` | `entities` | resolves `ProduceKey(topicFqn, produceRegion, storageTopicId)`; gated and ungated forms |
 | `ProduceKey` as producer cache key | `varadhi-server.produce-service` | `produceRegion` is **currently only a cache-key discriminator** |
 | `Region` / `RegionStatus`, `PATCH /v1/regions/:region` | `entities`, `varadhi-server.http-ingress` | operator-set regional availability |
-| `TransitionType`, `TransitionEvent`, `TransitionAck` | `entities` | event/ack shapes for pod coordination |
+| `TransitionType`, `TransitionStage`, `TransitionParticipation`, `TransitionEvent`, `TransitionAck` | `entities` | pod-coordination wire contract. **`TransitionStage` ships as `PENDING/PREPARE/SWITCH/DRAIN/COMPLETED/ABORTED`; this VIP redefines it** (§6.4): `SWITCH` splits into `FENCE` + `MIGRATE`, and `DRAIN` becomes a first-class controller-only state. Only tests depend on the enum today, so the change is free. |
 | `ZNodeKind(kind, pathFormat, …)` | `metastore-zk` | `pathFormat` is a format string, so hierarchical paths need no new machinery |
 | Operation records + reconciliation | `varadhi-controller.operation-manager` | pattern to copy for failover ops |
 
@@ -104,7 +104,13 @@ Known gaps this VIP must close (all verified against the code, not assumed):
 1. **Nothing can produce cross-cluster.** `ProducerService.loadProducerObject` drops
    `key.produceRegion()` entirely, and `PulsarProducerFactory` holds a single `PulsarClient` built
    from a single `PulsarConfig`. There is exactly one broker connection per pod today.
-2. **No orchestration.** No state machine, no transition store, no pod-side transition handling.
+2. **No orchestration behind the wire contract.** The stage / participation / event / ack shapes
+   ship, but nothing drives them: no controller state machine, no transition store, no pod-side
+   transition handling. Two shapes also need changing to carry this design (§6.4):
+   `TransitionEvent.topicVersionToAwait` is a **`VaradhiTopic`** version, whereas the version pods
+   must converge on is the **regional produce config** version; and `TransitionAck` has no field for
+   the version a pod actually observed, so a barrier failure is today indistinguishable from a bare
+   timeout.
 3. **`TopicResolver` reads the *target* region's `ProduceConfig`** to get `produceIdx`. That is both
    unnecessary (`produceIdx` never changes on failover) and incompatible with a region-local config
    (§6.3).
@@ -132,12 +138,17 @@ Supporting decisions, each with the reason it is not the obvious alternative:
   and is written by that region's controller; a separate per-region ZK ensemble keeps that write
   path independent of the global ensemble's availability. Hidden behind `shared.metadata-spi` — the
   SPI does not expose which ensemble backs a call.
-- **One commit, at `MIGRATED`.** `SWITCH` writes only `state=Fenced`; `MIGRATED` writes
+- **Config-authoritative.** The regional produce config is the only thing that changes pod
+  behaviour; the transition state in ZK is the only thing that advances the orchestration. Events
+  are *convergence probes*, not instructions to route. This is what makes a restarting pod correct
+  by data alone, and it is the reason no barrier is needed to un-fence anyone (§6.4).
+- **One commit, at `MIGRATE`.** `FENCE` writes only `state=Fenced`; `MIGRATE` writes
   `state=Producing` **and** `failOverRegion=target` together. Single-purpose writes make abort a
   plain revert, and make the route going live atomic with produce reopening.
-- **The replication drain sits inside `SWITCH`.** Backlog can only settle *after* produce to the
-  source stops, and produce can only reopen *after* it has settled. It is inside the outage window
-  by construction, not by choice.
+- **The replication drain is its own state, between `FENCE` and `MIGRATE`.** Backlog can only settle
+  *after* produce to the source stops, and produce can only reopen *after* it has settled. It is
+  inside the outage window by construction, not by choice. It is also the one state with no pod
+  participation, which is why it is separate rather than folded into `FENCE`.
 - **Pods stop *using* the source producer; they do not close it.** Abort then costs nothing and the
   connection is still hot. Closing is deferred to a terminal state, and only actually needed when
   `produceIdx` moved (storage migration).
@@ -201,7 +212,7 @@ The region is implicit in *which* ensemble is addressed, so it appears in no pat
 | Entity | Fields |
 |---|---|
 | `TopicProduceConfig` | `state`, `produceIdx`, `failOverRegion` — the shipped `ProduceConfig` promoted to a versioned regional entity keyed by topic FQN |
-| `TopicTransition` | `transitionId`, `type`, `topicFqn`, `targetRegion`, `state`, `participants`, `requiredConfigVersion`, `lagDrainTimeoutMs`, `onLagTimeout`, per-state timestamps |
+| `TopicTransition` | `transitionId`, `type`, `topicFqn`, `targetRegion`, `state` (§6.4), `participants`, `awaitConfigVersion`, `lagDrainTimeoutMs`, `onLagTimeout`, per-state timestamps |
 | `TopicFailoverOperation` | audit record: `opId`, requester, state history, error — modelled on `SubscriptionOperation`, with its own `MetaStoreEntityType` and `ZNodeKind` |
 
 The operation path doubles as the **index of in-flight transitions**: a restarted controller
@@ -251,47 +262,104 @@ for `Fenced` is wrong, because mainstream HTTP clients treat it as terminal.
 stateDiagram-v2
     [*] --> PENDING
     PENDING --> PREPARE
-    PREPARE --> SWITCH
-    SWITCH --> MIGRATED
-    MIGRATED --> COMPLETED
+    PREPARE --> FENCE
+    FENCE --> DRAIN
+    FENCE --> MIGRATE
+    DRAIN --> MIGRATE
+    MIGRATE --> COMPLETED
     PENDING --> ABORTED
     PREPARE --> ABORTED
-    SWITCH --> ABORTED
+    FENCE --> ABORTED
+    DRAIN --> ABORTED
     COMPLETED --> [*]
     ABORTED --> [*]
 ```
 
-| State | Produce config write | Pod work | Abort? |
+**Two invariants govern every state.**
+
+*Config-authoritative.* A pod routes and gates produce from its cached produce config, never from an
+event payload. The single exception is `PREPARE`'s target region, which the config does not yet
+carry and which is used **only to open a connection, never to select a producer for a message**.
+Events are convergence probes: they ask a pod whether it has caught up to a given config version
+and, where the pod has work to do, tell it to do it. A pod that never receives an event still
+converges, and a pod that restarts mid-transition is correct by data alone.
+
+*State-first.* The transition state is written to the regional store **before** the work for that
+state runs, so a restarted controller knows what was in flight instead of inferring it. The price is
+that **every state must be idempotently re-executable**: re-entering a state re-writes the same
+config value under CAS, re-broadcasts, and restarts its ack barrier from zero. Pods must
+correspondingly treat a repeated event — or an event for a transition they have already cleaned up —
+as a no-op and ack success.
+
+| State | Transition write | Then executes | Broadcast | Barrier | Abort |
+|---|---|---|---|---|---|
+| `PENDING` | state=`PENDING` + op record | validate target, claim uniqueness (E1–E4) | no | — | yes, free |
+| `PREPARE` | state=`PREPARE` | pods open a producer to the **target** cluster for the same storage topic name | yes, carries target | yes | yes, free |
+| `FENCE` | state=`FENCE` | write config `state=Fenced` (vN+1); pods stop accepting produce (503), settle in-flight sends to the source, **retain** the source producer | yes | yes | yes: revert to `Producing` |
+| `DRAIN` | state=`DRAIN` | poll source→target replication backlog until zero or `lagDrainTimeoutMs`. Skipped entirely for ungrouped topics | no | — | yes: revert to `Producing` |
+| `MIGRATE` | state=`MIGRATE` | write config `state=Producing` **and** `failOverRegion=target` (vN+2); pods serve traffic from the pre-warmed producer and release transition state | yes | yes, non-fatal | **no — forward only** |
+| `COMPLETED` | state=`COMPLETED` | delete the transition znode, finalize the op record | no | — | terminal |
+| `ABORTED` | state=`ABORTED` | write config `state=Producing`, `failOverRegion` untouched; pods resume on the retained source producer and release transition state | yes | no | terminal |
+
+Because `failOverRegion` is written only at `MIGRATE`, aborting from `FENCE` or `DRAIN` restores the
+exact prior state with a single field write.
+
+Three consequences of the table are worth stating outright:
+
+- **`MIGRATE` is the pods' terminal state**, not `COMPLETED`. Pod-side cleanup — releasing
+  transition state and the producer that is no longer the resolved target — happens there, because
+  `MIGRATE` is the last state the controller enforces on pods. `COMPLETED` is controller-only
+  bookkeeping and is not broadcast at all. `ABORTED` plays the same terminal role on the abort path.
+- **`MIGRATE`'s barrier waits but cannot fail.** The route is committed, so expiry can only proceed
+  to `COMPLETED` and alert (E8). Its purpose is to bound pod cleanup and yield a fleet-converged
+  signal — not to un-fence anyone. An un-acked pod converges from its own config regardless, and
+  until it does it stays fenced: the failure mode of slow convergence is continued unavailability
+  for that pod's traffic, never produce split across two clusters.
+- **Only `MIGRATE` needs an explicit resume rule.** On restart in `MIGRATE`, read the produce
+  config: if `failOverRegion` is already the target the commit landed, so go collect acks;
+  otherwise write it. That removes any need for a transaction spanning the transition and config
+  znodes. Every other state's resume is just its idempotent re-execution.
+
+**Ack semantics.** Every broadcast event carries the produce-config version the pod must observe. A
+pod waits until its cached config reaches that version — bounded by `ackTimeout` — does its work,
+and acks **with the version it observed**, so a barrier failure is diagnosable rather than a bare
+timeout. The controller counts only acks at ≥ the required version. At `FENCE` the ack is compound:
+*observed vN+1* **and** *in-flight sends settled*.
+
+This is what makes ordering between the two channels irrelevant. Transition events
+(`shared.cluster-rpc`) and config updates (the metastore event pipeline) are independent, so either
+may lead. Event first: the pod blocks on the version gate. Config first: the pod is already fenced
+or un-fenced by data, and the event only advances its bookkeeping. A `(transitionId, stage)` pair
+lets a pod drop a reordered or stale event.
+
+Because the version gate is served by that pipeline, **independent per-pod event progress is a
+prerequisite of this design rather than an optimization**:
+`flow.cache.entity-event-propagation` today commits an event only after every node acks, so one
+stuck pod delays every pod's convergence — and therefore both the `FENCE` abort and the `MIGRATE`
+alert (§8).
+
+**Timeouts.** Two, and only two:
+
+| Timeout | Set by | Applies to | On expiry |
 |---|---|---|---|
-| `PENDING` | — | — | yes, free |
-| `PREPARE` | — | open a producer to the **target** cluster for the same storage topic name; ack | yes, free |
-| `SWITCH` | `state=Fenced` | stop accepting produce (503), settle in-flight sends to the source, **retain** the source producer, ack with observed config version → then the controller polls source→target backlog | yes: revert to `Producing` |
-| `MIGRATED` | `state=Producing`, `failOverRegion=target` | resolve now yields `produceRegion=target`; the pre-warmed producer serves traffic | **no — forward only** |
-| `COMPLETED` | — | all acks at ≥ committed version | terminal |
-| `ABORTED` | `state=Producing`, `failOverRegion` untouched | resume on the retained source producer | terminal |
+| `ackTimeout` | config | every barrier | `PREPARE`, `FENCE` → **abort** (nothing committed); `MIGRATE` → proceed to `COMPLETED` + alert |
+| `lagDrainTimeoutMs` | **request** | `DRAIN` | `onLagTimeout: FAILOVER` (default) → proceed to `MIGRATE` accepting ordering loss; `ABORT` → revert |
 
-Because `failOverRegion` is written only at `MIGRATED`, aborting from `SWITCH` restores the exact
-prior state with a single field write.
-
-**Timeouts.** Two, nested, both inside `SWITCH`:
-
-| Timeout | Set by | Typical | On expiry |
-|---|---|---|---|
-| `prepareAckTimeoutMs` | config | seconds | abort |
-| `switchAckTimeoutMs` | config | ~2s | abort — nothing is committed yet |
-| `lagDrainTimeoutMs` | **request** | caller's call | `onLagTimeout: FAILOVER` (default) → proceed to `MIGRATED` accepting ordering loss; `ABORT` → revert |
-| `migratedAckTimeoutMs` | config | seconds | alert; **cannot** abort — the route is committed |
+A single generic ack timeout is deliberate: what differs between barriers is the *expiry policy*,
+not the duration. A `PREPARE` timeout aborts rather than proceeding on a best-effort warm, because
+it almost always means that pod cannot reach the target cluster — which would resurface as produce
+failures immediately after the commit. Nothing is written yet, so the abort costs nothing, and the
+barrier doubles as a fleet-wide cross-region connectivity pre-check.
 
 So the honest bound is:
 
 ```
-outage ≈ switchAck + lagDrain + convergence
+outage ≈ fenceAck + drain + convergence          worst case: ackTimeout + lagDrainTimeoutMs
 ```
 
-The caller sets `lagDrainTimeoutMs`, therefore **the caller sets the outage length**. Ungrouped
-topics skip the drain entirely, making their outage `switchAck + convergence` — sub-second in
-practice. Use `GET …/failover/preflight` (§6.7) to read current backlog *before* choosing the
-budget.
+The caller sets `lagDrainTimeoutMs`, therefore **the caller sets the dominant term**. Ungrouped
+topics skip `DRAIN` entirely, making their outage `fenceAck + convergence` — sub-second in practice.
+Use `GET …/failover/preflight` (§6.7) to read current backlog *before* choosing the budget.
 
 If the source cluster's admin API is unreachable, backlog is **unknown, not zero**; the same
 timeout policy applies.
@@ -307,43 +375,38 @@ sequenceDiagram
     participant MS as pulsar (source)
 
     Op->>Ctrl: POST …/failover {targetRegion, lagDrainTimeoutMs}
-    Ctrl->>RZK: create transition (uniqueness) + op record
+    Ctrl->>RZK: transition PENDING (create = uniqueness) + op record
+    Ctrl->>RZK: transition PREPARE
     Ctrl->>Pod: PREPARE (target region)
     Pod->>Pod: open producer to target cluster
     Pod-->>Ctrl: ack
-    Ctrl->>RZK: write state=Fenced (v=N+1)
-    Ctrl->>Pod: SWITCH (requiredConfigVersion=N+1)
+    Ctrl->>RZK: transition FENCE, then config state=Fenced (v=N+1)
+    Ctrl->>Pod: FENCE (await v=N+1)
     Pod->>Pod: reject produce (503), settle in-flight, retain source producer
     Pod-->>Ctrl: ack (observed version)
+    Ctrl->>RZK: transition DRAIN
     loop grouped only, until 0 or lagDrainTimeoutMs
         Ctrl->>MS: replication backlog → target
     end
-    Ctrl->>RZK: write state=Producing, failOverRegion=target (v=N+2)
-    Ctrl->>Pod: MIGRATED (requiredConfigVersion=N+2)
-    Pod->>Pod: resolve → target cluster; produce resumes
-    Pod-->>Ctrl: ack
-    Ctrl->>RZK: delete transition; op COMPLETED
+    Ctrl->>RZK: transition MIGRATE, then config state=Producing + failOverRegion=target (v=N+2)
+    Ctrl->>Pod: MIGRATE (await v=N+2)
+    Pod->>Pod: resolve → target cluster; produce resumes; release transition state
+    Pod-->>Ctrl: ack (observed version)
+    Ctrl->>RZK: transition COMPLETED; delete transition; finalize op
 ```
 
-**Happens-before.** The produce config is the authority; the event is only a nudge plus a barrier.
-Pods **never** take routing from an event payload — routing comes from the cached config, always.
-Each event therefore carries `requiredConfigVersion`: a pod waits until its cached config reaches
-that version (bounded by the state's timeout), acts, and acks with the version it observed; the
-controller counts only acks at ≥ the required version. This makes event ordering relative to global
-metastore events irrelevant, because failover reads and writes *only* the regional config. A
-`(transitionId, state-ordinal)` pair lets a pod drop a reordered or stale event instead of
-applying it.
-
-**Participants** are `varadhi-server` pods holding a producer for that topic. `NOT_INVOLVED` pods
-ack to opt out so the barrier stops waiting on them. Strictness is only needed at `SWITCH`:
+**Participants.** Under config-authority, `TransitionParticipation` records *whether a pod ran
+`PREPARE`'s pre-warm*; it is **not** an exemption from the barrier. Every `varadhi-server` pod in the
+region must satisfy the version gate at `FENCE`, including one that holds no producer for the topic:
+such a pod can take its first produce request for that topic during the drain, and with a stale
+cached config it would write to the source and silently invalidate the drain. Pre-warm is what
+`INVOLVED` buys; convergence is owed by everyone.
 
 - a pod **leaving** mid-transition takes its in-flight sends with it — safe to continue;
 - a pod **joining** (including a restart) reads `state=Fenced` from the regional store and is
-  therefore fenced by data, with no event needed — safe by construction;
-- `PREPARE` coverage is best-effort: a pod that misses it merely pays a cold connection at
-  `MIGRATED`.
+  therefore fenced by data, with no event needed — safe by construction.
 
-**Failback** is the same call with `targetRegion` = the local region. `MIGRATED` clears
+**Failback** is the same call with `targetRegion` = the local region. `MIGRATE` clears
 `failOverRegion`, and the drain runs in the reverse direction.
 
 ### 6.5 Why the drain is required
@@ -370,17 +433,26 @@ for it, and today eviction silently leaks the underlying producer. Replace the T
 **event-driven registry** keyed by `ProduceKey`:
 
 - populated on demand, as now;
-- entries removed **only** on: regional produce-config change for that topic, topic
-  delete / invalidate, pod shutdown;
+- entries removed **only** on: topic delete / invalidate; regional produce-config *removal* (region
+  offboarding); a `produceIdx` move, applied when the `MIGRATE` event arrives (storage migration, §8);
+  pod shutdown;
+- **never on an ordinary produce-config update.** `FENCE` and the `MIGRATE` commit are both config
+  writes; evicting on them would throw away the producer `PREPARE` just pre-warmed and make the
+  first post-commit produce pay the cold cross-region connect that Approach A was rejected for;
+- a failover commit therefore leaves the source producer resident and simply unselected — which is
+  what makes abort and failback cheap;
 - every removal path funnels through a single remover that `close()`s — this fixes the existing
   leak;
-- an optional idle reaper may exist on an *hours* timescale, never on a transition timescale.
+- an optional idle reaper may exist on an *hours* timescale, never on a transition timescale. It is
+  what eventually retires the source producer of a region that stays failed over.
 
-Invalidation hooks `ResourceReadCache#addOnInvalidate` on the **regional produce-config** cache —
-the mechanism `varadhi-server.produce-rate-limiter` already uses for per-topic cleanup.
+The hook is `ResourceReadCache#addOnInvalidate` — the mechanism
+`varadhi-server.produce-rate-limiter` already uses for per-topic cleanup — on both the topic cache
+and the regional produce-config cache. Its semantics are already exactly right: it fires on
+`INVALIDATE` only and never on upsert, so subscribing to it cannot evict on a version bump.
 
-Nothing time-based can then drop a producer mid-transition, so source and target producers are both
-legitimately resident for the whole window and no special pinning is required.
+Nothing time-based, and nothing routine, can then drop a producer mid-transition: source and target
+producers are both legitimately resident for the whole window and no special pinning is required.
 
 ### 6.7 REST API
 
@@ -392,7 +464,7 @@ topic routes (a new `ResourceAction`, at the same `concept.topic` hierarchy leve
 |---|---|---|
 | `GET` | `…/topics/:t/failover/preflight?targetRegion=` | Dry run: target ∈ `StorageTopic.regions`, `Region.status`, **current backlog**, participant count. Lets an operator size `lagDrainTimeoutMs` before opening an outage. |
 | `POST` | `…/topics/:t/failover` | `{ targetRegion, lagDrainTimeoutMs?, onLagTimeout? }`, `?skipValidation` (admin). → **202** + `{transitionId, opId}`. Failback = `targetRegion` is the local region. |
-| `POST` | `…/topics/:t/failover/abort` | Allowed through `SWITCH`; **409** at `MIGRATED` or later. → 202 |
+| `POST` | `…/topics/:t/failover/abort` | Allowed through `DRAIN`; **409** at `MIGRATE` or later. → 202 |
 | `GET` | `…/topics/:t/failover` | Live transition: state, entered-at, participants, **which hosts have not acked**, current backlog, remaining budget. 404 if none. |
 | `GET` | `…/topics/:t/failover/history?limit=` | Past attempts from the operation store. |
 | `GET` | `…/topics/:t/produce-config` | This region's live config: `state`, `produceIdx`, `failOverRegion`, version. Answers "where is this region producing right now" directly rather than by inference. |
@@ -417,7 +489,7 @@ audited.
 | `varadhi-controller.event-distributor` | Watch the regional ensemble in addition to the global one; fan out regional `concept.entity-change-event`s to that region's pods. |
 | `varadhi-controller.operation-manager` | New operation type; reconcile in-flight failovers on controller restart; reuse existing concurrency and retry configuration. |
 | `shared.entity-services` | `flow.admin.create-topic` / delete materialize and remove regional produce configs (§6.9). |
-| `shared.cluster-rpc` | Transport for `TransitionEvent` / `TransitionAck`. |
+| `shared.cluster-rpc` | Transport for `TransitionEvent` / `TransitionAck`. The shipped shapes need two changes (§4): the awaited version becomes the regional produce-config version, and `TransitionAck` gains the version the pod observed. |
 
 **New components:**
 
@@ -463,19 +535,19 @@ needs cross-region ensemble connectivity, which the global ensemble already requ
 | E4 | Concurrent failover on the same topic | `create` of the transition znode fails `NodeExists` → 409 |
 | E5 | Topic update or delete during a transition | Rejected: ZK will not delete a produce config with a live transition child; update guarded at the API |
 | E6 | Config CAS conflict on a controller write | Re-read and retry the state; abort if still conflicting. Backstop only — the transition znode is the primary guard |
-| E7 | Ack timeout in `PENDING` / `PREPARE` / `SWITCH` | Targeted resend, then abort |
-| E8 | Ack timeout at `MIGRATED` | Alert; cannot abort. Route is committed and pods converge from the config regardless |
+| E7 | Ack timeout at `PREPARE` or `FENCE` | Targeted resend, then abort. A `PREPARE` timeout usually means that pod cannot reach the target cluster at all |
+| E8 | Ack timeout at `MIGRATE` | Proceed to `COMPLETED` and alert; cannot abort. The route is committed and pods converge from the config regardless — an un-acked pod stays fenced, so the impact is unavailability, not split produce |
 | E9 | Backlog will not drain (source cluster dead) | `lagDrainTimeoutMs` expires → `onLagTimeout` decides (§6.5) |
 | E10 | Backlog **growing** during the drain | Abort — implies produce to the source has not actually stopped |
 | E11 | Missing segment for `produceIdx` | Fail loudly at resolve; a config/storage inconsistency, not a failover concern |
-| E12 | Controller dies in `PENDING` / `PREPARE` | Nothing written; reconciler aborts |
-| E13 | Controller dies in `SWITCH` | **The topic stays fenced in that region until the controller returns.** Reconciler then aborts or advances. See the risk below |
-| E14 | Controller dies at/after `MIGRATED` | Route is already committed; pods converge from the config alone. Reconciler only finishes bookkeeping |
+| E12 | Controller dies in `PENDING` / `PREPARE` | No config written; reconciler aborts |
+| E13 | Controller dies in `FENCE` / `DRAIN` | **The topic stays fenced in that region until the controller returns.** Reconciler then re-executes the state idempotently, or aborts. See the risk below |
+| E14 | Controller dies in `MIGRATE` | Reconciler reads the config: committed → collect acks; not committed → write it. Either way pods converge from the config alone and only bookkeeping remains |
 | E15 | Pod restarts mid-transition | Comes up non-participating and reads `Fenced` from the store, so it correctly refuses produce; joins normal service on the next terminal state |
 
 **Risk — HA controller is a production prerequisite.** `varadhi-controller` is a singleton with no
-leader election today, so E13 means a controller crash between the `SWITCH` write and the
-`MIGRATED` write leaves that topic's produce fenced in that region until the controller comes back.
+leader election today, so E13 means a controller crash between the `FENCE` write and the
+`MIGRATE` write leaves that topic's produce fenced in that region until the controller comes back.
 A durable fence deadline was considered as mitigation and **rejected** to keep the model simple
 (one authority, no time-dependent divergence between pods); controller HA is the intended fix and
 gates production use of this feature.
@@ -500,7 +572,8 @@ reconciler provide convergence.
 |---|---|
 | `failover.transition.state` (counter: state, outcome) | Per-state success and failure rates |
 | `failover.transition.duration` (histogram per state) | Where the outage time actually goes |
-| `failover.outage.duration` (histogram, `SWITCH` → `MIGRATED` acked) | The number the goal in §3 is measured against |
+| `failover.outage.duration` (histogram, `FENCE` config write → `MIGRATE` commit write) | The number the goal in §3 is measured against. Controller-observed, not ack-anchored — the per-pod tail is convergence lag, below |
+| `failover.unconverged_pods` (gauge, during and after `MIGRATE`) | Pods not yet at the committed config version. Replaces the abort that `MIGRATE` cannot perform; sourced from the existing per-node event-completion tracking |
 | `failover.active` (gauge) | In-flight transitions |
 | `failover.replication_backlog` (gauge during drain) | Drain progress; also the input to sizing `lagDrainTimeoutMs` |
 | `failover.lag_timeout.total` (by `onLagTimeout` outcome) | How often ordering loss is being accepted |
@@ -518,8 +591,9 @@ reconciler provide convergence.
 2. **Peer-region broker endpoint configuration.** Static per-pod config listing every peer region's
    endpoints and credentials, or derived from `Region` entities in the global metastore? Static is
    simpler; derived avoids a redeploy when a region is onboarded.
-3. **`switchAckTimeoutMs` and default `lagDrainTimeoutMs` values.** Need measurement — pod fan-out
-   size and observed steady-state backlog per topic class.
+3. **`ackTimeout` and default `lagDrainTimeoutMs` values.** Need measurement — pod fan-out size,
+   cross-region connection setup time (which sizes the `PREPARE` barrier and therefore the single
+   generic timeout), and observed steady-state backlog per topic class.
 4. **Backlog query granularity.** Per storage topic summed over partitions is assumed. Confirm
    against what the stack's admin API reports for a partitioned topic, and what it reports when a
    replication cluster is unreachable rather than merely behind.
@@ -528,6 +602,11 @@ reconciler provide convergence.
 6. **Region-local reconciler placement.** Regional controller or server? Controller is the natural
    owner, but §6.9 keeps create in the server, so the two would split responsibility for the same
    data.
+7. **Escape hatch for a `PREPARE` abort.** Aborting on a `PREPARE` ack timeout means one slow or
+   flapping pod can block a failover during an incident. Proceeding without it is bounded harm — that
+   pod fences and then produces to the target on a cold connection. Add a force flag to the request,
+   in the same audited-override family as `skipValidation` and a non-default `onLagTimeout`, or rely
+   on operator retry?
 
 ---
 
@@ -544,14 +623,15 @@ reconciler provide convergence.
   participants in topic failover, and why this needs its own VIP: subscription-scoped produce
   configs, and a fenced consumer must pause its processing loop rather than fail messages.
 - **Storage migration** (`TransitionType.STORAGE_MIGRATION`, moving `produceIdx` within a region)
-  reuses this state machine with a different target type and an actual producer close at
-  `COMPLETED`.
+  reuses this state machine with a different target type and an actual producer close at `MIGRATE`
+  — the one case where the old producer is genuinely dead rather than merely unselected (§6.6).
 - **External / ingress failover** — the complement to this VIP, for when Varadhi itself is
   unreachable in a region.
 - **Controller HA** — see the risk in §6.10.
 - **Independent per-pod event progress.** `flow.cache.entity-event-propagation` currently commits
-  only after every node acks, so one stuck pod head-of-line-blocks propagation cluster-wide. Not
-  required by this VIP, but it directly limits how fast convergence can be relied upon.
+  only after every node acks, so one stuck pod head-of-line-blocks propagation cluster-wide. This is
+  a **prerequisite**, not an optional improvement: every ack barrier in §6.4 waits on a pod's cached
+  config reaching a version through exactly this pipeline.
 
 ---
 
