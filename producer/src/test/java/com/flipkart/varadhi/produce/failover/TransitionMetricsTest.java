@@ -64,14 +64,14 @@ class TransitionMetricsTest {
     @Test
     void topicStage_perStageActiveCounts() {
         metrics.setTopicStage(TOPIC_A, TransitionStage.PREPARE);
-        metrics.setTopicStage(TOPIC_B, TransitionStage.SWITCH);
+        metrics.setTopicStage(TOPIC_B, TransitionStage.FENCE);
 
         assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "PREPARE").gauge().value());
-        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "SWITCH").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "FENCE").gauge().value());
 
         metrics.clearTopicStage(TOPIC_A);
         assertEquals(0.0, registry.find("topic.transition.active").tag("stage", "PREPARE").gauge().value());
-        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "SWITCH").gauge().value());
+        assertEquals(1.0, registry.find("topic.transition.active").tag("stage", "FENCE").gauge().value());
     }
 
     @Test

@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
@@ -19,32 +18,24 @@ import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service responsible for producing messages to topics in Varadhi.
  * <p>
- * This service provides high-performance, thread-safe message production capabilities with:
- * <ul>
- *   <li>Efficient producer caching using Caffeine for optimal resource utilization</li>
- *   <li>Fully asynchronous message production with CompletableFuture</li>
- *   <li>Comprehensive metrics collection for monitoring and performance analysis</li>
- *   <li>Robust error handling with detailed error messages</li>
- * </ul>
- * <p>
- * The service maintains a cache of producers for storage topics to optimize performance
- * and resource utilization. Producers are created on-demand and cached for reuse based on
- * configurable TTL settings.
+ * Producers are cached by {@link ProduceKey} in an event-driven registry: entries are removed
+ * (and {@link Producer#close()}'d) on topic invalidate / delete only — not on ordinary topic
+ * upserts — so PREPARE-warmed producers survive FENCE/MIGRATE version bumps.
  */
 @Slf4j
 public final class ProducerService {
 
     /**
-     * Cache of producers for storage topics.
+     * Registry of producers for {@link ProduceKey}s.
      */
-    private final LoadingCache<ProduceKey, Producer<? extends Offset>> producerCache;
+    private final ConcurrentHashMap<ProduceKey, Producer<? extends Offset>> producerCache;
+
+    private final ProducerFactory producerFactory;
 
     /**
      * The region this pod is deployed in (ingress / local region).
@@ -147,14 +138,13 @@ public final class ProducerService {
         this.projectCache = projectCache;
         this.orgCache = orgCache;
         this.rateLimiter = rateLimiter;
-        this.producerCache = Caffeine.newBuilder()
-                                     .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
-                                     .recordStats()
-                                     .build(key -> loadProducerObject(producerFactory, key));
+        this.producerFactory = producerFactory;
+        this.producerCache = new ConcurrentHashMap<>();
         this.metricsProvider = metricsRecorderProvider;
+        topicCache.addOnInvalidate(this::evictProducersForTopic);
     }
 
-    private Producer<? extends Offset> loadProducerObject(ProducerFactory producerFactory, ProduceKey key) {
+    private Producer<? extends Offset> loadProducerObject(ProduceKey key) {
         var topicMaybe = topicCache.get(key.topicFqn().toFqn());
         if (topicMaybe.isEmpty()) {
             throw new ResourceNotFoundException(
@@ -166,8 +156,35 @@ public final class ProducerService {
 
         return producerFactory.newProducer(
             topic.getEntity().getSegmentedStorageTopic().getTopic(key.storageTopicId()),
-            topic.getEntity().getCapacity()
+            topic.getEntity().getCapacity(),
+            key.produceRegion().value()
         );
+    }
+
+    private void evictProducersForTopic(String topicFqn) {
+        VaradhiTopicName name;
+        try {
+            name = VaradhiTopicName.parse(topicFqn);
+        } catch (RuntimeException e) {
+            log.warn("Ignoring producer eviction for unparseable topic FQN {}", topicFqn, e);
+            return;
+        }
+        VaradhiTopicName topicName = name;
+        producerCache.entrySet().removeIf(entry -> {
+            if (!entry.getKey().topicFqn().equals(topicName)) {
+                return false;
+            }
+            closeQuietly(entry.getValue());
+            return true;
+        });
+    }
+
+    private static void closeQuietly(Producer<? extends Offset> producer) {
+        try {
+            producer.close();
+        } catch (Exception e) {
+            log.warn("Failed to close producer on registry eviction", e);
+        }
     }
 
     private ProducerMetrics getMetrics(String topicFQN) {
@@ -253,13 +270,15 @@ public final class ProducerService {
      * Gets a producer for the resolved {@link ProduceKey}.
      */
     public CompletableFuture<Producer<? extends Offset>> getProducer(ProduceKey produceKey) {
-        Producer<? extends Offset> producer = producerCache.getIfPresent(produceKey);
+        Producer<? extends Offset> producer = producerCache.get(produceKey);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
 
         try {
-            return CompletableFuture.completedFuture(producerCache.get(produceKey));
+            return CompletableFuture.completedFuture(
+                producerCache.computeIfAbsent(produceKey, this::loadProducerObject)
+            );
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
@@ -306,7 +325,7 @@ public final class ProducerService {
     }
 
     public boolean hasProducer(String topicFQN, int storageTopicId, String region) {
-        return producerCache.getIfPresent(
+        return producerCache.get(
             new ProduceKey(VaradhiTopicName.parse(topicFQN), RegionName.of(region), storageTopicId)
         ) != null;
     }

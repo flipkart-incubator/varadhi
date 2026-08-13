@@ -20,8 +20,8 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
  *   <li>{@code awaitVersion} — whether this stage is version-gated. When {@code true} the pod
  *       must observe {@code topicVersionToAwait} in its TopicCache before acking; when
  *       {@code false} the version carried is ignored and the pod acks immediately on receipt
- *       ({@link TransitionStage#PENDING}, {@link TransitionStage#DRAIN},
- *       {@link TransitionStage#COMPLETED}, {@link TransitionStage#ABORTED}).</li>
+ *       ({@link TransitionStage#PENDING}, {@link TransitionStage#COMPLETED},
+ *       {@link TransitionStage#ABORTED}).</li>
  *   <li>{@code topicVersionToAwait} — the {@code VaradhiTopic} version the pod must observe in
  *       its TopicCache before acking.</li>
  *   <li>{@code target} — the destination of the switch as a {@link Target}.

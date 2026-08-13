@@ -10,9 +10,7 @@ public class RetryPolicy {
     private final int minBackoffSeconds;
     private final int maxBackoffSeconds;
 
-
     public boolean canRetry(OrderedOperation operation) {
-        // TODO::This needs better implementation, retry decision can also be impacted by kind of failure.
         return operation.hasFailed() && operation.getRetryAttempt() < maxRetryAllowed;
     }
 

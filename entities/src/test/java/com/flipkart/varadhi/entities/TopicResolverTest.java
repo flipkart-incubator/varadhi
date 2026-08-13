@@ -21,12 +21,14 @@ class TopicResolverTest {
     }
 
     @Test
-    void resolve_emptyWhenFailoverRegionNotConfigured() {
+    void resolve_usesIngressProduceIdxWhenFailOverRegionMissingFromMap() {
         VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
             Map.of(RegionName.of("r1"), new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2")))
         );
 
-        assertTrue(TopicResolver.resolve(topic, RegionName.of("r1")).isEmpty());
+        ProduceKey key = TopicResolver.resolve(topic, RegionName.of("r1")).orElseThrow();
+        assertEquals(RegionName.of("r2"), key.produceRegion());
+        assertEquals(0, key.storageTopicId());
     }
 
     @Test

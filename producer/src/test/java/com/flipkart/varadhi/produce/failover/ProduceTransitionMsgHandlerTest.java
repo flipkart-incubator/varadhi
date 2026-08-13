@@ -268,12 +268,12 @@ class ProduceTransitionMsgHandlerTest {
         );
         seed(11);
         h.onTransition(
-            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE, true, 11, null)
         );
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         assertEquals(TransitionParticipation.NOT_INVOLVED, acker.acks.get(0).participation());
         TransitionAck switchAck = acker.acks.get(1);
-        assertEquals(TransitionStage.SWITCH, switchAck.stage());
+        assertEquals(TransitionStage.FENCE, switchAck.stage());
         assertEquals(TransitionParticipation.NOT_INVOLVED, switchAck.participation());
         assertTrue(switchAck.isSuccess());
     }
@@ -308,12 +308,12 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.onTransition(
-            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
-        assertEquals(TransitionStage.SWITCH, ack.stage());
+        assertEquals(TransitionStage.FENCE, ack.stage());
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
@@ -327,7 +327,7 @@ class ProduceTransitionMsgHandlerTest {
         CompletableFuture.delayedExecutor(40, TimeUnit.MILLISECONDS).execute(() -> seed(11));
 
         h.onTransition(
-            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -340,7 +340,7 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(60L, 10L));
 
         h.onTransition(
-            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -354,7 +354,7 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(new PodTransitionConfig(2000L, 5L));
 
         h.onTransition(
-            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
@@ -372,12 +372,12 @@ class ProduceTransitionMsgHandlerTest {
         ProduceTransitionMsgHandler h = handler(PodTransitionConfig.defaultConfig());
 
         h.onTransition(
-            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH, true, 11, null)
+            TransitionEvent.of(OP_ID, TOPIC_NAME, TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE, true, 11, null)
         );
 
         assertTrue(acker.latch.await(2, TimeUnit.SECONDS));
         TransitionAck ack = acker.acks.get(0);
-        assertEquals(TransitionStage.SWITCH, ack.stage());
+        assertEquals(TransitionStage.FENCE, ack.stage());
         assertFalse(ack.isSuccess());
         assertTrue(ack.errorMsg().contains("overshot"));
     }
