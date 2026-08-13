@@ -74,7 +74,7 @@ class ProducerServiceTests {
         projectCache = mock(ResourceReadCache.class);
         orgCache = mock(ResourceReadCache.class);
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
 
         service = new ProducerService(region, producerFactory::newProducer, orgCache, projectCache, topicReadCache);
         random = new Random();
@@ -87,7 +87,7 @@ class ProducerServiceTests {
 
         when(topicReadCache.get(any())).thenReturn(Optional.of(vt));
 
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,
             VaradhiTopic.fqn(project.getName(), topic)
@@ -103,7 +103,7 @@ class ProducerServiceTests {
         Assertions.assertNotNull(rc.produceResult);
         Assertions.assertNull(rc.throwable);
         verify(producer, times(1)).produceAsync(msg2);
-        verify(producerFactory, times(1)).newProducer(any(), any());
+        verify(producerFactory, times(1)).newProducer(any(), any(), any());
         verify(topicReadCache, times(3)).get(vt.getName());
     }
 
@@ -113,7 +113,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 10);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
         doThrow(new RuntimeException("Some random error.")).when(producer).produceAsync(msg1);
         // This is testing Producer.ProduceAsync(), throwing an exception which is handled in produce service.
         // This is not expected in general.
@@ -131,7 +131,7 @@ class ProducerServiceTests {
     void testProduceToNonExistingTopic() {
         Message msg1 = getMessage(0, 1, null, 0);
         String topicName = VaradhiTopic.fqn(project.getName(), topic);
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
         when(topicReadCache.get(topicName)).thenReturn(Optional.empty());
         ResourceNotFoundException ex = Assertions.assertThrows(
             ResourceNotFoundException.class,
@@ -181,7 +181,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         VaradhiTopic vt = getTopic(topicState, topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(Resource.of(vt, ResourceType.TOPIC)));
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,
             VaradhiTopic.fqn(project.getName(), topic)
@@ -199,7 +199,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        ProducerFactory failingProducerProvider = (st, c) -> {
+        ProducerFactory failingProducerProvider = (st, c, r) -> {
             throw new RuntimeException("Unknown Error.");
         };
         ProducerService failingService = new ProducerService(
@@ -224,7 +224,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        ProducerFactory failingProducerProvider = (st, c) -> {
+        ProducerFactory failingProducerProvider = (st, c, r) -> {
             throw new RuntimeException("Topic doesn't exist.");
         };
         ProducerService failingService = new ProducerService(
@@ -250,7 +250,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, UnsupportedOperationException.class.getName(), 0);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
 
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,
@@ -265,7 +265,7 @@ class ProducerServiceTests {
             "Produce failure from messaging stack for Topic/Queue. null",
             rc.produceResult.getFailureReason()
         );
-        verify(producerFactory, times(1)).newProducer(any(), any());
+        verify(producerFactory, times(1)).newProducer(any(), any(), any());
     }
 
     // TODO: this test expectation looks wrong. the metric emit failure should not lead to api failure.
@@ -286,7 +286,7 @@ class ProducerServiceTests {
         Message msg1 = getMessage(0, 1, null, 10);
         Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
         when(topicReadCache.get(vt.getName())).thenReturn(Optional.of(vt));
-        doReturn(producer).when(producerFactory).newProducer(any(), any());
+        doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
 
         CompletableFuture<ProduceResult> result = service.produceToTopic(
             msg1,

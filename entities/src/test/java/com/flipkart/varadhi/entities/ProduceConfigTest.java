@@ -10,52 +10,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProduceConfigTest {
 
     @Test
-    void withProduceRegion_firstProducingThenBlocked() {
-        VaradhiTopic topic = VaradhiTopic.of(
-            "project1",
-            "topic1",
-            false,
-            new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
-        );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")))
-                     .withProduceRegion(RegionName.of("r1"))
-                     .withProduceRegion(RegionName.of("r2"));
-
-        assertEquals(TopicState.Producing, topic.getProduceConfig(RegionName.of("r1")).orElseThrow().state());
-        assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
+    void producingAndBlockedFactories() {
+        assertEquals(TopicState.Producing, ProduceConfig.producing().getState());
+        assertEquals(TopicState.Blocked, ProduceConfig.blocked().getState());
+        assertTrue(ProduceConfig.producing().getFailOverRegion().isEmpty());
     }
 
     @Test
-    void withProduceConfigs_allowsMultipleProducingRegions() {
-        VaradhiTopic topic = VaradhiTopic.of(
-            "project1",
-            "topic1",
-            false,
-            new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
-        );
-        topic = topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t.r1")))
-                     .withProduceRegion(RegionName.of("r1"))
-                     .withProduceRegion(RegionName.of("r2"));
-
-        VaradhiTopic updated = VaradhiTopicTestUtils.withProduceConfigs(
-            topic,
-            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.producing())
+    void withRegion_allowsMultipleProducingRegions() {
+        VaradhiTopic topic = VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.blocked())
         );
 
-        assertTrue(updated.getProduceConfig(RegionName.of("r1")).orElseThrow().state().isProduceAllowed());
-        assertTrue(updated.getProduceConfig(RegionName.of("r2")).orElseThrow().state().isProduceAllowed());
-        assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().state());
+        VaradhiTopic updated = topic.with(RegionName.of("r2"), ProduceConfig.producing());
+
+        assertTrue(updated.getProduceConfig(RegionName.of("r1")).orElseThrow().getState().isProduceAllowed());
+        assertTrue(updated.getProduceConfig(RegionName.of("r2")).orElseThrow().getState().isProduceAllowed());
+        assertEquals(TopicState.Blocked, topic.getProduceConfig(RegionName.of("r2")).orElseThrow().getState());
     }
 
     @Test
-    void fromJson_legacyProduceAllowed() {
-        ProduceConfig producing = ProduceConfig.fromJson(null, true, null);
-        ProduceConfig blocked = ProduceConfig.fromJson(null, false, RegionName.of("CH"));
-
-        assertEquals(TopicState.Producing, producing.state());
-        assertEquals(TopicState.Blocked, blocked.state());
-        assertEquals(RegionName.of("CH"), blocked.failOverRegion());
+    void failOverRegionOptional() {
+        ProduceConfig cfg = new ProduceConfig(TopicState.Producing, 0, RegionName.of("CH"));
+        assertEquals(RegionName.of("CH"), cfg.getFailOverRegion().orElseThrow());
     }
 }

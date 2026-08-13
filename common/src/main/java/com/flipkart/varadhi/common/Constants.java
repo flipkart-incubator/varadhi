@@ -132,6 +132,7 @@ public class Constants {
     public static class HttpCodes {
         public static final int HTTP_RATE_LIMITED = 429;
         public static final int HTTP_UNPROCESSABLE_ENTITY = 422;
+        public static final int HTTP_SERVICE_UNAVAILABLE = 503;
 
         private HttpCodes() {
             // Private constructor to prevent instantiation

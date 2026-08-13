@@ -17,8 +17,11 @@ public class InMemoryProducerFactory implements ProducerFactory {
     }
 
     @Override
-    public Producer<InMemoryOffset> newProducer(StorageTopic _topic, TopicCapacityPolicy capacity)
-        throws MessagingException {
+    public Producer<InMemoryOffset> newProducer(
+        StorageTopic _topic,
+        TopicCapacityPolicy capacity,
+        String produceRegion
+    ) throws MessagingException {
         var topic = TypeUtil.safeCast(_topic, InMemoryStorageTopic.class);
         return new InMemoryProducer(topic, true, timer, true);
     }

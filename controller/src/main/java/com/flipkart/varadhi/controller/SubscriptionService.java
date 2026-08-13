@@ -20,8 +20,10 @@ import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.ProduceConfig;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.TopicProduceConfigs;
+import com.flipkart.varadhi.entities.TopicState;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.cluster.Assignment;
@@ -319,7 +321,9 @@ public class SubscriptionService implements SubscriptionApi {
     ) {
         return CompletableFuture.supplyAsync(() -> {
             VaradhiTopic topic = topicStore.get(topicFqn); // throws ResourceNotFoundException if missing
-            validateFailoverRegions(topic, request);
+            RegionName source = request.sourceRegion() != null ? request.sourceRegion() : deployedRegion;
+            RegionName target = request.targetRegion();
+            validateFailoverRegions(topic, source, target);
             if (transitionStore.exists(topicFqn)) {
                 throw new InvalidOperationForResourceException(
                     "An active failover already exists for topic " + topicFqn + "."
@@ -327,21 +331,19 @@ public class SubscriptionService implements SubscriptionApi {
             }
             TopicFailoverOperation op = TopicFailoverOperation.of(
                 topicFqn,
-                request.sourceRegion(),
-                request.targetRegion(),
+                source,
+                target,
                 request.waitForReplicationLagToClear(),
                 requestedBy
             );
             // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
-            transitionStore.create(
-                TransitionMaster.forFailover(op.getId(), topicFqn, request.sourceRegion(), request.targetRegion())
-            );
+            transitionStore.create(TransitionMaster.forFailover(op.getId(), topicFqn, source, target));
             log.info(
                 "Created topic failover op {} for {} ({}->{})",
                 op.getId(),
                 topicFqn,
-                request.sourceRegion(),
-                request.targetRegion()
+                source,
+                target
             );
             operationMgr.createAndEnqueueTopicFailover(op, newFailoverExecutor());
             return op;
@@ -369,14 +371,28 @@ public class SubscriptionService implements SubscriptionApi {
                     "Failover for " + topicFqn + " is not abortable in stage " + transition.getCurrentStage() + "."
                 );
             }
+            VaradhiTopic topic = topicStore.get(topicFqn);
+            RegionName source = transition.getSourceRegion();
+            // Point of no return: MIGRATE already committed failOverRegion on ingress.
+            if (transition.getCurrentStage() == TransitionStage.MIGRATE) {
+                boolean committed = topic.getProduceConfig(source)
+                                         .filter(c -> c.getState() == TopicState.Producing)
+                                         .flatMap(ProduceConfig::getFailOverRegion)
+                                         .map(r -> r.equals(transition.getTargetRegion()))
+                                         .orElse(false);
+                if (committed) {
+                    throw new InvalidOperationForResourceException(
+                        "Failover for " + topicFqn + " already committed the route; abort is not allowed."
+                    );
+                }
+            }
             log.info(
                 "Aborting topic failover op {} for {} (requestedBy={})",
                 transition.getOperationId(),
                 topicFqn,
                 requestedBy
             );
-            // Notify pods best-effort, fail the in-flight stage barrier (which fails the executor and
-            // marks the op ERRORED), then drop the master so retries/resume become no-ops.
+            revertFenceIfNeeded(topic, source);
             broadcastTransition(
                 TransitionEvent.of(
                     transition.getOperationId(),
@@ -395,6 +411,19 @@ public class SubscriptionService implements SubscriptionApi {
             transition.advanceTo(TransitionStage.ABORTED, 0L);
             transitionStore.delete(topicFqn);
             return failoverOp;
+        });
+    }
+
+    private void revertFenceIfNeeded(VaradhiTopic topic, RegionName source) {
+        topic.getProduceConfig(source).ifPresent(cfg -> {
+            if (cfg.getState() == TopicState.Fenced) {
+                topicStore.update(
+                    topic.with(
+                        source,
+                        new ProduceConfig(TopicState.Producing, cfg.getProduceIdx(), cfg.getFailOverRegion().orElse(null))
+                    )
+                );
+            }
         });
     }
 
@@ -444,9 +473,7 @@ public class SubscriptionService implements SubscriptionApi {
         );
     }
 
-    private void validateFailoverRegions(VaradhiTopic topic, TopicFailoverRequest request) {
-        RegionName source = request.sourceRegion();
-        RegionName target = request.targetRegion();
+    private void validateFailoverRegions(VaradhiTopic topic, RegionName source, RegionName target) {
         if (source == null || target == null) {
             throw new IllegalArgumentException("sourceRegion and targetRegion are required for failover.");
         }

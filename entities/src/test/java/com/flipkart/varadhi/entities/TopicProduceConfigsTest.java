@@ -2,22 +2,17 @@ package com.flipkart.varadhi.entities;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TopicProduceConfigsTest {
 
     private VaradhiTopic topicWithRegions() {
-        VaradhiTopic topic = VaradhiTopic.of(
-            "project1",
-            "topic1",
-            false,
-            new TopicCapacityPolicy(100, 400, 2, 2),
-            LifecycleStatus.ActionCode.SYSTEM_ACTION
+        return VaradhiTopicTestUtils.getNewTopic(
+            Map.of(RegionName.of("r1"), ProduceConfig.producing(), RegionName.of("r2"), ProduceConfig.blocked())
         );
-        return topic.withStorageTopic(SegmentedStorageTopic.of(new VaradhiTopicTest.DummyStorageTopic("t")))
-                    .withProduceRegion(RegionName.of("r1"))
-                    .withProduceRegion(RegionName.of("r2"));
     }
 
     @Test
@@ -36,9 +31,9 @@ class TopicProduceConfigsTest {
 
     @Test
     void findProducingRegion_usesFailOverRegionWhenSet() {
-        VaradhiTopic topic = topicWithRegions().withProduceConfig(
+        VaradhiTopic topic = topicWithRegions().with(
             RegionName.of("r1"),
-            new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
+            new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2"))
         );
 
         assertEquals(
@@ -63,9 +58,9 @@ class TopicProduceConfigsTest {
 
     @Test
     void findActiveProducingRegion_usesFailOverWhenSet() {
-        VaradhiTopic topic = topicWithRegions().withProduceConfig(
+        VaradhiTopic topic = topicWithRegions().with(
             RegionName.of("r1"),
-            new ProduceConfig(TopicState.Producing, RegionName.of("r2"))
+            new ProduceConfig(TopicState.Producing, 0, RegionName.of("r2"))
         );
 
         assertEquals(RegionName.of("r2"), TopicProduceConfigs.findActiveProducingRegion(topic).orElseThrow());
@@ -73,8 +68,8 @@ class TopicProduceConfigsTest {
 
     @Test
     void findActiveProducingRegion_reflectsSwitchedProducer() {
-        VaradhiTopic topic = topicWithRegions().withProduceConfig(RegionName.of("r1"), ProduceConfig.blocked())
-                                               .withProduceConfig(RegionName.of("r2"), ProduceConfig.producing());
+        VaradhiTopic topic = topicWithRegions().with(RegionName.of("r1"), ProduceConfig.blocked())
+                                               .with(RegionName.of("r2"), ProduceConfig.producing());
 
         assertEquals(RegionName.of("r2"), TopicProduceConfigs.findActiveProducingRegion(topic).orElseThrow());
     }

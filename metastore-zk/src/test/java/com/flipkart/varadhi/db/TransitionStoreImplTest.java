@@ -70,11 +70,11 @@ class TransitionStoreImplTest {
     void updatePersistsStageAdvance() {
         store.create(TransitionMaster.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
         TransitionMaster t = store.get(FQN);
-        t.advanceTo(TransitionStage.SWITCH, 42L);
+        t.advanceTo(TransitionStage.FENCE, 42L);
         store.update(t);
 
         TransitionMaster reloaded = store.get(FQN);
-        assertEquals(TransitionStage.SWITCH, reloaded.getCurrentStage());
+        assertEquals(TransitionStage.FENCE, reloaded.getCurrentStage());
         assertEquals(42L, reloaded.getTopicVersionToAwait());
     }
 

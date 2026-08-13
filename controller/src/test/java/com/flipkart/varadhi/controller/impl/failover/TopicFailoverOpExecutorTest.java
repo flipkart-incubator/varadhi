@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -105,12 +106,14 @@ class TopicFailoverOpExecutorTest {
         AtomicReference<VaradhiTopic> topicRef = new AtomicReference<>(topic);
         when(topicStore.get(FQN)).thenAnswer(invocation -> topicRef.get());
         doAnswer(invocation -> {
-            topicRef.set(invocation.getArgument(0));
+            VaradhiTopic updated = invocation.getArgument(0);
+            updated.setVersion(topicRef.get().getVersion() + 1);
+            topicRef.set(updated);
             return null;
         }).when(topicStore).update(any(VaradhiTopic.class));
         when(transitionStore.exists(FQN)).thenReturn(true);
         when(transitionStore.get(FQN)).thenReturn(transition);
-        when(stageAwaiter.expect(anyString(), any(), anySet(), anyLong())).thenReturn(
+        when(stageAwaiter.expect(anyString(), any(), anySet(), anyLong(), anyLong())).thenReturn(
             CompletableFuture.completedFuture(null)
         );
         when(clusterManager.getAllMembers()).thenReturn(
@@ -133,30 +136,34 @@ class TopicFailoverOpExecutorTest {
     }
 
     @Test
-    void happyPathSwitchesProduceAndCompletes() throws Exception {
+    void happyPathFencesThenCommitsFailOverRegionOnIngress() throws Exception {
         executor.execute(op).get(5, TimeUnit.SECONDS);
 
         ArgumentCaptor<VaradhiTopic> updated = ArgumentCaptor.forClass(VaradhiTopic.class);
         verify(topicStore, times(2)).update(updated.capture());
-        VaradhiTopic afterSwitch = updated.getAllValues().get(0);
-        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(SOURCE).orElseThrow().getState());
-        assertEquals(TopicState.Fenced, afterSwitch.getProduceConfig(TARGET).orElseThrow().getState());
-        VaradhiTopic afterComplete = updated.getAllValues().get(1);
-        assertEquals(TopicState.Blocked, afterComplete.getProduceConfig(SOURCE).orElseThrow().getState());
-        assertEquals(TopicState.Producing, afterComplete.getProduceConfig(TARGET).orElseThrow().getState());
+        VaradhiTopic afterFence = updated.getAllValues().get(0);
+        assertEquals(TopicState.Fenced, afterFence.getProduceConfig(SOURCE).orElseThrow().getState());
+        assertTrue(afterFence.getProduceConfig(SOURCE).orElseThrow().getFailOverRegion().isEmpty());
+        assertEquals(TopicState.Blocked, afterFence.getProduceConfig(TARGET).orElseThrow().getState());
+
+        VaradhiTopic afterMigrate = updated.getAllValues().get(1);
+        assertEquals(TopicState.Producing, afterMigrate.getProduceConfig(SOURCE).orElseThrow().getState());
+        assertEquals(TARGET, afterMigrate.getProduceConfig(SOURCE).orElseThrow().getFailOverRegion().orElseThrow());
+        assertEquals(TopicState.Blocked, afterMigrate.getProduceConfig(TARGET).orElseThrow().getState());
+
         assertEquals(TransitionStage.COMPLETED, transition.getCurrentStage());
         verify(transitionStore).delete(FQN);
 
-        verify(stageAwaiter).expect(anyString(), eq(TransitionStage.PREPARE), anySet(), anyLong());
-        verify(stageAwaiter).expect(anyString(), eq(TransitionStage.SWITCH), anySet(), anyLong());
-        verify(stageAwaiter, times(0)).expect(anyString(), eq(TransitionStage.DRAIN), anySet(), anyLong());
+        verify(stageAwaiter).expect(anyString(), eq(TransitionStage.PREPARE), anySet(), anyLong(), anyLong());
+        verify(stageAwaiter).expect(anyString(), eq(TransitionStage.FENCE), anySet(), anyLong(), anyLong());
+        verify(stageAwaiter).expect(anyString(), eq(TransitionStage.MIGRATE), anySet(), anyLong(), anyLong());
+        // PREPARE + FENCE + MIGRATE + COMPLETED broadcasts
         verify(messageExchange, times(4)).publish(
             eq(TransitionBusAddress.ROUTE_TOPIC_TRANSITION),
             eq(TransitionBusAddress.STAGE_BROADCAST_API),
             any()
         );
 
-        verify(operationMgr, times(5)).updateTopicFailoverOp(op);
         assertEquals(com.flipkart.varadhi.entities.cluster.Operation.State.COMPLETED, op.getState());
         assertFalse(op.getStageHistory().isEmpty());
         assertEquals(TransitionStage.COMPLETED, op.getStageHistory().get(op.getStageHistory().size() - 1).getStage());

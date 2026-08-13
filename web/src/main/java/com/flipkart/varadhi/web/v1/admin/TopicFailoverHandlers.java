@@ -14,6 +14,7 @@ import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -34,11 +35,11 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
  *
  * <ul>
  *   <li>POST {@code /v1/projects/:project/topics/:topic/failover} — request a failover
- *       (source→target). Returns {@code 200} with the intent op once durably recorded.</li>
+ *       (source→target). Returns {@code 202} with the intent op once durably recorded.</li>
  *   <li>GET  {@code /v1/projects/:project/topics/:topic/failover} — in-flight failover op
  *       (includes stageHistory); 404 if none active.</li>
  *   <li>POST {@code /v1/projects/:project/topics/:topic/failover/abort} — abort, honored only while
- *       the transition is still abortable (PENDING/PREPARE/DRAIN).</li>
+ *       the transition is still abortable (PENDING/PREPARE/FENCE/pre-commit MIGRATE).</li>
  * </ul>
  */
 @Slf4j
@@ -94,9 +95,16 @@ public class TopicFailoverHandlers implements RouteProvider {
 
     public void create(RoutingContext ctx) {
         TopicFailoverRequest body = ctx.get(REQUEST_BODY);
-        ctx.handleResponse(
-            controllerClient.createTopicFailover(getVaradhiTopicName(ctx), body, ctx.getIdentityOrDefault())
-        );
+        controllerClient.createTopicFailover(getVaradhiTopicName(ctx), body, ctx.getIdentityOrDefault())
+                        .whenComplete((op, error) -> ctx.vertx().runOnContext(v -> {
+                            if (error != null) {
+                                ctx.fail(error instanceof java.util.concurrent.CompletionException
+                                    ? error.getCause()
+                                    : error);
+                            } else {
+                                ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), op);
+                            }
+                        }));
     }
 
     public void status(RoutingContext ctx) {
@@ -104,7 +112,16 @@ public class TopicFailoverHandlers implements RouteProvider {
     }
 
     public void abort(RoutingContext ctx) {
-        ctx.handleResponse(controllerClient.abortTopicFailover(getVaradhiTopicName(ctx), ctx.getIdentityOrDefault()));
+        controllerClient.abortTopicFailover(getVaradhiTopicName(ctx), ctx.getIdentityOrDefault())
+                        .whenComplete((op, error) -> ctx.vertx().runOnContext(v -> {
+                            if (error != null) {
+                                ctx.fail(error instanceof java.util.concurrent.CompletionException
+                                    ? error.getCause()
+                                    : error);
+                            } else {
+                                ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), op);
+                            }
+                        }));
     }
 
     private String getVaradhiTopicName(RoutingContext ctx) {

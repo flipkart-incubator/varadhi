@@ -40,7 +40,7 @@ class StageAwaiterTest {
     @Test
     void completesImmediatelyWhenNoExpectedHosts() throws Exception {
         StageAwaiter awaiter = new StageAwaiter();
-        CompletableFuture<Void> barrier = awaiter.expect(OP, TransitionStage.SWITCH, Set.of(), 5_000);
+        CompletableFuture<Void> barrier = awaiter.expect(OP, TransitionStage.FENCE, Set.of(), 5_000);
         barrier.get(1, TimeUnit.SECONDS);
         assertTrue(barrier.isDone());
     }
@@ -69,7 +69,7 @@ class StageAwaiterTest {
     @Test
     void failsOnTimeout() {
         StageAwaiter awaiter = new StageAwaiter();
-        CompletableFuture<Void> barrier = awaiter.expect(OP, TransitionStage.SWITCH, Set.of("h1"), 100);
+        CompletableFuture<Void> barrier = awaiter.expect(OP, TransitionStage.FENCE, Set.of("h1"), 100);
 
         ExecutionException ex = assertThrows(ExecutionException.class, () -> barrier.get(2, TimeUnit.SECONDS));
         assertInstanceOf(FailoverAbortedException.class, ex.getCause());
@@ -89,9 +89,9 @@ class StageAwaiterTest {
     @Test
     void ignoresAckForDifferentStage() {
         StageAwaiter awaiter = new StageAwaiter();
-        CompletableFuture<Void> barrier = awaiter.expect(OP, TransitionStage.SWITCH, Set.of("h1"), 5_000);
+        CompletableFuture<Void> barrier = awaiter.expect(OP, TransitionStage.FENCE, Set.of("h1"), 5_000);
 
-        // A stale PREPARE ack must not satisfy a SWITCH barrier.
+        // A stale PREPARE ack must not satisfy a FENCE barrier.
         awaiter.recordAck(successAck("h1", TransitionStage.PREPARE));
 
         assertThrows(TimeoutException.class, () -> barrier.get(300, TimeUnit.MILLISECONDS));

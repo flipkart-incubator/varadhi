@@ -173,7 +173,10 @@ public class ControllerVerticle extends AbstractVerticle {
             clusterManager,
             messageExchange,
             new StageAwaiter(),
-            TopicFailoverConfig.defaultConfig(),
+            new TopicFailoverConfig(
+                operationsConfig.getTopicFailoverStageAwaitMs(),
+                operationsConfig.getTopicFailoverFenceHoldMs()
+            ),
             deployedRegion
         );
     }

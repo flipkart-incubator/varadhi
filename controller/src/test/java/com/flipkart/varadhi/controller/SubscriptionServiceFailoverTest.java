@@ -183,7 +183,7 @@ class SubscriptionServiceFailoverTest {
     @Test
     void abortRejectsWhenNotAbortable() {
         TransitionMaster transition = TransitionMaster.forFailover("op", FQN, SOURCE, TARGET);
-        transition.advanceTo(TransitionStage.SWITCH, 1L); // past the abortable window
+        transition.advanceTo(TransitionStage.COMPLETED, 1L); // past the abortable window
         when(transitionStore.exists(FQN)).thenReturn(true);
         when(transitionStore.get(FQN)).thenReturn(transition);
 
@@ -201,6 +201,7 @@ class SubscriptionServiceFailoverTest {
         TopicFailoverOperation failoverOp = TopicFailoverOperation.of(FQN, SOURCE, TARGET, false, "tester");
         when(transitionStore.exists(FQN)).thenReturn(true);
         when(transitionStore.get(FQN)).thenReturn(transition);
+        when(topicStore.get(FQN)).thenReturn(topicWithRegions());
         when(operationMgr.getTopicFailoverOp("op")).thenReturn(failoverOp);
 
         TopicFailoverOperation returned = subscriptionService.abortTopicFailover(FQN, "tester").get();
