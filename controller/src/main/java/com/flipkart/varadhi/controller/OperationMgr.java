@@ -262,15 +262,23 @@ public class OperationMgr {
     }
 
     /**
+     * Persists a topic-failover op without requiring it to be on the in-memory execution queue.
+     * Used for intent-only lifecycle (create/abort) before the orchestrator enqueues the op.
+     */
+    public void persistTopicFailoverOp(TopicFailoverOperation operation) {
+        TopicFailoverOperation latest = opStore.getTopicFailoverOp(operation.getId());
+        latest.applyProgressFrom(operation);
+        opStore.updateTopicFailoverOp(latest);
+    }
+
+    /**
      * Records a terminal (or progress) update on a topic-failover op: re-reads the latest from the
      * store, applies the new state, persists, and lets the queue dequeue/retry as needed.
      */
     public void updateTopicFailoverOp(TopicFailoverOperation operation) {
         processOpTaskForOpUpdate(operation, op -> {
-            TopicFailoverOperation latest = opStore.getTopicFailoverOp(operation.getId());
-            latest.applyProgressFrom(operation);
-            opStore.updateTopicFailoverOp(latest);
-            return latest;
+            persistTopicFailoverOp((TopicFailoverOperation) op);
+            return opStore.getTopicFailoverOp(operation.getId());
         });
     }
 

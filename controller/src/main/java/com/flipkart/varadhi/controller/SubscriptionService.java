@@ -397,8 +397,8 @@ public class SubscriptionService implements SubscriptionApi {
             );
             TopicFailoverOperation failoverOp = operationMgr.getTopicFailoverOp(transition.getOperationId());
             failoverOp.beginStage(TransitionStage.ABORTED);
-            operationMgr.updateTopicFailoverOp(failoverOp);
-            transition.advanceTo(TransitionStage.ABORTED, 0L);
+            failoverOp.markCompleted();
+            operationMgr.persistTopicFailoverOp(failoverOp);
             transitionStore.delete(topicFqn);
             return failoverOp;
         });

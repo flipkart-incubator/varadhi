@@ -126,6 +126,9 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
      * store-loaded instance before persist — used by {@code OperationMgr} to avoid version races.
      */
     public void applyProgressFrom(TopicFailoverOperation src) {
+        if (src == this) {
+            return;
+        }
         this.state = src.getState();
         this.errorMsg = src.getErrorMsg();
         this.endTime = src.getEndTime();
