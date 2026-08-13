@@ -40,8 +40,8 @@ import java.util.concurrent.*;
  *       {@link TransitionParticipation#NOT_INVOLVED} (no producer created; fencing can plug in
  *       later) and ack. A stale/unreachable pod times out, and a warm failure acks failure — both
  *       let the controller abort before any change.</li>
- *   <li><b>SWITCH</b> ({@code topicVersionToAwait} = N+1) — convergence: same exact-version
- *       wait but for N+1, then ack.</li>
+ *   <li><b>FENCE / MIGRATE</b> ({@code topicVersionToAwait} = N+1 / N+2) — convergence: same
+ *       exact-version wait, then ack with the observed topic version.</li>
  *   <li>For version-gated stages, if the cache has already moved <em>past</em> the target, the
  *       pod acks failure, treating it as a concurrent modification so the controller can
  *       abort/retry.</li>
@@ -100,7 +100,7 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
         this.versionWaitExecutor = RetryUtils.newPollingExecutor(
             versionWaitScheduler,
             config.versionWaitMaxAttempts(),
-            config.podPollIntervalMs(),
+            config.pollIntervalMs(),
             StaleVersionException.class
         );
     }
@@ -236,7 +236,8 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
                 event.transitionType(),
                 participation,
                 hostname,
-                event.stage()
+                event.stage(),
+                observedTopicVersion(event)
             )
         );
         clearParticipationIfTerminal(event);
@@ -253,10 +254,18 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
                 participation,
                 hostname,
                 event.stage(),
-                errorMsg
+                errorMsg,
+                observedTopicVersion(event)
             )
         );
         clearParticipationIfTerminal(event);
+    }
+
+    private Long observedTopicVersion(TransitionEvent event) {
+        return topicCache.get(event.topicFqn().toFqn())
+                         .map(Resource.EntityResource::getVersion)
+                         .map(Integer::longValue)
+                         .orElse(null);
     }
 
     private void sendAck(TransitionAck ack) {
