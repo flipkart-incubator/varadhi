@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: produce-config
+data:
+  MESSAGE_COUNT: "100"
+  TOPIC_NAME: "topic-9jan3"
+  PROJECT_NAME: "project-dec5"
+  MESSAGE_COUNT_PER_GROUP: "100"
+  MIN_MESSAGE_SIZE_KB: "100"
+  MAX_MESSAGE_SIZE_KB: "200"
+  RANDOM_PAYLOAD_POOL_SIZE: "1024"
+  RANDOM_PAYLOAD_MAX_USAGE: "10"
+  PRODUCE_ENDPOINT: "http://host.docker.internal:8080"
+  PRODUCE_URL: "/v1/projects/{}/topics/{}/produce"
