@@ -77,6 +77,19 @@ public class ZKMetaStoreTests {
         Assertions.assertEquals(String.format("%s(%s) not found.", testKind.kind(), data1.getName()), e.getMessage());
     }
 
+    @Test
+    public void registerEventListener_createsListenerNodeWithZkPathSeparator() throws Exception {
+        // Regression test: the listener path used to be built with java.nio.file.Path, which uses
+        // the OS file separator ("\\" on Windows) and produced an invalid ZooKeeper path there.
+        zkMetaStore.createZNode(ZNode.ofEntityType(ZNode.EVENT));
+
+        Assertions.assertTrue(zkMetaStore.registerEventListener(event -> {}));
+
+        String expectedPath = ZNode.ofEntityType(ZNode.EVENT).getPath() + "/change_event_listener";
+        Assertions.assertTrue(expectedPath.startsWith("/"));
+        Assertions.assertNotNull(zkCuratorFramework.checkExists().forPath(expectedPath));
+    }
+
     private ZNode getZnode(String name) {
         return ZNode.ofKind(testKind, name);
     }
