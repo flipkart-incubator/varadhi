@@ -2,6 +2,7 @@ package com.flipkart.varadhi.db;
 
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 import static com.flipkart.varadhi.db.ZNode.SHARD_OP;
 import static com.flipkart.varadhi.db.ZNode.SUB_OP;
+import static com.flipkart.varadhi.db.ZNode.TOPIC_FAILOVER_OP;
 
 /**
  * Implementation of the Operation Store using ZooKeeper as the underlying storage.
@@ -36,6 +38,7 @@ public class OpStoreImpl implements OpStore {
     private void ensureEntityTypePathExists() {
         zkMetaStore.createZNode(ZNode.ofEntityType(SUB_OP));
         zkMetaStore.createZNode(ZNode.ofEntityType(SHARD_OP));
+        zkMetaStore.createZNode(ZNode.ofEntityType(TOPIC_FAILOVER_OP));
     }
 
     /**
@@ -158,6 +161,39 @@ public class OpStoreImpl implements OpStore {
     @Override
     public void updateShardOp(ShardOperation operation) {
         ZNode znode = ZNode.ofShardOperation(operation.getName());
+        zkMetaStore.updateZNodeWithData(znode, operation);
+    }
+
+    @Override
+    public void createTopicFailoverOp(TopicFailoverOperation operation) {
+        ZNode znode = ZNode.ofTopicFailoverOperation(operation.getName());
+        zkMetaStore.createZNodeWithData(znode, operation);
+    }
+
+    @Override
+    public TopicFailoverOperation getTopicFailoverOp(String operationId) {
+        ZNode znode = ZNode.ofTopicFailoverOperation(operationId);
+        return zkMetaStore.getZNodeDataAsPojo(znode, TopicFailoverOperation.class);
+    }
+
+    @Override
+    public List<TopicFailoverOperation> getPendingTopicFailoverOps() {
+        // TODO: This needs to improvise i.e shouldn't need to deserialize all.
+        return zkMetaStore.listChildren(ZNode.ofEntityType(TOPIC_FAILOVER_OP))
+                          .stream()
+                          .map(
+                              id -> zkMetaStore.getZNodeDataAsPojo(
+                                  ZNode.ofTopicFailoverOperation(id),
+                                  TopicFailoverOperation.class
+                              )
+                          )
+                          .filter(op -> !op.isDone())
+                          .toList();
+    }
+
+    @Override
+    public void updateTopicFailoverOp(TopicFailoverOperation operation) {
+        ZNode znode = ZNode.ofTopicFailoverOperation(operation.getName());
         zkMetaStore.updateZNodeWithData(znode, operation);
     }
 }

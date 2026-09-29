@@ -4,6 +4,7 @@ import com.flipkart.varadhi.spi.db.AssignmentStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 
 public class InMemoryMetastoreProvider implements MetaStoreProvider {
 
@@ -28,6 +29,11 @@ public class InMemoryMetastoreProvider implements MetaStoreProvider {
     public AssignmentStore getAssignmentStore() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAssignmentStore'");
+    }
+
+    @Override
+    public TransitionStore getTransitionStore() {
+        throw new UnsupportedOperationException("Unimplemented method 'getTransitionStore'");
     }
 
     @Override

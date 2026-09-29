@@ -2,6 +2,7 @@ package com.flipkart.varadhi.pulsar;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
 import com.flipkart.varadhi.entities.Project;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.TopicPartitions;
@@ -130,6 +131,15 @@ public class PulsarTopicService implements StorageTopicService {
                 e
             );
         }
+    }
+
+    /**
+     * Stub: always reports caught up. TODO: read Pulsar geo-replication backlog
+     * (e.g. admin topics/replication stats for {@code source} → {@code target}).
+     */
+    @Override
+    public long getReplicationLag(StorageTopic topic, RegionName source, RegionName target) {
+        return 0L;
     }
 
     private void createTenant(String tenantName) {

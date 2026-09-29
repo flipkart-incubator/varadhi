@@ -38,13 +38,13 @@ class TransitionEventTest {
             OP_ID,
             TOPIC,
             TransitionType.TOPIC_FAILOVER,
-            TransitionStage.SWITCH,
+            TransitionStage.FENCE,
             true,
             11L,
             new TransitionEvent.Target.Region(new RegionName("ignored-by-handler"))
         );
 
-        assertEquals(TransitionStage.SWITCH, event.stage());
+        assertEquals(TransitionStage.FENCE, event.stage());
         assertTrue(event.awaitVersion());
         assertEquals(11L, event.topicVersionToAwait());
         assertEquals(new TransitionEvent.Target.Region(new RegionName("ignored-by-handler")), event.target());

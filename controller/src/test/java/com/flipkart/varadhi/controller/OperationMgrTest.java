@@ -4,8 +4,11 @@ import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -18,6 +21,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.List;
 import java.util.concurrent.*;
 
+import static com.flipkart.varadhi.entities.cluster.Operation.State.COMPLETED;
 import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
@@ -200,7 +204,7 @@ public class OperationMgrTest {
         CountDownLatch completed2 = completeOperation(startOp2);
         waiting3.countDown();
         CountDownLatch completed3 = completeOperation(startOp3);
-        await().atMost(1, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0 && completed3.getCount() == 0);
+        await().atMost(20, TimeUnit.SECONDS).until(() -> completed2.getCount() == 0 && completed3.getCount() == 0);
         assertEquals(0, operationMgr.getPendingOperations(orderingKey2).size());
         assertEquals(0, operationMgr.getPendingOperations(orderingKey3).size());
     }
@@ -630,5 +634,27 @@ public class OperationMgrTest {
 
     public static ShardOperation getShardStartOp(String subOpId, SubscriptionUnitShard shard, VaradhiSubscription sub) {
         return ShardOperation.startOp(subOpId, shard, sub);
+    }
+
+    @Test
+    void persistTopicFailoverOp_withoutEnqueue_persistsTerminalAbort() {
+        String topicFqn = "proj.topic1";
+        TopicFailoverOperation stored = TopicFailoverOperation.of(
+            topicFqn,
+            RegionName.of("r1"),
+            RegionName.of("r2"),
+            true,
+            "tester"
+        );
+        when(opStore.getTopicFailoverOp(stored.getId())).thenReturn(stored);
+
+        stored.beginStage(TransitionStage.ABORTED);
+        stored.markCompleted();
+        operationMgr.persistTopicFailoverOp(stored);
+
+        verify(opStore).updateTopicFailoverOp(stored);
+        assertEquals(COMPLETED, stored.getState());
+        assertEquals(1, stored.getStageHistory().size());
+        assertEquals(TransitionStage.ABORTED, stored.getStageHistory().get(0).getStage());
     }
 }

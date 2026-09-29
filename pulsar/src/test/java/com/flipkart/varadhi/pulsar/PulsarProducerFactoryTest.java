@@ -36,7 +36,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
     @Test
     public void testGetProducer() throws PulsarClientException {
         PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
-        Producer<? extends Offset> p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY);
+        Producer<? extends Offset> p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, "region");
         Assertions.assertNotNull(p);
         verify(builder, times(1)).create();
     }
@@ -47,7 +47,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
         doThrow(new PulsarClientException.NotFoundException("Topic not found")).when(builder).create();
         ProduceException pe = Assertions.assertThrows(
             ProduceException.class,
-            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY)
+            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, "region")
         );
         verify(builder, times(1)).create();
         Assertions.assertEquals(
@@ -62,7 +62,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
         doThrow(new RuntimeException("Random error check")).when(builder).create();
         RuntimeException re = Assertions.assertThrows(
             RuntimeException.class,
-            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY)
+            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, "region")
         );
         verify(builder, times(1)).create();
         Assertions.assertEquals("Random error check", re.getMessage());

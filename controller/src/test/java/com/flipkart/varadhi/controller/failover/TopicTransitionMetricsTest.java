@@ -36,13 +36,13 @@ class TopicTransitionMetricsTest {
 
     @Test
     void ackProcessed_incrementsTaggedCounter() {
-        metrics.ackProcessed(TransitionType.TOPIC_FAILOVER, TransitionStage.SWITCH);
+        metrics.ackProcessed(TransitionType.TOPIC_FAILOVER, TransitionStage.FENCE);
 
         assertEquals(
             1.0,
             registry.find("topic.transition.ack.processed")
                     .tag("type", "TOPIC_FAILOVER")
-                    .tag("stage", "SWITCH")
+                    .tag("stage", "FENCE")
                     .counter()
                     .count()
         );

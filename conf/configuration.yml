@@ -1,4 +1,4 @@
-deployedRegion: "default"
+deployedRegion: "region-a"
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
@@ -23,6 +23,8 @@ deliveryOptions:
 
 producerOptions:
   producerCacheTtlSeconds: 3600
+  transitionVersionWaitMs: 30000
+  transitionPollIntervalMs: 0
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
@@ -104,9 +106,13 @@ tracesEnabled: true
 operationsConfig:
   maxConcurrentOps: 2
   maxRetryAllowed: 3
+  topicFailoverMaxRetryAllowed: 0
   retryIntervalInSeconds: 10
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60
+  topicFailoverStageAwaitMs: 60000
+  # harness: hold Fenced so produce can hit 503 (0 in prod)
+  topicFailoverFenceHoldMs: 5000
 
 disabledAPIs: [ ]
 

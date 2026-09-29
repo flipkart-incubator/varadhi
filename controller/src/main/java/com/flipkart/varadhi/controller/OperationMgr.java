@@ -3,6 +3,7 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -24,18 +25,42 @@ public class OperationMgr {
     private final Map<String, RetryOpTask> retryOpTasks;
     private final Map<String, Deque<OpTask>> opTasks;
     private final RetryPolicy retryPolicy;
+    private final RetryPolicy topicFailoverRetryPolicy;
+    private volatile Consumer<TopicFailoverOperation> topicFailoverTerminalFailureHandler;
 
     public OperationMgr(int maxConcurrentOps, OpStore opStore, RetryPolicy retryPolicy) {
+        this(maxConcurrentOps, opStore, retryPolicy, retryPolicy);
+    }
+
+    public OperationMgr(
+        int maxConcurrentOps,
+        OpStore opStore,
+        RetryPolicy retryPolicy,
+        RetryPolicy topicFailoverRetryPolicy
+    ) {
         this.opStore = opStore;
         this.opTasks = new ConcurrentHashMap<>();
         this.retryOpTasks = new ConcurrentHashMap<>();
         this.retryPolicy = retryPolicy;
+        this.topicFailoverRetryPolicy = topicFailoverRetryPolicy;
         //TODO::ExecutorService should emit the metrics.
         this.executor = Executors.newFixedThreadPool(
             maxConcurrentOps,
             new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
         );
         this.delayedScheduler = Executors.newSingleThreadScheduledExecutor();
+    }
+
+    /** Invoked when a topic-failover op has failed and will not be retried. */
+    public void setTopicFailoverTerminalFailureHandler(Consumer<TopicFailoverOperation> handler) {
+        this.topicFailoverTerminalFailureHandler = handler;
+    }
+
+    private void notifyTopicFailoverTerminalFailure(TopicFailoverOperation operation) {
+        Consumer<TopicFailoverOperation> handler = topicFailoverTerminalFailureHandler;
+        if (handler != null) {
+            handler.accept(operation);
+        }
     }
 
     /**
@@ -195,13 +220,66 @@ public class OperationMgr {
     }
 
     void enqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
-        OpTask opTask = new OpTask(opExecutor, op -> opStore.updateSubOp((SubscriptionOperation)op), subOp);
+        OpTask opTask = new OpTask(
+            opExecutor,
+            op -> opStore.updateSubOp((SubscriptionOperation)op),
+            subOp,
+            retryPolicy
+        );
         enqueueOpTask(opTask);
     }
 
     void createAndEnqueue(SubscriptionOperation subOp, OpExecutor<OrderedOperation> opExecutor) {
         opStore.createSubOp(subOp);
         enqueue(subOp, opExecutor);
+    }
+
+    void enqueueTopicFailover(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
+        OpTask opTask = new OpTask(
+            opExecutor,
+            o -> opStore.updateTopicFailoverOp((TopicFailoverOperation)o),
+            op,
+            topicFailoverRetryPolicy
+        );
+        enqueueOpTask(opTask);
+    }
+
+    void createTopicFailoverOp(TopicFailoverOperation op) {
+        opStore.createTopicFailoverOp(op);
+    }
+
+    void createAndEnqueueTopicFailover(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
+        opStore.createTopicFailoverOp(op);
+        enqueueTopicFailover(op, opExecutor);
+    }
+
+    List<TopicFailoverOperation> getPendingTopicFailoverOps() {
+        return opStore.getPendingTopicFailoverOps();
+    }
+
+    public TopicFailoverOperation getTopicFailoverOp(String operationId) {
+        return opStore.getTopicFailoverOp(operationId);
+    }
+
+    /**
+     * Persists a topic-failover op without requiring it to be on the in-memory execution queue.
+     * Used for intent-only lifecycle (create/abort) before the orchestrator enqueues the op.
+     */
+    public void persistTopicFailoverOp(TopicFailoverOperation operation) {
+        TopicFailoverOperation latest = opStore.getTopicFailoverOp(operation.getId());
+        latest.applyProgressFrom(operation);
+        opStore.updateTopicFailoverOp(latest);
+    }
+
+    /**
+     * Records a terminal (or progress) update on a topic-failover op: re-reads the latest from the
+     * store, applies the new state, persists, and lets the queue dequeue/retry as needed.
+     */
+    public void updateTopicFailoverOp(TopicFailoverOperation operation) {
+        processOpTaskForOpUpdate(operation, op -> {
+            persistTopicFailoverOp((TopicFailoverOperation) op);
+            return opStore.getTopicFailoverOp(operation.getId());
+        });
     }
 
     public void submitShardOp(ShardOperation shardOp, boolean isRetry) {
@@ -273,7 +351,7 @@ public class OperationMgr {
         ScheduledFuture<Void> scheduledFuture;
 
         void schedule() {
-            int backOffSeconds = retryPolicy.getRetryBackoffSeconds(opTask.operation);
+            int backOffSeconds = opTask.retryPolicy.getRetryBackoffSeconds(opTask.operation);
             scheduledFuture = delayedScheduler.schedule(() -> {
                 // task is getting scheduled for execution, remove it from retry pending.
                 retryOpTasks.remove(opTask.getOrderingKey());
@@ -321,6 +399,7 @@ public class OperationMgr {
         final OpExecutor<OrderedOperation> opExecutor;
         final Consumer<OrderedOperation> dbUpdateHandler;
         OrderedOperation operation;
+        final RetryPolicy retryPolicy;
 
         void execute() {
             CompletableFuture.runAsync(() -> {
@@ -346,7 +425,7 @@ public class OperationMgr {
                 try {
                     OrderedOperation retryOp = operation.nextRetry();
                     dbUpdateHandler.accept(retryOp);
-                    RetryOpTask task = new RetryOpTask(new OpTask(opExecutor, dbUpdateHandler, retryOp));
+                    RetryOpTask task = new RetryOpTask(new OpTask(opExecutor, dbUpdateHandler, retryOp, retryPolicy));
                     task.schedule();
                 } catch (MetaStoreException e) {
                     log.error("Retry ERROR -- {} not retried due to failure {}", operation, e.getMessage());
@@ -356,6 +435,9 @@ public class OperationMgr {
                 }
             } else {
                 log.error("Operation {} has failed but further retry is not allowed.", operation);
+                if (operation instanceof TopicFailoverOperation topicFailoverOperation) {
+                    notifyTopicFailoverTerminalFailure(topicFailoverOperation);
+                }
             }
         }
 

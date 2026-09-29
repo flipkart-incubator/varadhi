@@ -6,6 +6,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 import lombok.extern.slf4j.Slf4j;
 import org.mockito.Mockito;
 
@@ -30,6 +31,11 @@ public class MockMetaStoreProvider implements MetaStoreProvider {
     @Override
     public AssignmentStore getAssignmentStore() {
         return Mockito.mock(AssignmentStore.class);
+    }
+
+    @Override
+    public TransitionStore getTransitionStore() {
+        return Mockito.mock(TransitionStore.class);
     }
 
     @Override

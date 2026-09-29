@@ -16,9 +16,9 @@ public final class TopicResolver {
     /**
      * Resolves produce routing for {@code region}: topic + produce region + storage segment id.
      *
-     * <p>Uses the active storage segment ({@link ProduceConfig#getProduceIdx()} on the resolved produce region).
-     * Correct for steady-state produce and topic failover after SWITCH. Storage-migration PREPARE
-     * must warm an explicit segment id from
+     * <p>Uses the active storage segment ({@link ProduceConfig#getProduceIdx()} on the
+     * <em>ingress</em> region's config). Correct for steady-state produce and topic failover after
+     * MIGRATE. Storage-migration PREPARE must warm an explicit segment id from
      * {@link com.flipkart.varadhi.entities.cluster.failover.TransitionEvent.Target.StorageTopic#storageTopicId()},
      * not this resolver alone.
      *
@@ -72,13 +72,10 @@ public final class TopicResolver {
             return Optional.empty();
         }
         RegionName produceRegion = produceConfig.getFailOverRegion().orElse(region);
-        return topic.getProduceConfig(produceRegion)
-                    .map(
-                        produceRegionConfig -> new ProduceTarget(
-                            produceRegion,
-                            topic.getSegmentedStorageTopic().getTopic(produceRegionConfig.getProduceIdx())
-                        )
-                    );
+        // produceIdx always from the ingress region's config — failover never moves the segment.
+        return Optional.of(
+            new ProduceTarget(produceRegion, topic.getSegmentedStorageTopic().getTopic(produceConfig.getProduceIdx()))
+        );
     }
 
     private record ProduceTarget(RegionName produceRegion, StorageTopic segment) {
