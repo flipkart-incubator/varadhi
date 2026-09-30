@@ -3,6 +3,7 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.entities.JsonMapper;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import org.apache.curator.framework.CuratorFramework;
@@ -54,7 +55,6 @@ public class ZKMetaStoreTests {
         zkCuratorTestingServer.close();
     }
 
-
     @Test
     public void testZKData() {
         Org data2 = new Org("test-node2", 0);
@@ -83,7 +83,8 @@ public class ZKMetaStoreTests {
         // the OS file separator ("\\" on Windows) and produced an invalid ZooKeeper path there.
         zkMetaStore.createZNode(ZNode.ofEntityType(ZNode.EVENT));
 
-        Assertions.assertTrue(zkMetaStore.registerEventListener(event -> {}));
+        Assertions.assertTrue(zkMetaStore.registerEventListener(event -> {
+        }));
 
         String expectedPath = ZNode.ofEntityType(ZNode.EVENT).getPath() + "/change_event_listener";
         Assertions.assertTrue(expectedPath.startsWith("/"));
@@ -133,7 +134,6 @@ public class ZKMetaStoreTests {
         );
     }
 
-
     @Test
     public void testUpdateZNodeWithDataFailure() throws Exception {
         SetDataBuilder builder = spy(zkCuratorFramework.setData());
@@ -146,7 +146,6 @@ public class ZKMetaStoreTests {
             () -> zkMetaStore.updateZNodeWithData(zn, data1)
         );
 
-
         doThrow(new KeeperException.BadVersionException()).when(builder).forPath(any(), any());
         validateException(
             InvalidOperationForResourceException.class,
@@ -157,7 +156,6 @@ public class ZKMetaStoreTests {
             ),
             () -> zkMetaStore.updateZNodeWithData(zn, data1)
         );
-
 
         doThrow(new KeeperException.DataInconsistencyException()).when(builder).forPath(any(), any());
         validateException(
@@ -185,6 +183,19 @@ public class ZKMetaStoreTests {
             String.format("Failed to find %s(%s) at %s.", zn.getKind(), zn.getName(), zn.getPath()),
             () -> zkMetaStore.getZNodeDataAsPojo(zn, Org.class)
         );
+    }
+
+    @Test
+    public void testZNodeDataIsStoredAsJsonBytes() throws Exception {
+        Org org = Org.of("café-org");                       // non-ASCII on purpose
+        ZNode znode = ZNode.ofKind(testKind, org.getName());
+        zkMetaStore.createZNodeWithData(znode, org);
+
+        byte[] stored = zkCuratorFramework.getData().forPath(znode.getPath());
+        Assertions.assertArrayEquals(JsonMapper.jsonSerializeAsBytes(org), stored);    // saved as exact JSON bytes
+        Assertions.assertEquals(org, zkMetaStore.getZNodeDataAsPojo(znode, Org.class)); // reads back the same
+
+        zkMetaStore.deleteZNode(znode);
     }
 
     @Test
@@ -251,6 +262,7 @@ public class ZKMetaStoreTests {
     }
 
     interface MethodCaller {
+
         void call();
     }
 }
