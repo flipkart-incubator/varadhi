@@ -4,6 +4,7 @@ import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.JsonMapper;
+import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.entities.Org;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import org.apache.curator.framework.CuratorFramework;
@@ -195,6 +196,21 @@ public class ZKMetaStoreTests {
         Assertions.assertArrayEquals(JsonMapper.jsonSerializeAsBytes(org), stored);    // saved as exact JSON bytes
         Assertions.assertEquals(org, zkMetaStore.getZNodeDataAsPojo(znode, Org.class)); // reads back the same
 
+        zkMetaStore.deleteZNode(znode);
+    }
+
+    @Test
+    public void testTrackedCreateAndUpdateStoreJsonBytes() throws Exception {
+        zkMetaStore.createZNode(ZNode.ofEntityType(ZNode.EVENT));   // parent for the change-event nodes
+        Org org = Org.of("tracked-org");
+        ZNode znode = ZNode.ofKind(testKind, org.getName());
+        zkMetaStore.createTrackedZNodeWithData(znode, org, MetaStoreEntityType.ORG);
+        Assertions.assertArrayEquals(
+            JsonMapper.jsonSerializeAsBytes(org),
+            zkCuratorFramework.getData().forPath(znode.getPath())
+        );
+        zkMetaStore.updateTrackedZNodeWithData(znode, org, MetaStoreEntityType.ORG);
+        Assertions.assertEquals(org, zkMetaStore.getZNodeDataAsPojo(znode, Org.class));
         zkMetaStore.deleteZNode(znode);
     }
 
