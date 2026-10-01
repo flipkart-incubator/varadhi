@@ -21,7 +21,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.OpResult;
 import org.apache.zookeeper.data.Stat;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,7 +113,7 @@ public class ZKMetaStore implements AutoCloseable {
      */
     <T extends MetaStoreEntity> void createZNodeWithData(ZNode znode, T dataObject) {
         try {
-            byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
+            byte[] jsonData = JsonMapper.jsonSerializeAsBytes(dataObject);
             zkCurator.create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData);
 
             dataObject.setVersion(0);
@@ -141,7 +140,7 @@ public class ZKMetaStore implements AutoCloseable {
         MetaStoreEntityType metaStoreEntityType
     ) {
         try {
-            byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
+            byte[] jsonData = JsonMapper.jsonSerializeAsBytes(dataObject);
             var ops = List.of(
                 zkCurator.transactionOp().create().withMode(CreateMode.PERSISTENT).forPath(znode.getPath(), jsonData),
                 createChangeEventZNode(znode.getName(), metaStoreEntityType)
@@ -189,7 +188,7 @@ public class ZKMetaStore implements AutoCloseable {
      */
     <T extends MetaStoreEntity> void updateZNodeWithData(ZNode znode, T dataObject) {
         try {
-            byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
+            byte[] jsonData = JsonMapper.jsonSerializeAsBytes(dataObject);
             var stat = zkCurator.setData().withVersion(dataObject.getVersion()).forPath(znode.getPath(), jsonData);
 
             dataObject.setVersion(stat.getVersion());
@@ -223,7 +222,7 @@ public class ZKMetaStore implements AutoCloseable {
         MetaStoreEntityType metaStoreEntityType
     ) {
         try {
-            byte[] jsonData = JsonMapper.jsonSerialize(dataObject).getBytes(StandardCharsets.UTF_8);
+            byte[] jsonData = JsonMapper.jsonSerializeAsBytes(dataObject);
 
             var ops = List.of(
                 zkCurator.transactionOp()
@@ -307,7 +306,7 @@ public class ZKMetaStore implements AutoCloseable {
         try {
             var stat = new Stat();
             byte[] jsonData = zkCurator.getData().storingStatIn(stat).forPath(znode.getPath());
-            var res = JsonMapper.jsonDeserialize(new String(jsonData, StandardCharsets.UTF_8), pojoClazz);
+            var res = JsonMapper.jsonDeserialize(jsonData, pojoClazz);
             res.setVersion(stat.getVersion());
             return res;
         } catch (KeeperException.NoNodeException e) {
