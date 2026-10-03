@@ -8,6 +8,7 @@ import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -47,6 +48,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
     private VaradhiMetaStore varadhiMetaStore;
     private OpStoreImpl opStore;
     private AssignmentStoreImpl assignmentStore;
+    private TransitionStoreImpl transitionStore;
 
     /**
      * {@inheritDoc}
@@ -79,6 +81,7 @@ public class ZookeeperProvider implements MetaStoreProvider {
         varadhiMetaStore = new VaradhiMetaStore(globalZkStore);
         opStore = new OpStoreImpl(localZkStore);
         assignmentStore = new AssignmentStoreImpl(localZkStore);
+        transitionStore = new TransitionStoreImpl(localZkStore);
     }
 
     /**
@@ -106,6 +109,15 @@ public class ZookeeperProvider implements MetaStoreProvider {
     public AssignmentStore getAssignmentStore() {
         checkInitialized();
         return assignmentStore;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TransitionStore getTransitionStore() {
+        checkInitialized();
+        return transitionStore;
     }
 
     /**

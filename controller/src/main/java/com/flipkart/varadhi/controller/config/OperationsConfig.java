@@ -6,6 +6,12 @@ import lombok.Data;
 public class OperationsConfig {
     private int maxConcurrentOps = 2;
     private int maxRetryAllowed = 3;
+    /**
+     * Max retries for topic-failover ops only ({@code 0} = fail once). Used to build a separate
+     * {@link com.flipkart.varadhi.controller.RetryPolicy} when enqueueing failover — same backoff
+     * knobs as {@link #maxRetryAllowed}, different ceiling.
+     */
+    private int topicFailoverMaxRetryAllowed = 0;
     private int retryIntervalInSeconds = 10;
     private int retryMinBackoffInSeconds = 10;
     private int retryMaxBackOffInSeconds = 60;
