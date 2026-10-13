@@ -300,7 +300,7 @@ public class VaradhiConsumerImpl implements VaradhiConsumer {
     }
 
     FailedMsgProducer<? extends Offset> createFailedMsgProducer(StorageTopic topic, TopicCapacityPolicy capacity) {
-        return new FailedMsgProducer<>(env.getProducerFactory().newProducer(topic, capacity));
+        return new FailedMsgProducer<>(env.getProducerFactory().newProducer(topic, capacity, "failed"));
     }
 
     void startLoop() {

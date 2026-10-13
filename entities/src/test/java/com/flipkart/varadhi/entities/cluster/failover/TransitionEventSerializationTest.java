@@ -120,7 +120,7 @@ class TransitionEventSerializationTest {
                 "topicName": "topic"
               },
               "transitionType": "TOPIC_FAILOVER",
-              "stage": "SWITCH",
+              "stage": "FENCE",
               "awaitVersion": true,
               "topicVersionToAwait": 11,
               "target": null

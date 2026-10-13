@@ -53,4 +53,13 @@ public interface MetaStoreProvider extends AutoCloseable {
      * @throws IllegalStateException if provider is not initialized
      */
     AssignmentStore getAssignmentStore();
+
+    /**
+     * Returns the transition store implementation (controller-only master state for topic
+     * transitions / failover).
+     *
+     * @return The transition store instance
+     * @throws IllegalStateException if provider is not initialized
+     */
+    TransitionStore getTransitionStore();
 }
