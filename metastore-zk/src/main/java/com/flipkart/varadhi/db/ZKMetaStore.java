@@ -15,7 +15,6 @@ import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.framework.api.transaction.OperationType;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.OpResult;
@@ -586,7 +585,7 @@ public class ZKMetaStore implements AutoCloseable {
      * @return true if registration is successful, false otherwise
      */
     public boolean registerEventListener(MetaStoreEventListener listener) {
-        var listenerPath = ZKPaths.makePath(ZNode.ofEntityType(EVENT).getPath(), LISTENER_NODE);
+        var listenerPath = Path.of(ZNode.ofEntityType(EVENT).getPath(), LISTENER_NODE).toString();
 
         try {
             zkCurator.create().withMode(CreateMode.EPHEMERAL).forPath(listenerPath);

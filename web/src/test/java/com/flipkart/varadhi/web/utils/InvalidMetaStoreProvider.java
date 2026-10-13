@@ -5,6 +5,7 @@ import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreOptions;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -27,6 +28,11 @@ public class InvalidMetaStoreProvider implements MetaStoreProvider {
 
     @Override
     public AssignmentStore getAssignmentStore() {
+        return null;
+    }
+
+    @Override
+    public TransitionStore getTransitionStore() {
         return null;
     }
 

@@ -468,7 +468,8 @@ public class VaradhiApplication {
                              coreServices,
                              clusterManager,
                              config.controller.getOperationsConfig(),
-                             config.controller.getEventProcessorConfig()
+                             config.controller.getEventProcessorConfig(),
+                             memberInfo.region()
                          );
                          case Consumer -> new ConsumerVerticle(coreServices, memberInfo, clusterManager);
                      }));

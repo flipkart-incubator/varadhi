@@ -49,7 +49,7 @@ class TransitionAckSerializationTest {
             TransitionType.TOPIC_FAILOVER,
             TransitionParticipation.NOT_INVOLVED,
             HOST,
-            TransitionStage.SWITCH,
+            TransitionStage.FENCE,
             "timeout"
         );
 
@@ -93,7 +93,8 @@ class TransitionAckSerializationTest {
             TransitionParticipation.INVOLVED,
             HOST,
             TransitionStage.PREPARE,
-            "   "
+            "   ",
+            null
         );
         assertTrue(ack.isSuccess());
         assertFalse(ack.isFailure());
