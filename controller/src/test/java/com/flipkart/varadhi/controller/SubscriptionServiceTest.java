@@ -13,7 +13,10 @@ import com.flipkart.varadhi.entities.cluster.*;
 import com.flipkart.varadhi.spi.db.MetaStore;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
+import com.flipkart.varadhi.spi.db.RegionStore;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
+import com.flipkart.varadhi.spi.db.TopicStore;
+import com.flipkart.varadhi.spi.db.TransitionStore;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.eventbus.ReplyFailure;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +65,19 @@ public class SubscriptionServiceTest {
         subscriptionStore = mock(SubscriptionStore.class);
         when(metaStore.subscriptions()).thenReturn(subscriptionStore);
         subscriptionService = spy(
-            new SubscriptionService(operationMgr, assignmentManager, subscriptionStore, consumerClientFactory)
+            new SubscriptionService(
+                operationMgr,
+                assignmentManager,
+                subscriptionStore,
+                consumerClientFactory,
+                mock(TransitionStore.class),
+                mock(TopicStore.class),
+                mock(RegionStore.class),
+                mock(com.flipkart.varadhi.spi.services.StorageTopicService.class),
+                mock(VaradhiClusterManager.class),
+                mock(MessageExchange.class),
+                RegionName.of("r1")
+            )
         );
     }
 
