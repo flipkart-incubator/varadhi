@@ -36,10 +36,22 @@ public class PulsarProducerFactory implements ProducerFactory {
     }
 
     @Override
-    public Producer<PulsarOffset> newProducer(StorageTopic _topic, TopicCapacityPolicy capacity) {
+    public Producer<PulsarOffset> newProducer(
+        StorageTopic _topic,
+        TopicCapacityPolicy capacity,
+        String produceRegion
+    ) {
         var topic = TypeUtil.safeCast(_topic, PulsarStorageTopic.class);
         try {
-            return new PulsarProducer(pulsarClient, topic, capacity, producerOptions, hostName, telemetryOptions);
+            return new PulsarProducer(
+                pulsarClient,
+                topic,
+                capacity,
+                producerOptions,
+                hostName,
+                produceRegion,
+                telemetryOptions
+            );
         } catch (PulsarClientException e) {
             throw new ProduceException(
                 String.format("Failed to create Pulsar producer for %s. %s", topic.getName(), e.getMessage()),

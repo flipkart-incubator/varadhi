@@ -38,7 +38,7 @@ public class InMemoryMessagingTest {
 
         provider.getStorageTopicService().create(project, topic, policy);
 
-        Producer<? extends Offset> producer = provider.getProducerFactory().newProducer(topic, policy);
+        Producer<? extends Offset> producer = provider.getProducerFactory().newProducer(topic, policy, "region");
 
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(StdHeaders.get().msgId(), "msgId-1");
