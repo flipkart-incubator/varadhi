@@ -3,15 +3,11 @@ package com.flipkart.varadhi.entities.cluster;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
-import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
-import com.flipkart.varadhi.entities.cluster.failover.StageSnapshot;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
+import com.flipkart.varadhi.entities.cluster.failover.TransitionData;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import static com.flipkart.varadhi.entities.cluster.Operation.State.COMPLETED;
@@ -19,110 +15,57 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.ERRORED;
 import static com.flipkart.varadhi.entities.cluster.Operation.State.IN_PROGRESS;
 
 /**
- * Durable intent + outcome record for a topic failover in the {@code OpStore}. Retained after the
- * ephemeral {@code TransitionMaster} is deleted. Carries per-stage {@link #stageHistory} for
- * audit/GET after COMPLETE/ABORT.
+ * OperationMgr handle for one topic failover. Created in the same flow as its
+ * {@code TransitionMaster}. Retained after that master is deleted.
  *
- * <p>Ordering key is {@code "TopicFailover_" + topicFqn} so {@code OperationMgr} serializes all
- * failover work for a given topic. Retry limits come from the {@code RetryPolicy} passed when the
- * op is enqueued — not stamped on this record.
+ * <p>The id is the entity {@code name}. {@code topicFqn} is the ordering key and the master
+ * lookup key. Request fields live on the master. {@link #transitionData} is null while the
+ * attempt runs and is set from {@link TransitionData#from} before the terminal persist.
+ * {@link #nextRetry()} leaves it null.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
 public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOperation {
 
-    private final String operationId;
     private final String topicFqn;
-    private final String requestedBy;
-    private final RegionName sourceRegion;
-    private final RegionName targetRegion;
-    private final boolean waitForReplicationLagToClear;
     private final int retryAttempt;
-    private final long startTime;
-    private long endTime;
     private State state;
     private String errorMsg;
-    /** Per-stage audit log; survives past TransitionMaster deletion. */
-    private final List<StageSnapshot> stageHistory;
+    /** Null until the attempt ends, then a snapshot of the master. */
+    private TransitionData transitionData;
 
     @JsonCreator
     TopicFailoverOperation(
-        String operationId,
+        String name,
         int version,
         String topicFqn,
-        String requestedBy,
-        RegionName sourceRegion,
-        RegionName targetRegion,
-        boolean waitForReplicationLagToClear,
         int retryAttempt,
-        long startTime,
-        long endTime,
         State state,
         String errorMsg,
-        List<StageSnapshot> stageHistory
+        TransitionData transitionData
     ) {
-        super(operationId, version, MetaStoreEntityType.TOPIC_FAILOVER_OPERATION);
-        this.operationId = operationId;
+        super(name, version, MetaStoreEntityType.TOPIC_FAILOVER_OPERATION);
         this.topicFqn = topicFqn;
-        this.requestedBy = requestedBy;
-        this.sourceRegion = sourceRegion;
-        this.targetRegion = targetRegion;
-        this.waitForReplicationLagToClear = waitForReplicationLagToClear;
         this.retryAttempt = retryAttempt;
-        this.startTime = startTime;
-        this.endTime = endTime;
         this.state = state;
         this.errorMsg = errorMsg;
-        this.stageHistory = stageHistory != null ? new ArrayList<>(stageHistory) : new ArrayList<>();
+        this.transitionData = transitionData;
     }
 
-    public static TopicFailoverOperation of(
-        String topicFqn,
-        RegionName sourceRegion,
-        RegionName targetRegion,
-        boolean waitForReplicationLagToClear,
-        String requestedBy
-    ) {
-        return new TopicFailoverOperation(
-            UUID.randomUUID().toString(),
-            0,
-            topicFqn,
-            requestedBy,
-            sourceRegion,
-            targetRegion,
-            waitForReplicationLagToClear,
-            0,
-            System.currentTimeMillis(),
-            0,
-            IN_PROGRESS,
-            null,
-            new ArrayList<>()
-        );
+    public static TopicFailoverOperation of(String topicFqn) {
+        return new TopicFailoverOperation(UUID.randomUUID().toString(), 0, topicFqn, 0, IN_PROGRESS, null, null);
+    }
+
+    /** Terminal snapshot of the master. Set this before the final op persist. */
+    public void attachTransitionData(TransitionData data) {
+        if (data == null) {
+            throw new IllegalArgumentException("transitionData is required");
+        }
+        this.transitionData = data;
     }
 
     /**
-     * Starts {@code stage}, closing any open snapshot as {@link StageSnapshot.Outcome#OK}.
-     */
-    public void beginStage(TransitionStage stage) {
-        completeOpenStage(StageSnapshot.Outcome.OK, null);
-        stageHistory.add(StageSnapshot.started(stage));
-    }
-
-    private void completeOpenStage(StageSnapshot.Outcome outcome, String error) {
-        if (stageHistory.isEmpty()) {
-            return;
-        }
-        StageSnapshot last = stageHistory.get(stageHistory.size() - 1);
-        if (last.getOutcome() != StageSnapshot.Outcome.IN_PROGRESS) {
-            return;
-        }
-        last.setEndedAt(System.currentTimeMillis());
-        last.setOutcome(outcome);
-        last.setErrorMsg(error);
-    }
-
-    /**
-     * Copies progress fields (state, error, endTime, stageHistory) from {@code src} onto this
+     * Copies progress fields (state, error, transitionData) from {@code src} onto this
      * store-loaded instance before persist — used by {@code OperationMgr} to avoid version races.
      */
     public void applyProgressFrom(TopicFailoverOperation src) {
@@ -131,15 +74,13 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         }
         this.state = src.getState();
         this.errorMsg = src.getErrorMsg();
-        this.endTime = src.getEndTime();
-        this.stageHistory.clear();
-        this.stageHistory.addAll(src.getStageHistory());
+        this.transitionData = src.getTransitionData();
     }
 
     @JsonIgnore
     @Override
     public String getId() {
-        return operationId;
+        return getName();
     }
 
     @JsonIgnore
@@ -159,21 +100,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     @Override
     public TopicFailoverOperation nextRetry() {
-        return new TopicFailoverOperation(
-            operationId,
-            getVersion(),
-            topicFqn,
-            requestedBy,
-            sourceRegion,
-            targetRegion,
-            waitForReplicationLagToClear,
-            retryAttempt + 1,
-            startTime,
-            0,
-            IN_PROGRESS,
-            null,
-            new ArrayList<>()
-        );
+        return new TopicFailoverOperation(getName(), getVersion(), topicFqn, retryAttempt + 1, IN_PROGRESS, null, null);
     }
 
     @Override
@@ -200,38 +127,29 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     @Override
     public void markFail(String error) {
-        completeOpenStage(StageSnapshot.Outcome.FAILED, error);
         this.state = ERRORED;
         this.errorMsg = error;
-        this.endTime = System.currentTimeMillis();
     }
 
     @Override
     public void markCompleted() {
-        completeOpenStage(StageSnapshot.Outcome.OK, null);
         this.state = COMPLETED;
-        this.endTime = System.currentTimeMillis();
     }
 
     public void update(State opState, String opError) {
         this.state = opState;
         this.errorMsg = opError;
-        if (isDone()) {
-            this.endTime = System.currentTimeMillis();
-        }
     }
 
     @Override
     public String toString() {
         return String.format(
-            "TopicFailoverOperation{opId=%s, topic=%s, %s->%s, state=%s, retry=%d, stages=%d}",
-            operationId,
+            "TopicFailoverOperation{opId=%s, topic=%s, state=%s, retry=%d, transitionData=%s}",
+            getName(),
             topicFqn,
-            sourceRegion,
-            targetRegion,
             state,
             retryAttempt,
-            stageHistory.size()
+            transitionData == null ? "absent" : "set"
         );
     }
 }

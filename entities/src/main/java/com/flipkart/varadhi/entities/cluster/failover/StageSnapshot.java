@@ -9,9 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Per-stage history entry on durable {@code TopicFailoverOperation}: when the stage started/ended,
- * which hosts acked (when populated), and the outcome. Survives past {@code TransitionMaster}
- * deletion so COMPLETE/ABORT still leave an audit trail.
+ * Per-stage history entry on {@code TransitionMaster}: when the stage started/ended, which hosts
+ * acked (when populated), and the outcome. Copied into {@code TransitionData} when the attempt ends.
  */
 @Getter
 public class StageSnapshot {

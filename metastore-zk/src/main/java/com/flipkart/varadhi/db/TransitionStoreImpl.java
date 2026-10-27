@@ -1,9 +1,11 @@
 package com.flipkart.varadhi.db;
 
+import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.TransitionStore;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.flipkart.varadhi.db.ZNode.TRANSITION;
@@ -55,9 +57,14 @@ public class TransitionStoreImpl implements TransitionStore {
 
     @Override
     public List<TransitionMaster> listActive() {
-        return zkMetaStore.listChildren(ZNode.ofEntityType(TRANSITION))
-                          .stream()
-                          .map(fqn -> zkMetaStore.getZNodeDataAsPojo(ZNode.ofTransition(fqn), TransitionMaster.class))
-                          .toList();
+        List<TransitionMaster> active = new ArrayList<>();
+        for (String fqn : zkMetaStore.listChildren(ZNode.ofEntityType(TRANSITION))) {
+            try {
+                active.add(zkMetaStore.getZNodeDataAsPojo(ZNode.ofTransition(fqn), TransitionMaster.class));
+            } catch (ResourceNotFoundException e) {
+                // Child disappeared between list and get; skip it.
+            }
+        }
+        return active;
     }
 }

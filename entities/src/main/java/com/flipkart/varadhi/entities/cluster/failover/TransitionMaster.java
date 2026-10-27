@@ -8,14 +8,17 @@ import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Ephemeral controller-only orchestration pointer for an in-flight topic transition.
+ * Ephemeral controller-only orchestration state for an in-flight topic transition.
  * Never broadcast / never in a pod cache — pods route only off {@code VaradhiTopic} version +
  * per-region {@code TopicState}.
  *
  * <p>{@code name == topicFqn}, so atomic ZK create enforces one active transition per topic.
- * Deleted at a terminal stage. Durable request/outcome and per-stage history live on
- * {@code TopicFailoverOperation} in the {@code OpStore}.
+ * Holds the live stage and {@link #stageHistory}. Deleted once the attempt ends and that state
+ * has been copied onto {@code TopicFailoverOperation#transitionData}.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
@@ -26,11 +29,14 @@ public class TransitionMaster extends MetaStoreEntity {
     private final String topicFqn;
     private final RegionName sourceRegion;
     private final RegionName targetRegion;
+    private final boolean waitForReplicationLagToClear;
+    private final String requestedBy;
     private final long createdAt;
 
     private TransitionStage currentStage;
     private long topicVersionToAwait;
     private long updatedAt;
+    private final List<StageSnapshot> stageHistory;
 
     @JsonCreator
     TransitionMaster(
@@ -40,10 +46,13 @@ public class TransitionMaster extends MetaStoreEntity {
         String operationId,
         RegionName sourceRegion,
         RegionName targetRegion,
+        boolean waitForReplicationLagToClear,
+        String requestedBy,
         long createdAt,
         TransitionStage currentStage,
         long topicVersionToAwait,
-        long updatedAt
+        long updatedAt,
+        List<StageSnapshot> stageHistory
     ) {
         super(topicFqn, version, MetaStoreEntityType.TRANSITION_OBJECT);
         this.topicFqn = topicFqn;
@@ -51,17 +60,22 @@ public class TransitionMaster extends MetaStoreEntity {
         this.operationId = operationId;
         this.sourceRegion = sourceRegion;
         this.targetRegion = targetRegion;
+        this.waitForReplicationLagToClear = waitForReplicationLagToClear;
+        this.requestedBy = requestedBy;
         this.createdAt = createdAt;
         this.currentStage = currentStage;
         this.topicVersionToAwait = topicVersionToAwait;
         this.updatedAt = updatedAt;
+        this.stageHistory = stageHistory != null ? new ArrayList<>(stageHistory) : new ArrayList<>();
     }
 
     public static TransitionMaster forFailover(
         String operationId,
         String topicFqn,
         RegionName sourceRegion,
-        RegionName targetRegion
+        RegionName targetRegion,
+        boolean waitForReplicationLagToClear,
+        String requestedBy
     ) {
         long now = System.currentTimeMillis();
         return new TransitionMaster(
@@ -71,20 +85,42 @@ public class TransitionMaster extends MetaStoreEntity {
             operationId,
             sourceRegion,
             targetRegion,
+            waitForReplicationLagToClear,
+            requestedBy,
             now,
             TransitionStage.PENDING,
             0L,
-            now
+            now,
+            new ArrayList<>()
         );
     }
 
-    /**
-     * Advances live stage + version-to-await. Per-stage history is recorded on the linked
-     * {@code TopicFailoverOperation}, not here.
-     */
+    /** Advances live stage + version-to-await. Stage history is recorded via {@link #beginStage}. */
     public void advanceTo(TransitionStage stage, long topicVersionToAwait) {
         this.currentStage = stage;
         this.topicVersionToAwait = topicVersionToAwait;
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    /** Starts {@code stage}, closing any open snapshot as {@link StageSnapshot.Outcome#OK}. */
+    public void beginStage(TransitionStage stage) {
+        closeOpenStage(StageSnapshot.Outcome.OK, null);
+        stageHistory.add(StageSnapshot.started(stage));
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    /** Closes the in-progress snapshot, if any. Call before {@link TransitionData#from} on a terminal outcome. */
+    public void closeOpenStage(StageSnapshot.Outcome outcome, String error) {
+        if (stageHistory.isEmpty()) {
+            return;
+        }
+        StageSnapshot last = stageHistory.get(stageHistory.size() - 1);
+        if (last.getOutcome() != StageSnapshot.Outcome.IN_PROGRESS) {
+            return;
+        }
+        last.setEndedAt(System.currentTimeMillis());
+        last.setOutcome(outcome);
+        last.setErrorMsg(error);
         this.updatedAt = System.currentTimeMillis();
     }
 

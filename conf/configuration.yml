@@ -1,4 +1,4 @@
-deployedRegion: "region-a"
+deployedRegion: "default"
 
 member:
   roles: [ "Server", "Controller", "Consumer" ]
@@ -24,7 +24,7 @@ deliveryOptions:
 producerOptions:
   producerCacheTtlSeconds: 3600
   transitionVersionWaitMs: 30000
-  transitionPollIntervalMs: 0
+  transitionPollIntervalMs: 25
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
