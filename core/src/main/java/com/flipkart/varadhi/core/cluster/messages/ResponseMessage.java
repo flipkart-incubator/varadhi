@@ -2,8 +2,12 @@ package com.flipkart.varadhi.core.cluster.messages;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.ServerNotAvailableException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
+import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.entities.JsonMapper;
 import lombok.Getter;
 
@@ -19,9 +23,10 @@ public class ResponseMessage extends ClusterMessage {
     ResponseMessage(String payload, Exception exception, String requestId) {
         super(payload);
         this.requestId = requestId;
-        this.exception = exception;
-        this.failureType = exception != null ? exception.getClass().getName() : null;
-        this.failureMessage = exception != null ? exception.getMessage() : null;
+        Exception root = unwrap(exception);
+        this.exception = root;
+        this.failureType = root != null ? root.getClass().getName() : null;
+        this.failureMessage = root != null ? root.getMessage() : null;
     }
 
     @JsonCreator
@@ -55,12 +60,42 @@ public class ResponseMessage extends ClusterMessage {
         return JsonMapper.jsonDeserialize(getPayload(), clazz);
     }
 
+    private static Exception unwrap(Exception exception) {
+        if (exception == null) {
+            return null;
+        }
+        Throwable current = exception;
+        Throwable next;
+        while ((next = ThrowableUtils.unwrap(current)) != current) {
+            current = next;
+        }
+        if (current instanceof Exception e) {
+            return e;
+        }
+        return new VaradhiException(current);
+    }
+
     private static Exception reconstructException(String failureType, String failureMessage) {
         if (failureType == null) {
             return null;
         }
+        if (DuplicateResourceException.class.getName().equals(failureType)) {
+            return new DuplicateResourceException(failureMessage);
+        }
+        if (ServerNotAvailableException.class.getName().equals(failureType)) {
+            return new ServerNotAvailableException(failureMessage);
+        }
+        if (IllegalArgumentException.class.getName().equals(failureType)) {
+            return new IllegalArgumentException(failureMessage);
+        }
         if (ResourceNotFoundException.class.getName().equals(failureType)) {
             return new ResourceNotFoundException(failureMessage);
+        }
+        if (InvalidOperationForResourceException.class.getName().equals(failureType)) {
+            return new InvalidOperationForResourceException(failureMessage);
+        }
+        if (UnsupportedOperationException.class.getName().equals(failureType)) {
+            return new UnsupportedOperationException(failureMessage);
         }
         if (VaradhiException.class.getName().equals(failureType)) {
             return new VaradhiException(failureMessage);
