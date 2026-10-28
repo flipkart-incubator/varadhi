@@ -19,7 +19,7 @@ public final class TopicResolver {
      * <p>Uses the active storage segment ({@link ProduceConfig#getProduceIdx()} on the
      * <em>ingress</em> region's config). Correct for steady-state produce and topic failover after
      * MIGRATE. Storage-migration PREPARE must warm an explicit segment id from
-     * {@link com.flipkart.varadhi.entities.cluster.failover.TransitionEvent.Target.StorageTopic#storageTopicId()},
+     * {@link com.flipkart.varadhi.entities.cluster.transition.TransitionEvent.Target.StorageTopic#storageTopicId()},
      * not this resolver alone.
      *
      * <p>Does <em>not</em> check {@link TopicState#isProduceAllowed()}.
