@@ -277,7 +277,7 @@ public class OperationMgr {
      */
     public void updateTopicFailoverOp(TopicFailoverOperation operation) {
         processOpTaskForOpUpdate(operation, op -> {
-            persistTopicFailoverOp((TopicFailoverOperation) op);
+            persistTopicFailoverOp((TopicFailoverOperation)op);
             return opStore.getTopicFailoverOp(operation.getId());
         });
     }

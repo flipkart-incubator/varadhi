@@ -33,7 +33,6 @@ import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.*;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
@@ -98,7 +97,7 @@ public class SubscriptionService implements SubscriptionApi {
         if (!transitionStore.exists(topicFqn)) {
             return;
         }
-        TransitionMaster transition = transitionStore.get(topicFqn);
+        ActiveTransition transition = transitionStore.get(topicFqn);
         log.warn("Cleaning up failed topic failover op {} for {} (error={})", op.getId(), topicFqn, op.getErrorMsg());
         broadcastTransition(
             TransitionEvent.of(
@@ -319,22 +318,18 @@ public class SubscriptionService implements SubscriptionApi {
                     "An active failover already exists for topic " + topicFqn + "."
                 );
             }
-            TopicFailoverOperation op = TopicFailoverOperation.of(
-                topicFqn,
-                source,
-                target,
-                request.waitForReplicationLagToClear(),
-                requestedBy
-            );
+            TopicFailoverOperation op = TopicFailoverOperation.of(topicFqn, requestedBy);
             // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
-            transitionStore.create(TransitionMaster.forFailover(op.getId(), topicFqn, source, target));
-            log.info(
-                "Created topic failover op {} for {} ({}->{})",
-                op.getId(),
-                topicFqn,
-                source,
-                target
+            transitionStore.create(
+                ActiveTransition.forFailover(
+                    op.getId(),
+                    topicFqn,
+                    source,
+                    target,
+                    request.waitForReplicationLagToClear()
+                )
             );
+            log.info("Created topic failover op {} for {} ({}->{})", op.getId(), topicFqn, source, target);
             // Orchestrator (TopicFailoverOpExecutor) is wired in a follow-up change; REST only records intent.
             operationMgr.createTopicFailoverOp(op);
             return op;
@@ -346,7 +341,7 @@ public class SubscriptionService implements SubscriptionApi {
             if (!transitionStore.exists(topicFqn)) {
                 throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
             }
-            TransitionMaster transition = transitionStore.get(topicFqn);
+            ActiveTransition transition = transitionStore.get(topicFqn);
             return operationMgr.getTopicFailoverOp(transition.getOperationId());
         });
     }
@@ -356,27 +351,14 @@ public class SubscriptionService implements SubscriptionApi {
             if (!transitionStore.exists(topicFqn)) {
                 throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
             }
-            TransitionMaster transition = transitionStore.get(topicFqn);
-            if (!transition.isAbortable()) {
+            ActiveTransition transition = transitionStore.get(topicFqn);
+            if (!transition.getCurrentStage().isAbortable()) {
                 throw new InvalidOperationForResourceException(
                     "Failover for " + topicFqn + " is not abortable in stage " + transition.getCurrentStage() + "."
                 );
             }
             VaradhiTopic topic = topicStore.get(topicFqn);
             RegionName source = transition.getSourceRegion();
-            // Point of no return: MIGRATE already committed failOverRegion on ingress.
-            if (transition.getCurrentStage() == TransitionStage.MIGRATE) {
-                boolean committed = topic.getProduceConfig(source)
-                                         .filter(c -> c.getState() == TopicState.Producing)
-                                         .flatMap(ProduceConfig::getFailOverRegion)
-                                         .map(r -> r.equals(transition.getTargetRegion()))
-                                         .orElse(false);
-                if (committed) {
-                    throw new InvalidOperationForResourceException(
-                        "Failover for " + topicFqn + " already committed the route; abort is not allowed."
-                    );
-                }
-            }
             log.info(
                 "Aborting topic failover op {} for {} (requestedBy={})",
                 transition.getOperationId(),
@@ -396,7 +378,6 @@ public class SubscriptionService implements SubscriptionApi {
                 )
             );
             TopicFailoverOperation failoverOp = operationMgr.getTopicFailoverOp(transition.getOperationId());
-            failoverOp.beginStage(TransitionStage.ABORTED);
             failoverOp.markCompleted();
             operationMgr.persistTopicFailoverOp(failoverOp);
             transitionStore.delete(topicFqn);
@@ -410,14 +391,18 @@ public class SubscriptionService implements SubscriptionApi {
                 topicStore.update(
                     topic.with(
                         source,
-                        new ProduceConfig(TopicState.Producing, cfg.getProduceIdx(), cfg.getFailOverRegion().orElse(null))
+                        new ProduceConfig(
+                            TopicState.Producing,
+                            cfg.getProduceIdx(),
+                            cfg.getFailOverRegion().orElse(null)
+                        )
                     )
                 );
             }
         });
     }
 
-    public CompletableFuture<List<TransitionMaster>> getActiveFailovers() {
+    public CompletableFuture<List<ActiveTransition>> getActiveFailovers() {
         return CompletableFuture.supplyAsync(transitionStore::listActive);
     }
 
@@ -438,10 +423,7 @@ public class SubscriptionService implements SubscriptionApi {
     }
 
     public void retryTopicFailover(TopicFailoverOperation operation) {
-        log.warn(
-            "Cannot resume topic failover op {} — orchestrator not wired on this build",
-            operation.getId()
-        );
+        log.warn("Cannot resume topic failover op {} — orchestrator not wired on this build", operation.getId());
     }
 
     private void broadcastTransition(TransitionEvent event) {
@@ -471,8 +453,7 @@ public class SubscriptionService implements SubscriptionApi {
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
-        if (topic.getSegmentedStorageTopic() == null
-            || topic.getSegmentedStorageTopic().getStorageTopics() == null
+        if (topic.getSegmentedStorageTopic() == null || topic.getSegmentedStorageTopic().getStorageTopics() == null
             || topic.getSegmentedStorageTopic().getStorageTopics().length == 0) {
             throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }

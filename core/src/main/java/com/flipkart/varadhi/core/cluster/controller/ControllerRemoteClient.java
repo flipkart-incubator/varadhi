@@ -16,7 +16,7 @@ import com.flipkart.varadhi.entities.cluster.SubscriptionState;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
+import com.flipkart.varadhi.entities.cluster.failover.ActiveTransition;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -113,7 +113,7 @@ public class ControllerRemoteClient implements ControllerApi {
     }
 
     @Override
-    public CompletableFuture<List<TransitionMaster>> getActiveFailovers() {
+    public CompletableFuture<List<ActiveTransition>> getActiveFailovers() {
         ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(null));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.LIST_FAILOVERS_API, message)
                        .thenApply(rm -> rm.getResponse(ActiveFailovers.class).transitions());

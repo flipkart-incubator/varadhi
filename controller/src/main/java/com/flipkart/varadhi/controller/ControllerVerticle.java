@@ -93,7 +93,8 @@ public class ControllerVerticle extends AbstractVerticle {
                                                                        .onComplete(ar -> {
                                                                            if (ar.succeeded()) {
                                                                                log.info(
-                                                                                   "Controller started successfully"
+                                                                                   "Controller started successfully in region {}",
+                                                                                   deployedRegion
                                                                                );
                                                                                startPromise.complete();
                                                                            } else {
@@ -281,7 +282,7 @@ public class ControllerVerticle extends AbstractVerticle {
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
-        // Resume in-flight topic failovers from their TransitionMaster stage
+        // Resume in-flight topic failovers from their ActiveTransition stage
         requeueInProgressFailovers(subscriptionService);
 
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
@@ -290,7 +291,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
     /**
      * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
-     * executor is idempotent and re-enters from {@code TransitionMaster.currentStage}.
+     * executor is idempotent and re-enters from {@code ActiveTransition.currentStage}.
      */
     private void requeueInProgressFailovers(SubscriptionService subscriptionService) {
         List<TopicFailoverOperation> pendingFailovers = subscriptionService.getPendingTopicFailoverOps();
@@ -299,7 +300,7 @@ public class ControllerVerticle extends AbstractVerticle {
             return;
         }
         pendingFailovers.stream()
-                        .sorted(Comparator.comparing(TopicFailoverOperation::getStartTime))
+                        .sorted(Comparator.comparing(TopicFailoverOperation::getCreatedAt))
                         .forEach(subscriptionService::retryTopicFailover);
         log.info("Resumed {} pending topic failover(s)", pendingFailovers.size());
     }

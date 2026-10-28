@@ -2,7 +2,7 @@ package com.flipkart.varadhi.core.cluster.controller;
 
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
+import com.flipkart.varadhi.entities.cluster.failover.ActiveTransition;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -23,10 +23,10 @@ public interface ControllerApi extends SubscriptionApi, TransitionAckApi {
         String requestedBy
     );
 
-    /** In-flight failover op (includes {@code stageHistory}); 404 if no active master. */
+    /** In-flight failover op; 404 if no active master. */
     CompletableFuture<TopicFailoverOperation> getTopicFailover(String topicFqn);
 
     CompletableFuture<TopicFailoverOperation> abortTopicFailover(String topicFqn, String requestedBy);
 
-    CompletableFuture<List<TransitionMaster>> getActiveFailovers();
+    CompletableFuture<List<ActiveTransition>> getActiveFailovers();
 }

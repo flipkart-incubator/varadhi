@@ -3,8 +3,9 @@ package com.flipkart.varadhi.db;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.RegionName;
+import com.flipkart.varadhi.entities.cluster.failover.StageSnapshot;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
+import com.flipkart.varadhi.entities.cluster.failover.ActiveTransition;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -45,13 +46,14 @@ class TransitionStoreImplTest {
     @Test
     void createGetExistsDelete() {
         assertFalse(store.exists(FQN));
-        store.create(TransitionMaster.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
+        store.create(ActiveTransition.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2"), false));
 
         assertTrue(store.exists(FQN));
-        TransitionMaster got = store.get(FQN);
+        ActiveTransition got = store.get(FQN);
         assertEquals(FQN, got.getName());
         assertEquals("op-1", got.getOperationId());
         assertEquals(TransitionStage.PENDING, got.getCurrentStage());
+        assertFalse(got.isWaitForReplicationLagToClear());
 
         store.delete(FQN);
         assertFalse(store.exists(FQN));
@@ -59,31 +61,36 @@ class TransitionStoreImplTest {
 
     @Test
     void createIsUniquePerTopic() {
-        store.create(TransitionMaster.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
+        store.create(ActiveTransition.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2"), false));
         assertThrows(
             DuplicateResourceException.class,
-            () -> store.create(TransitionMaster.forFailover("op-2", FQN, RegionName.of("r1"), RegionName.of("r2")))
+            () -> store.create(
+                ActiveTransition.forFailover("op-2", FQN, RegionName.of("r1"), RegionName.of("r2"), false)
+            )
         );
     }
 
     @Test
     void updatePersistsStageAdvance() {
-        store.create(TransitionMaster.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2")));
-        TransitionMaster t = store.get(FQN);
-        t.advanceTo(TransitionStage.FENCE, 42L);
+        store.create(ActiveTransition.forFailover("op-1", FQN, RegionName.of("r1"), RegionName.of("r2"), false));
+        ActiveTransition t = store.get(FQN);
+        t.advanceTo(TransitionStage.FENCE, 42L, List.of(), null);
         store.update(t);
 
-        TransitionMaster reloaded = store.get(FQN);
+        ActiveTransition reloaded = store.get(FQN);
         assertEquals(TransitionStage.FENCE, reloaded.getCurrentStage());
         assertEquals(42L, reloaded.getTopicVersionToAwait());
+        assertEquals(1, reloaded.getStageHistory().size());
+        assertEquals(TransitionStage.PENDING, reloaded.getStageHistory().get(0).stage());
+        assertEquals(StageSnapshot.Outcome.OK, reloaded.getStageHistory().get(0).outcome());
     }
 
     @Test
     void listActiveReturnsAll() {
-        store.create(TransitionMaster.forFailover("op-1", "proj.a", RegionName.of("r1"), RegionName.of("r2")));
-        store.create(TransitionMaster.forFailover("op-2", "proj.b", RegionName.of("r1"), RegionName.of("r2")));
+        store.create(ActiveTransition.forFailover("op-1", "proj.a", RegionName.of("r1"), RegionName.of("r2"), false));
+        store.create(ActiveTransition.forFailover("op-2", "proj.b", RegionName.of("r1"), RegionName.of("r2"), false));
 
-        List<TransitionMaster> active = store.listActive();
+        List<ActiveTransition> active = store.listActive();
         assertEquals(2, active.size());
     }
 

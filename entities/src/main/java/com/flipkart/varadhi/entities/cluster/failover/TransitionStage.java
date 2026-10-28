@@ -2,7 +2,7 @@ package com.flipkart.varadhi.entities.cluster.failover;
 
 /**
  * Cluster-wide stage of a topic transition (e.g. topic failover, storage-topic migration).
- * The controller drives a {@code TransitionMaster} through these stages and waits on a
+ * The controller drives a {@code ActiveTransition} through these stages and waits on a
  * per-pod ack barrier at <b>every</b> stage it broadcasts — each pod acknowledges every
  * stage so the controller can confirm fleet-wide progress and abort/remediate on a missing
  * or failed ack.
@@ -26,12 +26,9 @@ public enum TransitionStage {
         return this == COMPLETED || this == ABORTED;
     }
 
-    /**
-     * Abort is honored through {@link #FENCE} and while {@link #MIGRATE} has not yet committed
-     * the route (executor enforces pre-commit). After the MIGRATE topic write, abort is refused.
-     */
+    /** Abort is honored through {@link #FENCE}. {@link #MIGRATE} has started the route commit and cannot abort. */
     public boolean isAbortable() {
-        return this == PENDING || this == PREPARE || this == FENCE || this == MIGRATE;
+        return this == PENDING || this == PREPARE || this == FENCE;
     }
 
     /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */

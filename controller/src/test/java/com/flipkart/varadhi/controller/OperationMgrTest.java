@@ -4,11 +4,9 @@ import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.entities.SubscriptionTestUtils;
 import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
-import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -639,22 +637,13 @@ public class OperationMgrTest {
     @Test
     void persistTopicFailoverOp_withoutEnqueue_persistsTerminalAbort() {
         String topicFqn = "proj.topic1";
-        TopicFailoverOperation stored = TopicFailoverOperation.of(
-            topicFqn,
-            RegionName.of("r1"),
-            RegionName.of("r2"),
-            true,
-            "tester"
-        );
+        TopicFailoverOperation stored = TopicFailoverOperation.of(topicFqn, "tester");
         when(opStore.getTopicFailoverOp(stored.getId())).thenReturn(stored);
 
-        stored.beginStage(TransitionStage.ABORTED);
         stored.markCompleted();
         operationMgr.persistTopicFailoverOp(stored);
 
         verify(opStore).updateTopicFailoverOp(stored);
         assertEquals(COMPLETED, stored.getState());
-        assertEquals(1, stored.getStageHistory().size());
-        assertEquals(TransitionStage.ABORTED, stored.getStageHistory().get(0).getStage());
     }
 }
