@@ -193,6 +193,12 @@ public class VaradhiTopic extends LifecycleEntity implements AbstractTopic {
         return Optional.ofNullable(produceConfigs.get(region));
     }
 
+    /** Unmodifiable view of per-region produce policy. */
+    @JsonIgnore
+    public Map<RegionName, ProduceConfig> getProduceConfigs() {
+        return Map.copyOf(produceConfigs);
+    }
+
     /**
      * Retrieves the project name from the topic name.
      *

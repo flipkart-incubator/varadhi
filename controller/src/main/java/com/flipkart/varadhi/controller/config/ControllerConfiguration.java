@@ -12,5 +12,8 @@ public class ControllerConfiguration extends AppConfiguration {
     @NotNull
     private OperationsConfig operationsConfig;
 
+    @NotNull
+    private OperationsConfig failoverOperationsConfig;
+
     private EventProcessorConfig eventProcessorConfig;
 }

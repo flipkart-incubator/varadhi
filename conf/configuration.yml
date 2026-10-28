@@ -23,6 +23,8 @@ deliveryOptions:
 
 producerOptions:
   producerCacheTtlSeconds: 3600
+  transitionVersionWaitMs: 30000
+  transitionPollIntervalMs: 25
 
 messagingStackOptions:
   providerClassName: "com.flipkart.varadhi.pulsar.PulsarStackProvider"
@@ -104,6 +106,13 @@ tracesEnabled: true
 operationsConfig:
   maxConcurrentOps: 2
   maxRetryAllowed: 3
+  retryIntervalInSeconds: 10
+  retryMinBackoffInSeconds: 10
+  retryMaxBackOffInSeconds: 60
+
+failoverOperationsConfig:
+  maxConcurrentOps: 2
+  maxRetryAllowed: 0
   retryIntervalInSeconds: 10
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60
