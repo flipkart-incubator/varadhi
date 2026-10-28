@@ -11,6 +11,9 @@ import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.entities.JsonMapper;
 import lombok.Getter;
 
+import java.util.Map;
+import java.util.function.Function;
+
 @Getter
 public class ResponseMessage extends ClusterMessage {
     private final String requestId;
@@ -19,6 +22,23 @@ public class ResponseMessage extends ClusterMessage {
 
     @JsonIgnore
     private final Exception exception;
+
+    private static final Map<String, Function<String, Exception>> EXCEPTION_BY_TYPE = Map.of(
+        DuplicateResourceException.class.getName(),
+        DuplicateResourceException::new,
+        ServerNotAvailableException.class.getName(),
+        ServerNotAvailableException::new,
+        IllegalArgumentException.class.getName(),
+        IllegalArgumentException::new,
+        ResourceNotFoundException.class.getName(),
+        ResourceNotFoundException::new,
+        InvalidOperationForResourceException.class.getName(),
+        InvalidOperationForResourceException::new,
+        UnsupportedOperationException.class.getName(),
+        UnsupportedOperationException::new,
+        VaradhiException.class.getName(),
+        VaradhiException::new
+    );
 
     ResponseMessage(String payload, Exception exception, String requestId) {
         super(payload);
@@ -79,26 +99,9 @@ public class ResponseMessage extends ClusterMessage {
         if (failureType == null) {
             return null;
         }
-        if (DuplicateResourceException.class.getName().equals(failureType)) {
-            return new DuplicateResourceException(failureMessage);
-        }
-        if (ServerNotAvailableException.class.getName().equals(failureType)) {
-            return new ServerNotAvailableException(failureMessage);
-        }
-        if (IllegalArgumentException.class.getName().equals(failureType)) {
-            return new IllegalArgumentException(failureMessage);
-        }
-        if (ResourceNotFoundException.class.getName().equals(failureType)) {
-            return new ResourceNotFoundException(failureMessage);
-        }
-        if (InvalidOperationForResourceException.class.getName().equals(failureType)) {
-            return new InvalidOperationForResourceException(failureMessage);
-        }
-        if (UnsupportedOperationException.class.getName().equals(failureType)) {
-            return new UnsupportedOperationException(failureMessage);
-        }
-        if (VaradhiException.class.getName().equals(failureType)) {
-            return new VaradhiException(failureMessage);
+        Function<String, Exception> factory = EXCEPTION_BY_TYPE.get(failureType);
+        if (factory != null) {
+            return factory.apply(failureMessage);
         }
         return new VaradhiException(failureMessage != null ? failureMessage : failureType);
     }
