@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.core.cluster.controller;
 
-import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionEvent;
 
 import java.util.concurrent.CompletableFuture;
 

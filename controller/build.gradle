@@ -15,4 +15,6 @@ dependencies {
     testImplementation(testFixtures(project(":core")))
     testImplementation(testFixtures(project(":common")))
     testImplementation(libs.awaitility)
+    testImplementation(project(':metastore-zk'))
+    testImplementation(libs.curator.test)
 }
