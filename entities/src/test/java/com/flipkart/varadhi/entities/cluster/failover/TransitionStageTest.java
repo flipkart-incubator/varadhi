@@ -18,11 +18,11 @@ class TransitionStageTest {
     }
 
     @Test
-    void isAbortable_throughFenceAndMigrate() {
+    void isAbortable_throughFence() {
         assertTrue(TransitionStage.PENDING.isAbortable());
         assertTrue(TransitionStage.PREPARE.isAbortable());
         assertTrue(TransitionStage.FENCE.isAbortable());
-        assertTrue(TransitionStage.MIGRATE.isAbortable());
+        assertFalse(TransitionStage.MIGRATE.isAbortable());
         assertFalse(TransitionStage.COMPLETED.isAbortable());
         assertFalse(TransitionStage.ABORTED.isAbortable());
     }

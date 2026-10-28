@@ -23,7 +23,7 @@ Still needed for later REST intent + orchestrator (this change):
 ## Decisions
 
 ### D1 — Master owns the attempt; op is the OperationMgr handle
-Master and op are created in the same flow. `TransitionMaster` holds the request, live stage, and stage history. `TopicFailoverOperation` keeps the id (entity name), `topicFqn` (ordering and master lookup), retry/state, and `transitionData`. `transitionData` is null until the attempt ends, then a read-only snapshot of the master on the same op record.
+Master and op are created in the same flow. `TransitionMaster` holds the request, live stage, and stage history. `TopicFailoverOperation` keeps the id (entity name), `topicFqn` (ordering and master lookup), retry/state, and `transitionSnapshot`. `transitionSnapshot` is null until the attempt ends, then a read-only snapshot of the master on the same op record.
 
 ### D2 — Flat ZK
 ```

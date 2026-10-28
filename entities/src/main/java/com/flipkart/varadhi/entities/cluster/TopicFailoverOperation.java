@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionData;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -16,57 +15,64 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.IN_PROGRESS;
 
 /**
  * OperationMgr handle for one topic failover. Created in the same flow as its
- * {@code TransitionMaster}. Retained after that master is deleted.
+ * {@code ActiveTransition}. Retained after that lock is deleted.
  *
- * <p>The id is the entity {@code name}. {@code topicFqn} is the ordering key and the master
- * lookup key. Request fields live on the master. {@link #transitionData} is null while the
- * attempt runs and is set from {@link TransitionData#from} before the terminal persist.
- * {@link #nextRetry()} leaves it null.
+ * <p>The id is the entity {@code name}. {@code topicFqn} is the ordering key and the lock
+ * lookup key. {@link #requestedBy}, {@link #createdAt}, and {@link #updatedAt} are the op
+ * audit fields.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
 public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOperation {
 
     private final String topicFqn;
+    private final String requestedBy;
+    private final long createdAt;
     private final int retryAttempt;
+    private long updatedAt;
     private State state;
     private String errorMsg;
-    /** Null until the attempt ends, then a snapshot of the master. */
-    private TransitionData transitionData;
 
     @JsonCreator
     TopicFailoverOperation(
         String name,
         int version,
         String topicFqn,
+        String requestedBy,
+        long createdAt,
+        long updatedAt,
         int retryAttempt,
         State state,
-        String errorMsg,
-        TransitionData transitionData
+        String errorMsg
     ) {
         super(name, version, MetaStoreEntityType.TOPIC_FAILOVER_OPERATION);
         this.topicFqn = topicFqn;
+        this.requestedBy = requestedBy;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
         this.retryAttempt = retryAttempt;
         this.state = state;
         this.errorMsg = errorMsg;
-        this.transitionData = transitionData;
     }
 
-    public static TopicFailoverOperation of(String topicFqn) {
-        return new TopicFailoverOperation(UUID.randomUUID().toString(), 0, topicFqn, 0, IN_PROGRESS, null, null);
-    }
-
-    /** Terminal snapshot of the master. Set this before the final op persist. */
-    public void attachTransitionData(TransitionData data) {
-        if (data == null) {
-            throw new IllegalArgumentException("transitionData is required");
-        }
-        this.transitionData = data;
+    public static TopicFailoverOperation of(String topicFqn, String requestedBy) {
+        long now = System.currentTimeMillis();
+        return new TopicFailoverOperation(
+            UUID.randomUUID().toString(),
+            0,
+            topicFqn,
+            requestedBy,
+            now,
+            now,
+            0,
+            IN_PROGRESS,
+            null
+        );
     }
 
     /**
-     * Copies progress fields (state, error, transitionData) from {@code src} onto this
-     * store-loaded instance before persist — used by {@code OperationMgr} to avoid version races.
+     * Copies progress fields (state, error) from {@code src} onto this store-loaded instance
+     * before persist — used by {@code OperationMgr} to avoid version races.
      */
     public void applyProgressFrom(TopicFailoverOperation src) {
         if (src == this) {
@@ -74,7 +80,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         }
         this.state = src.getState();
         this.errorMsg = src.getErrorMsg();
-        this.transitionData = src.getTransitionData();
+        this.updatedAt = src.getUpdatedAt();
     }
 
     @JsonIgnore
@@ -100,7 +106,18 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     @Override
     public TopicFailoverOperation nextRetry() {
-        return new TopicFailoverOperation(getName(), getVersion(), topicFqn, retryAttempt + 1, IN_PROGRESS, null, null);
+        long now = System.currentTimeMillis();
+        return new TopicFailoverOperation(
+            getName(),
+            getVersion(),
+            topicFqn,
+            requestedBy,
+            createdAt,
+            now,
+            retryAttempt + 1,
+            IN_PROGRESS,
+            null
+        );
     }
 
     @Override
@@ -129,27 +146,29 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
     public void markFail(String error) {
         this.state = ERRORED;
         this.errorMsg = error;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     @Override
     public void markCompleted() {
         this.state = COMPLETED;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public void update(State opState, String opError) {
         this.state = opState;
         this.errorMsg = opError;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     @Override
     public String toString() {
         return String.format(
-            "TopicFailoverOperation{opId=%s, topic=%s, state=%s, retry=%d, transitionData=%s}",
+            "TopicFailoverOperation{opId=%s, topic=%s, state=%s, retry=%d}",
             getName(),
             topicFqn,
             state,
-            retryAttempt,
-            transitionData == null ? "absent" : "set"
+            retryAttempt
         );
     }
 }
