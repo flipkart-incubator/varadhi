@@ -1,49 +1,52 @@
 package com.flipkart.varadhi.entities.cluster.failover;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Ephemeral controller-only orchestration pointer for an in-flight topic transition.
+ * Ephemeral controller-only orchestration state for an in-flight topic transition.
  * Never broadcast / never in a pod cache — pods route only off {@code VaradhiTopic} version +
  * per-region {@code TopicState}.
  *
  * <p>{@code name == topicFqn}, so atomic ZK create enforces one active transition per topic.
- * Deleted at a terminal stage. Durable request/outcome and per-stage history live on
- * {@code TopicFailoverOperation} in the {@code OpStore}.
+ * Holds the live stage and completed {@link #stageHistory}. Deleted once the attempt ends.
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
-public class TransitionMaster extends MetaStoreEntity {
+public class ActiveTransition extends MetaStoreEntity {
 
     private final TransitionKind transitionKind;
     private final String operationId;
     private final String topicFqn;
     private final RegionName sourceRegion;
     private final RegionName targetRegion;
-    private final long createdAt;
+    private final boolean waitForReplicationLagToClear;
 
     private TransitionStage currentStage;
     private long topicVersionToAwait;
-    private long updatedAt;
+    private long stageStartedAt;
+    private final List<StageSnapshot> stageHistory;
 
     @JsonCreator
-    TransitionMaster(
+    ActiveTransition(
         String topicFqn,
         int version,
         TransitionKind transitionKind,
         String operationId,
         RegionName sourceRegion,
         RegionName targetRegion,
-        long createdAt,
+        boolean waitForReplicationLagToClear,
         TransitionStage currentStage,
         long topicVersionToAwait,
-        long updatedAt
+        long stageStartedAt,
+        List<StageSnapshot> stageHistory
     ) {
         super(topicFqn, version, MetaStoreEntityType.TRANSITION_OBJECT);
         this.topicFqn = topicFqn;
@@ -51,52 +54,51 @@ public class TransitionMaster extends MetaStoreEntity {
         this.operationId = operationId;
         this.sourceRegion = sourceRegion;
         this.targetRegion = targetRegion;
-        this.createdAt = createdAt;
+        this.waitForReplicationLagToClear = waitForReplicationLagToClear;
         this.currentStage = currentStage;
         this.topicVersionToAwait = topicVersionToAwait;
-        this.updatedAt = updatedAt;
+        this.stageStartedAt = stageStartedAt;
+        this.stageHistory = stageHistory != null ? new ArrayList<>(stageHistory) : new ArrayList<>();
     }
 
-    public static TransitionMaster forFailover(
+    public static ActiveTransition forFailover(
         String operationId,
         String topicFqn,
         RegionName sourceRegion,
-        RegionName targetRegion
+        RegionName targetRegion,
+        boolean waitForReplicationLagToClear
     ) {
-        long now = System.currentTimeMillis();
-        return new TransitionMaster(
+        return new ActiveTransition(
             topicFqn,
             0,
             TransitionKind.FAILOVER,
             operationId,
             sourceRegion,
             targetRegion,
-            now,
+            waitForReplicationLagToClear,
             TransitionStage.PENDING,
             0L,
-            now
+            System.currentTimeMillis(),
+            new ArrayList<>()
         );
     }
 
     /**
-     * Advances live stage + version-to-await. Per-stage history is recorded on the linked
-     * {@code TopicFailoverOperation}, not here.
+     * Records the stage being left, then starts {@code stage}. {@code error == null} means
+     * {@link StageSnapshot.Outcome#OK}; otherwise {@link StageSnapshot.Outcome#FAILED}.
      */
-    public void advanceTo(TransitionStage stage, long topicVersionToAwait) {
+    public void advanceTo(TransitionStage stage, long topicVersionToAwait, List<String> ackedHosts, String error) {
+        StageSnapshot.Outcome outcome = error == null ? StageSnapshot.Outcome.OK : StageSnapshot.Outcome.FAILED;
+        stageHistory.add(StageSnapshot.completed(currentStage, stageStartedAt, ackedHosts, outcome, error));
         this.currentStage = stage;
         this.topicVersionToAwait = topicVersionToAwait;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    @JsonIgnore
-    public boolean isAbortable() {
-        return currentStage.isAbortable();
+        this.stageStartedAt = System.currentTimeMillis();
     }
 
     @Override
     public String toString() {
         return String.format(
-            "TransitionMaster{topic=%s, kind=%s, opId=%s, %s->%s, stage=%s, vToAwait=%d}",
+            "ActiveTransition{topic=%s, kind=%s, opId=%s, %s->%s, stage=%s, vToAwait=%d}",
             topicFqn,
             transitionKind,
             operationId,

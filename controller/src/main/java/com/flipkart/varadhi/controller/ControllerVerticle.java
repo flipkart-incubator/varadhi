@@ -14,6 +14,7 @@ import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
 import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
@@ -41,6 +42,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
+    private final RegionName region;
 
     private ResourceEventProcessor entityEventProcessor;
 
@@ -51,13 +53,15 @@ public class ControllerVerticle extends AbstractVerticle {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         OperationsConfig opsConfig,
-        EventProcessorConfig eventProcessorConfig
+        EventProcessorConfig eventProcessorConfig,
+        RegionName region
     ) {
         this.operationsConfig = opsConfig;
         this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
+        this.region = region;
     }
 
     /**
@@ -85,7 +89,8 @@ public class ControllerVerticle extends AbstractVerticle {
                                                                        .onComplete(ar -> {
                                                                            if (ar.succeeded()) {
                                                                                log.info(
-                                                                                   "Controller started successfully"
+                                                                                   "Controller started successfully in region {}",
+                                                                                   region
                                                                                );
                                                                                startPromise.complete();
                                                                            } else {

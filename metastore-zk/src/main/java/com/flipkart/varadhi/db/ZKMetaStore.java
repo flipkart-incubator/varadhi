@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import com.flipkart.varadhi.spi.db.MetaStoreEventListener;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
@@ -585,7 +586,7 @@ public class ZKMetaStore implements AutoCloseable {
      * @return true if registration is successful, false otherwise
      */
     public boolean registerEventListener(MetaStoreEventListener listener) {
-        var listenerPath = Path.of(ZNode.ofEntityType(EVENT).getPath(), LISTENER_NODE).toString();
+        var listenerPath = ZKPaths.makePath(ZNode.ofEntityType(EVENT).getPath(), LISTENER_NODE);
 
         try {
             zkCurator.create().withMode(CreateMode.EPHEMERAL).forPath(listenerPath);
