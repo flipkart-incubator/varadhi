@@ -17,6 +17,7 @@ public record StageSnapshot(
         OK, FAILED
     }
 
+
     public enum HostAck {
         ACKED, UNACKED
     }
