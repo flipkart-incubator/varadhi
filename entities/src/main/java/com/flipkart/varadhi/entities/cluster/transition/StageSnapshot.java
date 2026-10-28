@@ -13,6 +13,11 @@ public record StageSnapshot(
     Outcome outcome,
     String errorMsg
 ) {
+
+    public StageSnapshot {
+        hosts = Map.copyOf(hosts);
+    }
+
     public enum Outcome {
         OK, FAILED
     }

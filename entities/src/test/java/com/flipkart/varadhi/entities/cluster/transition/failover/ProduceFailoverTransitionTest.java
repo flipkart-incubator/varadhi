@@ -5,6 +5,7 @@ import com.flipkart.varadhi.entities.cluster.transition.TransitionStage;
 import com.flipkart.varadhi.entities.RegionName;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.flipkart.varadhi.entities.cluster.transition.StageSnapshot.HostAck.ACKED;
@@ -41,5 +42,23 @@ class ProduceFailoverTransitionTest {
         assertEquals(StageSnapshot.Outcome.FAILED, t.getStageHistory().get(2).outcome());
         assertEquals("barrier timeout", t.getStageHistory().get(2).errorMsg());
         assertEquals(TransitionStage.ABORTED, t.getCurrentStage());
+    }
+
+    @Test
+    void recordedHostsStayStableWhenCallerMutatesTheMap() {
+        ProduceFailoverTransition t = ProduceFailoverTransition.forFailover(
+            "op-1",
+            "proj.topic",
+            RegionName.of("r1"),
+            RegionName.of("r2"),
+            false
+        );
+        Map<String, StageSnapshot.HostAck> hosts = new HashMap<>();
+        hosts.put("host-a", ACKED);
+        t.advanceTo(TransitionStage.PREPARE, 7L, hosts, null);
+        hosts.put("host-a", UNACKED);
+        hosts.put("host-b", ACKED);
+
+        assertEquals(Map.of("host-a", ACKED), t.getStageHistory().get(0).hosts());
     }
 }
