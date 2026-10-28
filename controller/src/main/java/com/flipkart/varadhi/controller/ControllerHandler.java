@@ -1,15 +1,15 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
-import com.flipkart.varadhi.core.cluster.failover.ActiveFailovers;
-import com.flipkart.varadhi.core.cluster.failover.FailoverApiRequest;
+import com.flipkart.varadhi.controller.transition.TopicTransitionMetrics;
+import com.flipkart.varadhi.core.cluster.transition.failover.ActiveFailovers;
+import com.flipkart.varadhi.core.cluster.transition.failover.FailoverApiRequest;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
 import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;

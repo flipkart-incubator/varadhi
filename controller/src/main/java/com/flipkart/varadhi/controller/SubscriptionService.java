@@ -12,7 +12,7 @@ import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
@@ -30,8 +30,10 @@ import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
-import com.flipkart.varadhi.entities.cluster.failover.*;
+import com.flipkart.varadhi.entities.cluster.transition.failover.ProduceFailoverTransition;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.transition.*;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
@@ -97,7 +99,7 @@ public class SubscriptionService implements SubscriptionApi {
         if (!transitionStore.exists(topicFqn)) {
             return;
         }
-        ActiveTransition transition = transitionStore.get(topicFqn);
+        ProduceFailoverTransition transition = transitionStore.get(topicFqn);
         log.warn("Cleaning up failed topic failover op {} for {} (error={})", op.getId(), topicFqn, op.getErrorMsg());
         broadcastTransition(
             TransitionEvent.of(
@@ -321,7 +323,7 @@ public class SubscriptionService implements SubscriptionApi {
             TopicFailoverOperation op = TopicFailoverOperation.of(topicFqn, requestedBy);
             // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
             transitionStore.create(
-                ActiveTransition.forFailover(
+                ProduceFailoverTransition.forFailover(
                     op.getId(),
                     topicFqn,
                     source,
@@ -341,7 +343,7 @@ public class SubscriptionService implements SubscriptionApi {
             if (!transitionStore.exists(topicFqn)) {
                 throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
             }
-            ActiveTransition transition = transitionStore.get(topicFqn);
+            ProduceFailoverTransition transition = transitionStore.get(topicFqn);
             return operationMgr.getTopicFailoverOp(transition.getOperationId());
         });
     }
@@ -351,7 +353,7 @@ public class SubscriptionService implements SubscriptionApi {
             if (!transitionStore.exists(topicFqn)) {
                 throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
             }
-            ActiveTransition transition = transitionStore.get(topicFqn);
+            ProduceFailoverTransition transition = transitionStore.get(topicFqn);
             if (!transition.getCurrentStage().isAbortable()) {
                 throw new InvalidOperationForResourceException(
                     "Failover for " + topicFqn + " is not abortable in stage " + transition.getCurrentStage() + "."
@@ -402,7 +404,7 @@ public class SubscriptionService implements SubscriptionApi {
         });
     }
 
-    public CompletableFuture<List<ActiveTransition>> getActiveFailovers() {
+    public CompletableFuture<List<ProduceFailoverTransition>> getActiveFailovers() {
         return CompletableFuture.supplyAsync(transitionStore::listActive);
     }
 

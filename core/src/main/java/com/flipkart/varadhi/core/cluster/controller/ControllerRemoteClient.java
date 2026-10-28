@@ -1,9 +1,9 @@
 package com.flipkart.varadhi.core.cluster.controller;
 
 import com.flipkart.varadhi.core.cluster.MessageExchange;
-import com.flipkart.varadhi.core.cluster.failover.ActiveFailovers;
-import com.flipkart.varadhi.core.cluster.failover.FailoverApiRequest;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.transition.failover.ActiveFailovers;
+import com.flipkart.varadhi.core.cluster.transition.failover.FailoverApiRequest;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
@@ -13,10 +13,10 @@ import com.flipkart.varadhi.entities.UnsidelineRequest;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
-import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.ActiveTransition;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.failover.ProduceFailoverTransition;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -113,7 +113,7 @@ public class ControllerRemoteClient implements ControllerApi {
     }
 
     @Override
-    public CompletableFuture<List<ActiveTransition>> getActiveFailovers() {
+    public CompletableFuture<List<ProduceFailoverTransition>> getActiveFailovers() {
         ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(null));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.LIST_FAILOVERS_API, message)
                        .thenApply(rm -> rm.getResponse(ActiveFailovers.class).transitions());

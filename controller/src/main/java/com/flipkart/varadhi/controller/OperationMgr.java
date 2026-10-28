@@ -3,7 +3,7 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

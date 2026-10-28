@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
-import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
+import com.flipkart.varadhi.controller.transition.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MembershipListener;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
@@ -13,11 +13,11 @@ import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -44,6 +44,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MessagingStackProvider messagingStackProvider;
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
+    private final OperationsConfig failoverOperationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
     private final RegionName deployedRegion;
 
@@ -56,10 +57,12 @@ public class ControllerVerticle extends AbstractVerticle {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         OperationsConfig opsConfig,
+        OperationsConfig failoverOpsConfig,
         EventProcessorConfig eventProcessorConfig,
         RegionName deployedRegion
     ) {
         this.operationsConfig = opsConfig;
+        this.failoverOperationsConfig = failoverOpsConfig;
         this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
@@ -150,7 +153,7 @@ public class ControllerVerticle extends AbstractVerticle {
             operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
             createRetryPolicy(operationsConfig.getMaxRetryAllowed()),
-            createRetryPolicy(operationsConfig.getTopicFailoverMaxRetryAllowed())
+            createRetryPolicy(failoverOperationsConfig.getMaxRetryAllowed())
         );
 
         // Create assignment manager
@@ -282,7 +285,7 @@ public class ControllerVerticle extends AbstractVerticle {
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
-        // Resume in-flight topic failovers from their ActiveTransition stage
+        // Resume in-flight topic failovers from their ProduceFailoverTransition stage
         requeueInProgressFailovers(subscriptionService);
 
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
@@ -291,7 +294,7 @@ public class ControllerVerticle extends AbstractVerticle {
 
     /**
      * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
-     * executor is idempotent and re-enters from {@code ActiveTransition.currentStage}.
+     * executor is idempotent and re-enters from {@code ProduceFailoverTransition.currentStage}.
      */
     private void requeueInProgressFailovers(SubscriptionService subscriptionService) {
         List<TopicFailoverOperation> pendingFailovers = subscriptionService.getPendingTopicFailoverOps();

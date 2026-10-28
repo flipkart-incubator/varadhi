@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.Project;
 import com.flipkart.varadhi.entities.Resource;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;

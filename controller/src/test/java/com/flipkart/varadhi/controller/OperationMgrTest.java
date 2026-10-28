@@ -6,7 +6,7 @@ import com.flipkart.varadhi.entities.SubscriptionUnitShard;
 import com.flipkart.varadhi.entities.VaradhiSubscription;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.spi.db.MetaStoreException;
 import com.flipkart.varadhi.spi.db.OpStore;
 import org.apache.commons.lang3.mutable.MutableBoolean;

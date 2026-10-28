@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.core.cluster.controller;
 
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
-import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
-import com.flipkart.varadhi.entities.cluster.failover.ActiveTransition;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
+import com.flipkart.varadhi.entities.cluster.transition.failover.ProduceFailoverTransition;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -28,5 +28,5 @@ public interface ControllerApi extends SubscriptionApi, TransitionAckApi {
 
     CompletableFuture<TopicFailoverOperation> abortTopicFailover(String topicFqn, String requestedBy);
 
-    CompletableFuture<List<ActiveTransition>> getActiveFailovers();
+    CompletableFuture<List<ProduceFailoverTransition>> getActiveFailovers();
 }
