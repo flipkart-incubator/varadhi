@@ -25,11 +25,11 @@ public class ProducerOptions {
     private long transitionVersionWaitMs = 1000;
 
     /**
-     * Delay (ms) between TopicCache version checks during a topic-transition stage. {@code 0} =
-     * no delay (immediate retry); attempt budget still respects {@link #transitionVersionWaitMs}.
+     * Delay (ms) between TopicCache version checks during a topic-transition stage.
+     * Must be greater than 0; Failsafe rejects a zero delay.
      */
     @Builder.Default
-    private long transitionPollIntervalMs = 0;
+    private long transitionPollIntervalMs = 25;
 
     public static ProducerOptions defaultOptions() {
         return ProducerOptions.builder().build();

@@ -5,6 +5,7 @@ import java.io.IOException;
 import com.flipkart.varadhi.common.Constants;
 import com.flipkart.varadhi.common.exceptions.ProduceException;
 import com.flipkart.varadhi.entities.Offset;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;
@@ -36,7 +37,11 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
     @Test
     public void testGetProducer() throws PulsarClientException {
         PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
-        Producer<? extends Offset> p = factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, "region");
+        Producer<? extends Offset> p = factory.newProducer(
+            topic,
+            Constants.DEFAULT_TOPIC_CAPACITY,
+            RegionName.of("region")
+        );
         Assertions.assertNotNull(p);
         verify(builder, times(1)).create();
     }
@@ -47,7 +52,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
         doThrow(new PulsarClientException.NotFoundException("Topic not found")).when(builder).create();
         ProduceException pe = Assertions.assertThrows(
             ProduceException.class,
-            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, "region")
+            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, RegionName.of("region"))
         );
         verify(builder, times(1)).create();
         Assertions.assertEquals(
@@ -62,7 +67,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
         doThrow(new RuntimeException("Random error check")).when(builder).create();
         RuntimeException re = Assertions.assertThrows(
             RuntimeException.class,
-            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, "region")
+            () -> factory.newProducer(topic, Constants.DEFAULT_TOPIC_CAPACITY, RegionName.of("region"))
         );
         verify(builder, times(1)).create();
         Assertions.assertEquals("Random error check", re.getMessage());

@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
@@ -27,6 +28,9 @@ import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
 public class PulsarProducer implements Producer<PulsarOffset> {
+    /** Name segment for a producer that is not scoped to a {@link RegionName} (failed-message path). */
+    public static final String FAILED_MSG_NAME_PART = "failed";
+
     private final RandomStringGenerator stringGenerator;
     private final org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
@@ -36,7 +40,19 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions producerOptions,
         String hostName,
-        String produceRegion,
+        RegionName produceRegion,
+        TelemetryOptions telemetryOptions
+    ) throws PulsarClientException {
+        this(pulsarClient, storageTopic, capacity, producerOptions, hostName, produceRegion.value(), telemetryOptions);
+    }
+
+    PulsarProducer(
+        PulsarClient pulsarClient,
+        PulsarStorageTopic storageTopic,
+        TopicCapacityPolicy capacity,
+        ProducerOptions producerOptions,
+        String hostName,
+        String producerNamePart,
         TelemetryOptions telemetryOptions
     ) throws PulsarClientException {
         this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
@@ -48,7 +64,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
             capacity,
             producerOptions,
             hostName,
-            produceRegion
+            producerNamePart
         );
         if (telemetryOptions != null) {
             telemetryOptions.recordTelemetry(this.pulsarProducer);

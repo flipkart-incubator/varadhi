@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.produce;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -23,9 +25,10 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Service responsible for producing messages to topics in Varadhi.
  * <p>
- * Producers are cached by {@link ProduceKey} in an event-driven registry: entries are removed
- * (and {@link Producer#close()}'d) on topic invalidate / delete only — not on ordinary topic
- * upserts — so PREPARE-warmed producers survive FENCE/MIGRATE version bumps.
+ * Producers are kept in a {@link ConcurrentHashMap} by {@link ProduceKey}, same as oncall
+ * {@code ProducerFactory}: no access expiry. Failover PREPARE adds the target zone on the
+ * current storage segment and leaves the previous entry in the map. Topic delete closes
+ * every producer for that topic.
  */
 @Slf4j
 public final class ProducerService {
@@ -157,26 +160,33 @@ public final class ProducerService {
         return producerFactory.newProducer(
             topic.getEntity().getSegmentedStorageTopic().getTopic(key.storageTopicId()),
             topic.getEntity().getCapacity(),
-            key.produceRegion().value()
+            key.produceRegion()
         );
     }
 
     private void evictProducersForTopic(String topicFqn) {
-        VaradhiTopicName name;
-        try {
-            name = VaradhiTopicName.parse(topicFqn);
-        } catch (RuntimeException e) {
-            log.warn("Ignoring producer eviction for unparseable topic FQN {}", topicFqn, e);
+        VaradhiTopicName topicName = parseTopicName(topicFqn);
+        if (topicName == null) {
             return;
         }
-        VaradhiTopicName topicName = name;
+        List<Producer<? extends Offset>> closing = new ArrayList<>();
         producerCache.entrySet().removeIf(entry -> {
             if (!entry.getKey().topicFqn().equals(topicName)) {
                 return false;
             }
-            closeQuietly(entry.getValue());
+            closing.add(entry.getValue());
             return true;
         });
+        closing.forEach(ProducerService::closeQuietly);
+    }
+
+    private VaradhiTopicName parseTopicName(String topicFqn) {
+        try {
+            return VaradhiTopicName.parse(topicFqn);
+        } catch (RuntimeException e) {
+            log.warn("Ignoring producer eviction for unparseable topic FQN {}", topicFqn, e);
+            return null;
+        }
     }
 
     private static void closeQuietly(Producer<? extends Offset> producer) {
@@ -290,24 +300,29 @@ public final class ProducerService {
     }
 
     /**
-     * Pre-warms the producer for {@code region} (ungated resolve). Used by topic-failover PREPARE.
+     * Pre-warms the producer PREPARE will need after failover: {@code region} plus this pod's
+     * ingress {@link ProduceConfig#getProduceIdx()}. Failover does not move the segment, so warming
+     * the target region's own index misses the key the first post-failover produce uses when the
+     * indexes differ.
      */
     public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
-        Optional<ProduceKey> key = TopicResolver.resolve(topic, region, false);
-        if (key.isEmpty()) {
+        Optional<ProduceConfig> ingress = topic.getProduceConfig(RegionName.of(localRegion));
+        if (ingress.isEmpty()) {
             return CompletableFuture.failedFuture(
                 new ResourceNotFoundException(
-                    "Topic(%s) has no produce configuration for region(%s).".formatted(topic.getName(), region.value())
+                    "Topic(%s) has no produce configuration for region(%s).".formatted(topic.getName(), localRegion)
                 )
             );
         }
-        return getProducer(key.get());
+        ProduceKey key = new ProduceKey(VaradhiTopicName.parse(topic.getName()), region, ingress.get().getProduceIdx());
+        return getProducer(key);
     }
 
     /**
      * Whether this pod already has a cached producer for the topic's active produce path in
-     * {@code localRegion}. Uses <em>ungated</em> resolve (same as PREPARE warm) so fencing does
-     * not hide an existing producer when deciding transition participation.
+     * {@code localRegion}. Ungated resolve so fencing does not hide an existing producer when
+     * deciding transition participation. PREPARE warm is a different key: target region plus
+     * this pod's ingress segment.
      */
     public boolean hasActiveProducer(VaradhiTopic topic) {
         return TopicResolver.resolve(topic, RegionName.of(localRegion), false)

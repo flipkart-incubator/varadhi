@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.spi.mock;
 
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.utils.TypeUtil;
@@ -20,8 +21,18 @@ public class InMemoryProducerFactory implements ProducerFactory {
     public Producer<InMemoryOffset> newProducer(
         StorageTopic _topic,
         TopicCapacityPolicy capacity,
-        String produceRegion
+        RegionName produceRegion
     ) throws MessagingException {
+        return create(_topic);
+    }
+
+    @Override
+    public Producer<InMemoryOffset> newProducer(StorageTopic _topic, TopicCapacityPolicy capacity)
+        throws MessagingException {
+        return create(_topic);
+    }
+
+    private Producer<InMemoryOffset> create(StorageTopic _topic) {
         var topic = TypeUtil.safeCast(_topic, InMemoryStorageTopic.class);
         return new InMemoryProducer(topic, true, timer, true);
     }

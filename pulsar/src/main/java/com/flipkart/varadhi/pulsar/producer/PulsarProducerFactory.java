@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.pulsar.producer;
 
 import com.flipkart.varadhi.common.exceptions.ProduceException;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.StorageTopic;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.utils.TypeUtil;
@@ -39,8 +40,17 @@ public class PulsarProducerFactory implements ProducerFactory {
     public Producer<PulsarOffset> newProducer(
         StorageTopic _topic,
         TopicCapacityPolicy capacity,
-        String produceRegion
+        RegionName produceRegion
     ) {
+        return create(_topic, capacity, produceRegion.value());
+    }
+
+    @Override
+    public Producer<PulsarOffset> newProducer(StorageTopic _topic, TopicCapacityPolicy capacity) {
+        return create(_topic, capacity, PulsarProducer.FAILED_MSG_NAME_PART);
+    }
+
+    private Producer<PulsarOffset> create(StorageTopic _topic, TopicCapacityPolicy capacity, String producerNamePart) {
         var topic = TypeUtil.safeCast(_topic, PulsarStorageTopic.class);
         try {
             return new PulsarProducer(
@@ -49,7 +59,7 @@ public class PulsarProducerFactory implements ProducerFactory {
                 capacity,
                 producerOptions,
                 hostName,
-                produceRegion,
+                producerNamePart,
                 telemetryOptions
             );
         } catch (PulsarClientException e) {

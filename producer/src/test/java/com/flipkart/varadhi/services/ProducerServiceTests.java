@@ -29,8 +29,11 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.mockito.ArgumentCaptor;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -76,7 +79,7 @@ class ProducerServiceTests {
         producer = spy(new DummyProducer(JsonMapper.getMapper()));
         doReturn(producer).when(producerFactory).newProducer(any(), any(), any());
 
-        service = new ProducerService(region, producerFactory::newProducer, orgCache, projectCache, topicReadCache);
+        service = new ProducerService(region, producerFactory, orgCache, projectCache, topicReadCache);
         random = new Random();
     }
 
@@ -276,7 +279,7 @@ class ProducerServiceTests {
 
         service = new ProducerService(
             region,
-            producerFactory::newProducer,
+            producerFactory,
             orgCache,
             projectCache,
             topicReadCache,
@@ -299,6 +302,71 @@ class ProducerServiceTests {
         verify(emitter, times(1)).accepted(any(), isNull(), anyLong());
         // Exception gets wrapped in CompletionException.
         Assertions.assertEquals("Failed to send metric.", rc.throwable.getCause().getMessage());
+    }
+
+    @Test
+    void prepareWarmUsesIngressSegmentAndLeavesThePreviousProducer() throws Exception {
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache = mock(ResourceReadCache.class);
+        ProducerFactory factory = mock(ProducerFactory.class);
+        Producer<? extends Offset> active = mock(Producer.class);
+        Producer<? extends Offset> warmed = mock(Producer.class);
+        doReturn(active, warmed).when(factory).newProducer(any(), any(), any());
+
+        StorageTopic segment0 = new DummyStorageTopic(0, "seg-0");
+        StorageTopic segment1 = new DummyStorageTopic(1, "seg-1");
+        VaradhiTopic before = VaradhiTopic.of(
+            project.getName(),
+            topic,
+            false,
+            null,
+            LifecycleStatus.ActionCode.SYSTEM_ACTION,
+            null,
+            VaradhiTopic.TopicCategory.TOPIC,
+            null,
+            null,
+            null,
+            new SegmentedStorageTopic(new StorageTopic[] {segment0, segment1}),
+            false,
+            Map.of(
+                RegionName.of("r1"),
+                new ProduceConfig(TopicState.Producing, 0, null),
+                RegionName.of("r2"),
+                new ProduceConfig(TopicState.Producing, 1, null)
+            )
+        );
+        when(cache.get(any())).thenReturn(Optional.of(Resource.of(before, ResourceType.TOPIC)));
+
+        ProducerService regional = new ProducerService("r1", factory, orgCache, projectCache, cache);
+        String topicFqn = before.getName();
+        regional.getProducer(new ProduceKey(VaradhiTopicName.parse(topicFqn), RegionName.of("r1"), 0)).join();
+        regional.getProducerForRegion(before, RegionName.of("r2")).join();
+
+        assertTrue(regional.hasProducer(topicFqn, 0, "r1"));
+        assertTrue(regional.hasProducer(topicFqn, 0, "r2"));
+        Assertions.assertFalse(regional.hasProducer(topicFqn, 1, "r2"));
+        verify(active, never()).close();
+        verify(warmed, never()).close();
+    }
+
+    @Test
+    void topicDeleteClosesProducerAfterItLeavesTheCache() throws Exception {
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache = mock(ResourceReadCache.class);
+        ProducerFactory factory = mock(ProducerFactory.class);
+        Producer<? extends Offset> cached = mock(Producer.class);
+        doReturn(cached).when(factory).newProducer(any(), any(), any());
+        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
+        when(cache.get(any())).thenReturn(Optional.of(vt));
+
+        ProducerService regional = new ProducerService(region, factory, orgCache, projectCache, cache);
+        regional.getProducer(new ProduceKey(VaradhiTopicName.parse(vt.getName()), RegionName.of(region), 0)).join();
+
+        @SuppressWarnings ("unchecked")
+        ArgumentCaptor<Consumer<String>> invalidate = ArgumentCaptor.forClass(Consumer.class);
+        verify(cache).addOnInvalidate(invalidate.capture());
+        invalidate.getValue().accept(vt.getName());
+
+        verify(cached).close();
+        Assertions.assertFalse(regional.hasProducer(vt.getName(), 0, region));
     }
 
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {
@@ -370,7 +438,11 @@ class ProducerServiceTests {
 
     public static class DummyStorageTopic extends StorageTopic {
         public DummyStorageTopic(String name) {
-            super(0, name);
+            this(0, name);
+        }
+
+        public DummyStorageTopic(int id, String name) {
+            super(id, name);
         }
     }
 }
