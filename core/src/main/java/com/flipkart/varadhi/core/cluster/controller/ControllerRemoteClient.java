@@ -99,17 +99,17 @@ public class ControllerRemoteClient implements ControllerApi {
     }
 
     @Override
-    public CompletableFuture<TopicFailoverOperation> getTopicFailover(String topicFqn) {
+    public CompletableFuture<ProduceFailoverTransition> getTopicFailover(String topicFqn) {
         ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(topicFqn));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.GET_FAILOVER_API, message)
-                       .thenApply(rm -> rm.getResponse(TopicFailoverOperation.class));
+                       .thenApply(rm -> rm.getResponse(ProduceFailoverTransition.class));
     }
 
     @Override
-    public CompletableFuture<TopicFailoverOperation> abortTopicFailover(String topicFqn, String requestedBy) {
+    public CompletableFuture<ProduceFailoverTransition> abortTopicFailover(String topicFqn, String requestedBy) {
         ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(topicFqn, requestedBy));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.ABORT_FAILOVER_API, message)
-                       .thenApply(rm -> rm.getResponse(TopicFailoverOperation.class));
+                       .thenApply(rm -> rm.getResponse(ProduceFailoverTransition.class));
     }
 
     @Override

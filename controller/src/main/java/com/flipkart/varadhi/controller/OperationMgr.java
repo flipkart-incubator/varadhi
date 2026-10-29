@@ -25,24 +25,13 @@ public class OperationMgr {
     private final Map<String, RetryOpTask> retryOpTasks;
     private final Map<String, Deque<OpTask>> opTasks;
     private final RetryPolicy retryPolicy;
-    private final RetryPolicy topicFailoverRetryPolicy;
     private volatile Consumer<TopicFailoverOperation> topicFailoverTerminalFailureHandler;
 
     public OperationMgr(int maxConcurrentOps, OpStore opStore, RetryPolicy retryPolicy) {
-        this(maxConcurrentOps, opStore, retryPolicy, retryPolicy);
-    }
-
-    public OperationMgr(
-        int maxConcurrentOps,
-        OpStore opStore,
-        RetryPolicy retryPolicy,
-        RetryPolicy topicFailoverRetryPolicy
-    ) {
         this.opStore = opStore;
         this.opTasks = new ConcurrentHashMap<>();
         this.retryOpTasks = new ConcurrentHashMap<>();
         this.retryPolicy = retryPolicy;
-        this.topicFailoverRetryPolicy = topicFailoverRetryPolicy;
         //TODO::ExecutorService should emit the metrics.
         this.executor = Executors.newFixedThreadPool(
             maxConcurrentOps,
@@ -239,18 +228,13 @@ public class OperationMgr {
             opExecutor,
             o -> opStore.updateTopicFailoverOp((TopicFailoverOperation)o),
             op,
-            topicFailoverRetryPolicy
+            retryPolicy
         );
         enqueueOpTask(opTask);
     }
 
     void createTopicFailoverOp(TopicFailoverOperation op) {
         opStore.createTopicFailoverOp(op);
-    }
-
-    void createAndEnqueueTopicFailover(TopicFailoverOperation op, OpExecutor<OrderedOperation> opExecutor) {
-        opStore.createTopicFailoverOp(op);
-        enqueueTopicFailover(op, opExecutor);
     }
 
     List<TopicFailoverOperation> getPendingTopicFailoverOps() {

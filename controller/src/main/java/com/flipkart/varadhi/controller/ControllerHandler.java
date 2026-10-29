@@ -87,33 +87,31 @@ public class ControllerHandler {
             request.targetRegion(),
             request.waitForReplicationLagToClear()
         );
-        return subscriptionService.createTopicFailover(request.topicFqn(), failoverRequest, request.requestedBy())
-                                  .thenApply(message::getResponseMessage);
+        return transitionService.createTopicFailover(request.topicFqn(), failoverRequest, request.requestedBy())
+                                .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> getFailover(ClusterMessage message) {
         FailoverApiRequest request = message.getRequest(FailoverApiRequest.class);
-        return subscriptionService.getTopicFailover(request.topicFqn()).thenApply(message::getResponseMessage);
+        return transitionService.getTopicFailover(request.topicFqn()).thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> abortFailover(ClusterMessage message) {
         FailoverApiRequest request = message.getRequest(FailoverApiRequest.class);
-        return subscriptionService.abortTopicFailover(request.topicFqn(), request.requestedBy())
-                                  .thenApply(message::getResponseMessage);
+        return transitionService.abortTopicFailover(request.topicFqn(), request.requestedBy())
+                                .thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> listFailovers(ClusterMessage message) {
-        return subscriptionService.getActiveFailovers()
-                                  .thenApply(
-                                      transitions -> message.getResponseMessage(new ActiveFailovers(transitions))
-                                  );
+        return transitionService.getActiveFailovers()
+                                .thenApply(transitions -> message.getResponseMessage(new ActiveFailovers(transitions)));
     }
 
     public void ack(ClusterMessage message) {
         TransitionAck ack = message.getData(TransitionAck.class);
         transitionMetrics.ackReceived(ack.transitionType(), ack.stage());
         try {
-            subscriptionService.recordFailoverAck(ack);
+            transitionService.recordFailoverAck(ack);
             transitionMetrics.ackProcessed(ack.transitionType(), ack.stage());
         } catch (Exception e) {
             transitionMetrics.ackDeliveryFailed(ack.transitionType(), ack.stage());

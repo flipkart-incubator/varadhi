@@ -83,8 +83,20 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-        SubscriptionService subscriptionService = createSubscriptionService(messageExchange);
-        TransitionService transitionService = new TransitionService(messageExchange);
+        OperationMgr operationMgr = new OperationMgr(
+            operationsConfig.getMaxConcurrentOps(),
+            metaStoreProvider.getOpStore(),
+            createRetryPolicy(operationsConfig.getMaxRetryAllowed())
+        );
+        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, operationMgr);
+        TransitionService transitionService = new TransitionService(
+            messageExchange,
+            operationMgr,
+            metaStoreProvider.getTransitionStore(),
+            metaStoreProvider.getMetaStore().topics(),
+            metaStoreProvider.getMetaStore().regions(),
+            deployedRegion
+        );
         ControllerHandler apiHandler = new ControllerHandler(
             subscriptionService,
             transitionService,
@@ -92,22 +104,17 @@ public class ControllerVerticle extends AbstractVerticle {
         );
 
         // Assume leadership and initialize event system
-        onLeaderElected(subscriptionService, apiHandler, messageRouter).compose(v -> initializeEventSystem())
-                                                                       .onComplete(ar -> {
-                                                                           if (ar.succeeded()) {
-                                                                               log.info(
-                                                                                   "Controller started successfully in region {}",
-                                                                                   deployedRegion
-                                                                               );
-                                                                               startPromise.complete();
-                                                                           } else {
-                                                                               log.error(
-                                                                                   "Failed to start controller: {}",
-                                                                                   ar.cause().getMessage()
-                                                                               );
-                                                                               startPromise.fail(ar.cause());
-                                                                           }
-                                                                       });
+        onLeaderElected(subscriptionService, transitionService, apiHandler, messageRouter).compose(
+            v -> initializeEventSystem()
+        ).onComplete(ar -> {
+            if (ar.succeeded()) {
+                log.info("Controller started successfully in region {}", deployedRegion);
+                startPromise.complete();
+            } else {
+                log.error("Failed to start controller: {}", ar.cause().getMessage());
+                startPromise.fail(ar.cause());
+            }
+        });
     }
 
     /**
@@ -144,37 +151,18 @@ public class ControllerVerticle extends AbstractVerticle {
      * @param messageExchange the message exchange for internode communication
      * @return the configured SubscriptionService
      */
-    private SubscriptionService createSubscriptionService(MessageExchange messageExchange) {
-        // Create consumer client factory
+    private SubscriptionService createSubscriptionService(MessageExchange messageExchange, OperationMgr operationMgr) {
         ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
-
-        // Create operation manager with retry policy
-        OperationMgr operationMgr = new OperationMgr(
-            operationsConfig.getMaxConcurrentOps(),
-            metaStoreProvider.getOpStore(),
-            createRetryPolicy(operationsConfig.getMaxRetryAllowed()),
-            createRetryPolicy(failoverOperationsConfig.getMaxRetryAllowed())
-        );
-
-        // Create assignment manager
         AssignmentManager assigner = new AssignmentManager(
             new LeastAssignedStrategy(),
             metaStoreProvider.getAssignmentStore(),
             meterRegistry
         );
-
         return new SubscriptionService(
             operationMgr,
             assigner,
             metaStoreProvider.getMetaStore().subscriptions(),
-            consumerClientFactory,
-            metaStoreProvider.getTransitionStore(),
-            metaStoreProvider.getMetaStore().topics(),
-            metaStoreProvider.getMetaStore().regions(),
-            messagingStackProvider.getStorageTopicService(),
-            clusterManager,
-            messageExchange,
-            deployedRegion
+            consumerClientFactory
         );
     }
 
@@ -201,6 +189,7 @@ public class ControllerVerticle extends AbstractVerticle {
      */
     private Future<Void> onLeaderElected(
         SubscriptionService subscriptionService,
+        TransitionService transitionService,
         ControllerHandler handler,
         MessageRouter messageRouter
     ) {
@@ -215,7 +204,7 @@ public class ControllerVerticle extends AbstractVerticle {
         return clusterManager.getAllMembers()
                              .compose(allMembers -> initializeConsumerNodes(allMembers, subscriptionService))
                              .compose(consumerIds -> {
-                                 restoreControllerState(subscriptionService, consumerIds);
+                                 restoreControllerState(subscriptionService, transitionService, consumerIds);
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
@@ -278,7 +267,11 @@ public class ControllerVerticle extends AbstractVerticle {
      * @param subscriptionService the controller API manager
      * @param consumerIds      the list of active consumer IDs
      */
-    private void restoreControllerState(SubscriptionService subscriptionService, List<String> consumerIds) {
+    private void restoreControllerState(
+        SubscriptionService subscriptionService,
+        TransitionService transitionService,
+        List<String> consumerIds
+    ) {
         // Remove unavailable consumers
         removeUnavailableConsumers(subscriptionService, consumerIds);
 
@@ -286,7 +279,7 @@ public class ControllerVerticle extends AbstractVerticle {
         requeueInProgressOperations(subscriptionService);
 
         // Resume in-flight topic failovers from their ProduceFailoverTransition stage
-        requeueInProgressFailovers(subscriptionService);
+        requeueInProgressFailovers(transitionService);
 
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
         // This should include strategies for recovering from failures without requiring controller restart
@@ -296,15 +289,15 @@ public class ControllerVerticle extends AbstractVerticle {
      * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
      * executor is idempotent and re-enters from {@code ProduceFailoverTransition.currentStage}.
      */
-    private void requeueInProgressFailovers(SubscriptionService subscriptionService) {
-        List<TopicFailoverOperation> pendingFailovers = subscriptionService.getPendingTopicFailoverOps();
+    private void requeueInProgressFailovers(TransitionService transitionService) {
+        List<TopicFailoverOperation> pendingFailovers = transitionService.getPendingTopicFailoverOps();
         if (pendingFailovers.isEmpty()) {
             log.info("No pending topic failovers to resume");
             return;
         }
         pendingFailovers.stream()
                         .sorted(Comparator.comparing(TopicFailoverOperation::getCreatedAt))
-                        .forEach(subscriptionService::retryTopicFailover);
+                        .forEach(transitionService::retryTopicFailover);
         log.info("Resumed {} pending topic failover(s)", pendingFailovers.size());
     }
 

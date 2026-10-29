@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
 import com.flipkart.varadhi.web.Extensions.RequestBodyExtension;
 import com.flipkart.varadhi.web.Extensions.RoutingContextExtension;
+import com.flipkart.varadhi.web.hierarchy.Hierarchies.RootHierarchy;
 import com.flipkart.varadhi.web.hierarchy.Hierarchies.TopicHierarchy;
 import com.flipkart.varadhi.web.hierarchy.ResourceHierarchy;
 import com.flipkart.varadhi.web.routes.RouteDefinition;
@@ -19,13 +20,16 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static com.flipkart.varadhi.common.Constants.ContextKeys.REQUEST_BODY;
 import static com.flipkart.varadhi.common.Constants.MethodNames.GET;
+import static com.flipkart.varadhi.common.Constants.MethodNames.LIST;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_PROJECT;
 import static com.flipkart.varadhi.common.Constants.PathParams.PATH_PARAM_TOPIC;
+import static com.flipkart.varadhi.entities.auth.ResourceAction.ORG_LIST;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_GET;
 import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
 
@@ -36,10 +40,11 @@ import static com.flipkart.varadhi.entities.auth.ResourceAction.TOPIC_UPDATE;
  * <ul>
  *   <li>POST {@code /v1/projects/:project/topics/:topic/failover} — request a failover
  *       (source→target). Returns {@code 202} with the intent op once durably recorded.</li>
- *   <li>GET  {@code /v1/projects/:project/topics/:topic/failover} — in-flight failover op
+ *   <li>GET  {@code /v1/projects/:project/topics/:topic/failover} — in-flight transition
  *       (includes stageHistory); 404 if none active.</li>
- *   <li>POST {@code /v1/projects/:project/topics/:topic/failover/abort} — abort, honored only while
- *       the transition is still abortable (PENDING/PREPARE/FENCE/pre-commit MIGRATE).</li>
+ *   <li>POST {@code /v1/projects/:project/topics/:topic/failover/abort} — records abort requested;
+ *       honored by the failover executor while the stage is abortable.</li>
+ *   <li>GET  {@code /v1/failovers} — all active transitions.</li>
  * </ul>
  */
 @Slf4j
@@ -61,25 +66,39 @@ public class TopicFailoverHandlers implements RouteProvider {
 
     @Override
     public List<RouteDefinition> get() {
-        return new SubRoutes(
-            "/v1/projects/:project/topics",
-            List.of(
-                RouteDefinition.post("FAILOVER", API_NAME, "/:topic/failover")
-                               .hasBody()
-                               .bodyParser(this::setRequestBody)
-                               .nonBlocking()
-                               .authorize(TOPIC_UPDATE)
-                               .build(this::getHierarchies, this::create),
-                RouteDefinition.get(GET, API_NAME, "/:topic/failover")
-                               .nonBlocking()
-                               .authorize(TOPIC_GET)
-                               .build(this::getHierarchies, this::status),
-                RouteDefinition.post("FAILOVER_ABORT", API_NAME, "/:topic/failover/abort")
-                               .nonBlocking()
-                               .authorize(TOPIC_UPDATE)
-                               .build(this::getHierarchies, this::abort)
-            )
-        ).get();
+        List<RouteDefinition> routes = new ArrayList<>(
+            new SubRoutes(
+                "/v1/projects/:project/topics",
+                List.of(
+                    RouteDefinition.post("FAILOVER", API_NAME, "/:topic/failover")
+                                   .hasBody()
+                                   .bodyParser(this::setRequestBody)
+                                   .nonBlocking()
+                                   .authorize(TOPIC_UPDATE)
+                                   .build(this::getHierarchies, this::create),
+                    RouteDefinition.get(GET, API_NAME, "/:topic/failover")
+                                   .nonBlocking()
+                                   .authorize(TOPIC_GET)
+                                   .build(this::getHierarchies, this::status),
+                    RouteDefinition.post("FAILOVER_ABORT", API_NAME, "/:topic/failover/abort")
+                                   .nonBlocking()
+                                   .authorize(TOPIC_UPDATE)
+                                   .build(this::getHierarchies, this::abort)
+                )
+            ).get()
+        );
+        routes.addAll(
+            new SubRoutes(
+                "/v1/failovers",
+                List.of(
+                    RouteDefinition.get(LIST, API_NAME, "")
+                                   .nonBlocking()
+                                   .authorize(ORG_LIST)
+                                   .build(this::getRootHierarchy, this::list)
+                )
+            ).get()
+        );
+        return routes;
     }
 
     public void setRequestBody(RoutingContext ctx) {
@@ -93,14 +112,24 @@ public class TopicFailoverHandlers implements RouteProvider {
         return Map.of(ResourceType.TOPIC, new TopicHierarchy(project, topicName));
     }
 
+    public Map<ResourceType, ResourceHierarchy> getRootHierarchy(RoutingContext ctx, boolean hasBody) {
+        return Map.of(ResourceType.ROOT, new RootHierarchy());
+    }
+
     public void create(RoutingContext ctx) {
         TopicFailoverRequest body = ctx.get(REQUEST_BODY);
+        if (body.targetRegion() == null) {
+            throw new IllegalArgumentException("targetRegion is required for failover.");
+        }
+        if (body.sourceRegion() != null && body.sourceRegion().equals(body.targetRegion())) {
+            throw new IllegalArgumentException("sourceRegion and targetRegion must differ.");
+        }
         controllerClient.createTopicFailover(getVaradhiTopicName(ctx), body, ctx.getIdentityOrDefault())
                         .whenComplete((op, error) -> ctx.vertx().runOnContext(v -> {
                             if (error != null) {
-                                ctx.fail(error instanceof java.util.concurrent.CompletionException
-                                    ? error.getCause()
-                                    : error);
+                                ctx.fail(
+                                    error instanceof java.util.concurrent.CompletionException ? error.getCause() : error
+                                );
                             } else {
                                 ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), op);
                             }
@@ -113,15 +142,19 @@ public class TopicFailoverHandlers implements RouteProvider {
 
     public void abort(RoutingContext ctx) {
         controllerClient.abortTopicFailover(getVaradhiTopicName(ctx), ctx.getIdentityOrDefault())
-                        .whenComplete((op, error) -> ctx.vertx().runOnContext(v -> {
+                        .whenComplete((transition, error) -> ctx.vertx().runOnContext(v -> {
                             if (error != null) {
-                                ctx.fail(error instanceof java.util.concurrent.CompletionException
-                                    ? error.getCause()
-                                    : error);
+                                ctx.fail(
+                                    error instanceof java.util.concurrent.CompletionException ? error.getCause() : error
+                                );
                             } else {
-                                ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), op);
+                                ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), transition);
                             }
                         }));
+    }
+
+    public void list(RoutingContext ctx) {
+        ctx.handleResponse(controllerClient.getActiveFailovers());
     }
 
     private String getVaradhiTopicName(RoutingContext ctx) {

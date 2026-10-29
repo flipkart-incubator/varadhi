@@ -21,7 +21,11 @@ public record TopicFailoverRequest(
     Long lagDrainTimeoutMs,
     String onLagTimeout
 ) {
-    public TopicFailoverRequest(RegionName sourceRegion, RegionName targetRegion, boolean waitForReplicationLagToClear) {
+    public TopicFailoverRequest(
+        RegionName sourceRegion,
+        RegionName targetRegion,
+        boolean waitForReplicationLagToClear
+    ) {
         this(sourceRegion, targetRegion, waitForReplicationLagToClear, null, null);
     }
 }
