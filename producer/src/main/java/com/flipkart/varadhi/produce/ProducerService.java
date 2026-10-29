@@ -1,11 +1,10 @@
 package com.flipkart.varadhi.produce;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
@@ -20,23 +19,25 @@ import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
 import com.flipkart.varadhi.spi.services.Producer;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service responsible for producing messages to topics in Varadhi.
  * <p>
- * Producers are kept in a {@link ConcurrentHashMap} by {@link ProduceKey}, same as oncall
- * {@code ProducerFactory}: no access expiry. Failover PREPARE adds the target zone on the
- * current storage segment and leaves the previous entry in the map. Topic delete closes
- * every producer for that topic.
+ * Producers are cached by {@link ProduceKey} and expire after
+ * {@link ProducerOptions#getProducerCacheTtlSeconds()} with no access. A key that produce no
+ * longer uses, including the pre-failover producer, stays until that expiry. Nothing removes it
+ * when the route changes.
  */
 @Slf4j
 public final class ProducerService {
 
     /**
-     * Registry of producers for {@link ProduceKey}s.
+     * Cache of producers for {@link ProduceKey}s.
      */
-    private final ConcurrentHashMap<ProduceKey, Producer<? extends Offset>> producerCache;
+    private final LoadingCache<ProduceKey, Producer<? extends Offset>> producerCache;
 
     private final ProducerFactory producerFactory;
 
@@ -142,9 +143,11 @@ public final class ProducerService {
         this.orgCache = orgCache;
         this.rateLimiter = rateLimiter;
         this.producerFactory = producerFactory;
-        this.producerCache = new ConcurrentHashMap<>();
+        this.producerCache = Caffeine.newBuilder()
+                                     .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
+                                     .recordStats()
+                                     .build(this::loadProducerObject);
         this.metricsProvider = metricsRecorderProvider;
-        topicCache.addOnInvalidate(this::evictProducersForTopic);
     }
 
     private Producer<? extends Offset> loadProducerObject(ProduceKey key) {
@@ -162,39 +165,6 @@ public final class ProducerService {
             topic.getEntity().getCapacity(),
             key.produceRegion()
         );
-    }
-
-    private void evictProducersForTopic(String topicFqn) {
-        VaradhiTopicName topicName = parseTopicName(topicFqn);
-        if (topicName == null) {
-            return;
-        }
-        List<Producer<? extends Offset>> closing = new ArrayList<>();
-        producerCache.entrySet().removeIf(entry -> {
-            if (!entry.getKey().topicFqn().equals(topicName)) {
-                return false;
-            }
-            closing.add(entry.getValue());
-            return true;
-        });
-        closing.forEach(ProducerService::closeQuietly);
-    }
-
-    private VaradhiTopicName parseTopicName(String topicFqn) {
-        try {
-            return VaradhiTopicName.parse(topicFqn);
-        } catch (RuntimeException e) {
-            log.warn("Ignoring producer eviction for unparseable topic FQN {}", topicFqn, e);
-            return null;
-        }
-    }
-
-    private static void closeQuietly(Producer<? extends Offset> producer) {
-        try {
-            producer.close();
-        } catch (Exception e) {
-            log.warn("Failed to close producer on registry eviction", e);
-        }
     }
 
     private ProducerMetrics getMetrics(String topicFQN) {
@@ -280,15 +250,13 @@ public final class ProducerService {
      * Gets a producer for the resolved {@link ProduceKey}.
      */
     public CompletableFuture<Producer<? extends Offset>> getProducer(ProduceKey produceKey) {
-        Producer<? extends Offset> producer = producerCache.get(produceKey);
+        Producer<? extends Offset> producer = producerCache.getIfPresent(produceKey);
         if (producer != null) {
             return CompletableFuture.completedFuture(producer);
         }
 
         try {
-            return CompletableFuture.completedFuture(
-                producerCache.computeIfAbsent(produceKey, this::loadProducerObject)
-            );
+            return CompletableFuture.completedFuture(producerCache.get(produceKey));
         } catch (Exception e) {
             String errorMsg = String.format(
                 "Error getting producer for Topic(%s): %s",
@@ -340,7 +308,7 @@ public final class ProducerService {
     }
 
     public boolean hasProducer(String topicFQN, int storageTopicId, String region) {
-        return producerCache.get(
+        return producerCache.getIfPresent(
             new ProduceKey(VaradhiTopicName.parse(topicFQN), RegionName.of(region), storageTopicId)
         ) != null;
     }

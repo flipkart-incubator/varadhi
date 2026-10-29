@@ -29,10 +29,8 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -346,27 +344,6 @@ class ProducerServiceTests {
         Assertions.assertFalse(regional.hasProducer(topicFqn, 1, "r2"));
         verify(active, never()).close();
         verify(warmed, never()).close();
-    }
-
-    @Test
-    void topicDeleteClosesProducerAfterItLeavesTheCache() throws Exception {
-        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> cache = mock(ResourceReadCache.class);
-        ProducerFactory factory = mock(ProducerFactory.class);
-        Producer<? extends Offset> cached = mock(Producer.class);
-        doReturn(cached).when(factory).newProducer(any(), any(), any());
-        Resource.EntityResource<VaradhiTopic> vt = getTopic(topic, project, region);
-        when(cache.get(any())).thenReturn(Optional.of(vt));
-
-        ProducerService regional = new ProducerService(region, factory, orgCache, projectCache, cache);
-        regional.getProducer(new ProduceKey(VaradhiTopicName.parse(vt.getName()), RegionName.of(region), 0)).join();
-
-        @SuppressWarnings ("unchecked")
-        ArgumentCaptor<Consumer<String>> invalidate = ArgumentCaptor.forClass(Consumer.class);
-        verify(cache).addOnInvalidate(invalidate.capture());
-        invalidate.getValue().accept(vt.getName());
-
-        verify(cached).close();
-        Assertions.assertFalse(regional.hasProducer(vt.getName(), 0, region));
     }
 
     public Resource.EntityResource<VaradhiTopic> getTopic(String name, Project project, String region) {

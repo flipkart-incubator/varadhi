@@ -19,15 +19,14 @@ public class ProducerOptions {
 
     /**
      * Approximate upper bound (ms) a pod waits for its TopicCache to reach the coordinated topic
-     * version during a topic-transition stage before acking failure.
+     * version during a topic-transition stage (PREPARE/SWITCH) before acking failure. Mapped to a
+     * fixed number of poll attempts, so actual wait is roughly
+     * {@code (ceil(waitMs / pollIntervalMs) - 1) * pollIntervalMs}.
      */
     @Builder.Default
     private long transitionVersionWaitMs = 1000;
 
-    /**
-     * Delay (ms) between TopicCache version checks during a topic-transition stage.
-     * Must be greater than 0; Failsafe rejects a zero delay.
-     */
+    /** Fixed poll interval (ms) between TopicCache version checks during a topic-transition stage. */
     @Builder.Default
     private long transitionPollIntervalMs = 25;
 
