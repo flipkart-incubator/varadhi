@@ -6,9 +6,9 @@ package com.flipkart.varadhi.produce.transition;
  *
  * @param versionWaitMs approximate upper bound (ms) a pod waits for its TopicCache to reach the
  *                      target version before acking failure
- * @param pollIntervalMs delay (ms) between TopicCache version checks; {@code 0} means no delay
- *                       (retry immediately). Attempt count uses {@code max(1, pollIntervalMs)} as
- *                       the divisor so {@code versionWaitMs} still bounds the wait when delay is 0.
+ * @param pollIntervalMs delay (ms) between TopicCache version checks. Must be greater than 0;
+ *                       Failsafe rejects a zero delay. Attempt count uses {@code max(1, pollIntervalMs)}
+ *                       as the divisor.
  */
 public record PodTransitionConfig(long versionWaitMs, long pollIntervalMs) {
 
