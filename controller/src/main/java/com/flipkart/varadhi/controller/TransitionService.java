@@ -1,7 +1,6 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
-import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.controller.FailoverApi;
 import com.flipkart.varadhi.core.cluster.controller.TransitionAckApi;
@@ -10,8 +9,6 @@ import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.transition.TransitionEventBroadcaster;
 import com.flipkart.varadhi.entities.RegionName;
-import com.flipkart.varadhi.entities.TopicState;
-import com.flipkart.varadhi.entities.VaradhiTopic;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.transition.TransitionEvent;
@@ -20,8 +17,6 @@ import com.flipkart.varadhi.entities.cluster.transition.TransitionType;
 import com.flipkart.varadhi.entities.cluster.transition.failover.ProduceFailoverTransition;
 import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverRequest;
-import com.flipkart.varadhi.spi.db.RegionStore;
-import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,23 +32,17 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
     private final MessageExchange messageExchange;
     private final OperationMgr operationMgr;
     private final TransitionStore transitionStore;
-    private final TopicStore topicStore;
-    private final RegionStore regionStore;
     private final RegionName deployedRegion;
 
     public TransitionService(
         MessageExchange messageExchange,
         OperationMgr operationMgr,
         TransitionStore transitionStore,
-        TopicStore topicStore,
-        RegionStore regionStore,
         RegionName deployedRegion
     ) {
         this.messageExchange = messageExchange;
         this.operationMgr = operationMgr;
         this.transitionStore = transitionStore;
-        this.topicStore = topicStore;
-        this.regionStore = regionStore;
         this.deployedRegion = deployedRegion;
         if (operationMgr != null) {
             operationMgr.setTopicFailoverTerminalFailureHandler(this::cleanupFailedTopicFailover);
@@ -72,33 +61,31 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
 
     @Override
     public CompletableFuture<Void> ack(TransitionAck ack) {
-        recordFailoverAck(ack);
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<TopicFailoverOperation> createTopicFailover(
-        String topicFqn,
+        VaradhiTopicName topicFqn,
         TopicFailoverRequest request,
         String requestedBy
     ) {
         return CompletableFuture.supplyAsync(() -> {
-            VaradhiTopic topic = topicStore.get(topicFqn);
+            String fqn = topicFqn.toFqn();
             RegionName source = request.sourceRegion() != null ? request.sourceRegion() : deployedRegion;
             RegionName target = request.targetRegion();
-            validateFailoverRegions(topic, source, target);
-            if (transitionStore.exists(topicFqn)) {
+            if (transitionStore.exists(fqn)) {
                 throw new InvalidOperationForResourceException(
-                    "An active failover already exists for topic " + topicFqn + "."
+                    "An active failover already exists for topic " + fqn + "."
                 );
             }
-            TopicFailoverOperation op = TopicFailoverOperation.of(topicFqn, requestedBy);
+            TopicFailoverOperation op = TopicFailoverOperation.of(fqn, requestedBy);
             operationMgr.createTopicFailoverOp(op);
             try {
                 transitionStore.create(
                     ProduceFailoverTransition.forFailover(
                         op.getId(),
-                        topicFqn,
+                        fqn,
                         source,
                         target,
                         request.waitForReplicationLagToClear()
@@ -109,32 +96,36 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
                 operationMgr.persistTopicFailoverOp(op);
                 throw e;
             }
-            log.info("Created topic failover op {} for {} ({}->{})", op.getId(), topicFqn, source, target);
+            log.info("Created topic failover op {} for {} ({}->{})", op.getId(), fqn, source, target);
             return op;
         });
     }
 
     @Override
-    public CompletableFuture<ProduceFailoverTransition> getTopicFailover(String topicFqn) {
-        return CompletableFuture.supplyAsync(() -> requireActive(topicFqn));
+    public CompletableFuture<ProduceFailoverTransition> getTopicFailover(VaradhiTopicName topicFqn) {
+        return CompletableFuture.supplyAsync(() -> requireActive(topicFqn.toFqn()));
     }
 
     @Override
-    public CompletableFuture<ProduceFailoverTransition> abortTopicFailover(String topicFqn, String requestedBy) {
+    public CompletableFuture<ProduceFailoverTransition> abortTopicFailover(
+        VaradhiTopicName topicFqn,
+        String requestedBy
+    ) {
         return CompletableFuture.supplyAsync(() -> {
-            ProduceFailoverTransition transition = requireActive(topicFqn);
+            String fqn = topicFqn.toFqn();
+            ProduceFailoverTransition transition = requireActive(fqn);
             if (!transition.getCurrentStage().isAbortable()) {
                 throw new InvalidOperationForResourceException(
-                    "Failover for " + topicFqn + " is not abortable in stage " + transition.getCurrentStage() + "."
+                    "Failover for " + fqn + " is not abortable in stage " + transition.getCurrentStage() + "."
                 );
             }
             log.info(
                 "Abort requested for topic failover op {} on {} (requestedBy={})",
                 transition.getOperationId(),
-                topicFqn,
+                fqn,
                 requestedBy
             );
-            transition.requestAbort();
+            transition.setAbortRequested(true);
             transitionStore.update(transition);
             return transition;
         });
@@ -145,28 +136,17 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
         return CompletableFuture.supplyAsync(transitionStore::listActive);
     }
 
-    public void recordFailoverAck(TransitionAck ack) {
-        log.debug(
-            "Failover ack op={} host={} stage={} ok={}",
-            ack.opId(),
-            ack.hostname(),
-            ack.stage(),
-            ack.isSuccess()
-        );
-    }
-
     public List<TopicFailoverOperation> getPendingTopicFailoverOps() {
         return operationMgr.getPendingTopicFailoverOps();
     }
 
     public void retryTopicFailover(TopicFailoverOperation operation) {
-        log.warn("Cannot resume topic failover op {} — orchestrator not wired on this build", operation.getId());
+        throw new UnsupportedOperationException(
+            "Topic failover retry is not supported for op " + operation.getId()
+        );
     }
 
     private ProduceFailoverTransition requireActive(String topicFqn) {
-        if (!transitionStore.exists(topicFqn)) {
-            throw new ResourceNotFoundException("No active failover for topic " + topicFqn + ".");
-        }
         return transitionStore.get(topicFqn);
     }
 
@@ -193,42 +173,5 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
             )
         );
         transitionStore.delete(topicFqn);
-    }
-
-    private void validateFailoverRegions(VaradhiTopic topic, RegionName source, RegionName target) {
-        if (source == null || target == null) {
-            throw new IllegalArgumentException("sourceRegion and targetRegion are required for failover.");
-        }
-        if (source.equals(target)) {
-            throw new IllegalArgumentException("sourceRegion and targetRegion must differ.");
-        }
-        requireRegisteredRegion(source);
-        requireRegisteredRegion(target);
-        if (topic.getProduceConfig(source).isEmpty()) {
-            throw new IllegalArgumentException(
-                "Topic " + topic.getName() + " is not configured for sourceRegion " + source.value() + "."
-            );
-        }
-        if (topic.getProduceConfig(target).isEmpty()) {
-            throw new IllegalArgumentException(
-                "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
-            );
-        }
-        if (topic.getSegmentedStorageTopic() == null || topic.getSegmentedStorageTopic().getStorageTopics() == null
-            || topic.getSegmentedStorageTopic().getStorageTopics().length == 0) {
-            throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
-        }
-        TopicState sourceState = topic.getProduceConfig(source).orElseThrow().getState();
-        if (sourceState != TopicState.Producing) {
-            throw new IllegalArgumentException(
-                "sourceRegion " + source.value() + " is not producing (state=" + sourceState + ")."
-            );
-        }
-    }
-
-    private void requireRegisteredRegion(RegionName region) {
-        if (!regionStore.exists(region.value())) {
-            throw new IllegalArgumentException("Region " + region.value() + " is not registered.");
-        }
     }
 }

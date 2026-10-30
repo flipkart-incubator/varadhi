@@ -93,8 +93,6 @@ public class ControllerVerticle extends AbstractVerticle {
             messageExchange,
             operationMgr,
             metaStoreProvider.getTransitionStore(),
-            metaStoreProvider.getMetaStore().topics(),
-            metaStoreProvider.getMetaStore().regions(),
             deployedRegion
         );
         ControllerHandler apiHandler = new ControllerHandler(
@@ -278,27 +276,20 @@ public class ControllerVerticle extends AbstractVerticle {
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
-        // Resume in-flight topic failovers from their ProduceFailoverTransition stage
         requeueInProgressFailovers(transitionService);
 
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
         // This should include strategies for recovering from failures without requiring controller restart
     }
 
-    /**
-     * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
-     * executor is idempotent and re-enters from {@code ProduceFailoverTransition.currentStage}.
-     */
     private void requeueInProgressFailovers(TransitionService transitionService) {
         List<TopicFailoverOperation> pendingFailovers = transitionService.getPendingTopicFailoverOps();
         if (pendingFailovers.isEmpty()) {
-            log.info("No pending topic failovers to resume");
             return;
         }
         pendingFailovers.stream()
                         .sorted(Comparator.comparing(TopicFailoverOperation::getCreatedAt))
                         .forEach(transitionService::retryTopicFailover);
-        log.info("Resumed {} pending topic failover(s)", pendingFailovers.size());
     }
 
     /**

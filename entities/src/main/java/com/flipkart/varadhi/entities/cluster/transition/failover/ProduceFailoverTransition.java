@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
     private TransitionStage currentStage;
     private long topicVersionToAwait;
     private long stageStartedAt;
+    @Setter
     private boolean abortRequested;
     private final List<StageSnapshot> stageHistory;
 
@@ -89,11 +91,6 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
             false,
             new ArrayList<>()
         );
-    }
-
-    /** Marks abort requested. The executor honors this; callers must persist the entity. */
-    public void requestAbort() {
-        this.abortRequested = true;
     }
 
     /**

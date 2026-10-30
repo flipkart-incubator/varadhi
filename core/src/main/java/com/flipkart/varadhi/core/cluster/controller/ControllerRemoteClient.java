@@ -1,15 +1,16 @@
 package com.flipkart.varadhi.core.cluster.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
-import com.flipkart.varadhi.core.cluster.transition.failover.ActiveFailovers;
-import com.flipkart.varadhi.core.cluster.transition.failover.FailoverApiRequest;
+import com.flipkart.varadhi.core.cluster.transition.failover.TopicFailoverRequestWrapper;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
 import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
 import com.flipkart.varadhi.entities.UnsidelineRequest;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.ShardOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
 import com.flipkart.varadhi.entities.cluster.SubscriptionState;
@@ -82,41 +83,38 @@ public class ControllerRemoteClient implements ControllerApi {
 
     @Override
     public CompletableFuture<TopicFailoverOperation> createTopicFailover(
-        String topicFqn,
+        VaradhiTopicName topicFqn,
         TopicFailoverRequest request,
         String requestedBy
     ) {
-        FailoverApiRequest apiRequest = new FailoverApiRequest(
-            topicFqn,
-            request.sourceRegion(),
-            request.targetRegion(),
-            request.waitForReplicationLagToClear(),
-            requestedBy
-        );
-        ClusterMessage message = ClusterMessage.of(apiRequest);
+        ClusterMessage message = ClusterMessage.of(new TopicFailoverRequestWrapper(topicFqn, request, requestedBy));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.CREATE_FAILOVER_API, message)
                        .thenApply(rm -> rm.getResponse(TopicFailoverOperation.class));
     }
 
     @Override
-    public CompletableFuture<ProduceFailoverTransition> getTopicFailover(String topicFqn) {
-        ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(topicFqn));
+    public CompletableFuture<ProduceFailoverTransition> getTopicFailover(VaradhiTopicName topicFqn) {
+        ClusterMessage message = ClusterMessage.of(new TopicFailoverRequestWrapper(topicFqn, null, null));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.GET_FAILOVER_API, message)
                        .thenApply(rm -> rm.getResponse(ProduceFailoverTransition.class));
     }
 
     @Override
-    public CompletableFuture<ProduceFailoverTransition> abortTopicFailover(String topicFqn, String requestedBy) {
-        ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(topicFqn, requestedBy));
+    public CompletableFuture<ProduceFailoverTransition> abortTopicFailover(
+        VaradhiTopicName topicFqn,
+        String requestedBy
+    ) {
+        ClusterMessage message = ClusterMessage.of(new TopicFailoverRequestWrapper(topicFqn, null, requestedBy));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.ABORT_FAILOVER_API, message)
                        .thenApply(rm -> rm.getResponse(ProduceFailoverTransition.class));
     }
 
     @Override
     public CompletableFuture<List<ProduceFailoverTransition>> getActiveFailovers() {
-        ClusterMessage message = ClusterMessage.of(FailoverApiRequest.of(null));
+        ClusterMessage message = ClusterMessage.of(new TopicFailoverRequestWrapper(null, null, null));
         return exchange.request(ROUTE_CONTROLLER, TransitionBusAddress.LIST_FAILOVERS_API, message)
-                       .thenApply(rm -> rm.getResponse(ActiveFailovers.class).transitions());
+                       .thenApply(rm -> rm.getResponse(new TypeReference<List<ProduceFailoverTransition>>() {
+                       }));
     }
 
     @Override

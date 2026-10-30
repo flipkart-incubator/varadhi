@@ -5,8 +5,9 @@ import com.flipkart.varadhi.entities.RegionName;
 /**
  * HTTP/body payload to trigger a topic failover to {@code targetRegion}.
  *
- * <p>{@code sourceRegion} may be omitted — the controller uses its deployed region. When present,
- * it must match the topic's current producing region.
+ * <p>{@code sourceRegion} may be omitted — the REST handler defaults it to the deployed region
+ * (the controller does the same if the RPC still omits it). Both regions must be registered and
+ * configured on the topic, must differ, and source must be producing.
  *
  * <p>{@code waitForReplicationLagToClear} (default {@code true}) holds MIGRATE until source→target
  * lag is clear. {@code lagDrainTimeoutMs} / {@code onLagTimeout} are optional lag-budget controls
@@ -21,11 +22,4 @@ public record TopicFailoverRequest(
     Long lagDrainTimeoutMs,
     String onLagTimeout
 ) {
-    public TopicFailoverRequest(
-        RegionName sourceRegion,
-        RegionName targetRegion,
-        boolean waitForReplicationLagToClear
-    ) {
-        this(sourceRegion, targetRegion, waitForReplicationLagToClear, null, null);
-    }
 }

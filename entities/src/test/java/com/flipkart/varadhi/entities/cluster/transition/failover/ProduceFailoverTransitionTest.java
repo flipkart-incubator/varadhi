@@ -74,9 +74,9 @@ class ProduceFailoverTransitionTest {
             false
         );
         assertFalse(t.isAbortRequested());
-        t.requestAbort();
+        t.setAbortRequested(true);
         assertTrue(t.isAbortRequested());
-        t.requestAbort();
+        t.setAbortRequested(true);
         assertTrue(t.isAbortRequested());
     }
 }

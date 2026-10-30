@@ -6,6 +6,7 @@ import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -518,7 +519,10 @@ public class WebServerVerticle extends AbstractVerticle {
         routes.addAll(
             new TopicFailoverHandlers(
                 serviceRegistry.get(ControllerApi.class),
-                cacheRegistry.getCache(ResourceType.PROJECT)
+                cacheRegistry.getCache(ResourceType.PROJECT),
+                serviceRegistry.get(VaradhiTopicService.class),
+                serviceRegistry.get(RegionService.class),
+                RegionName.of(verticleConfig.deployedRegion())
             ).get()
         );
 
