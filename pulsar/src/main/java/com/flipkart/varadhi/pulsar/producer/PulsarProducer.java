@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
@@ -36,19 +37,27 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions producerOptions,
         String hostName,
+        RegionName produceRegion,
         TelemetryOptions telemetryOptions
     ) throws PulsarClientException {
         this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
                                                                   .filteredBy(DIGITS, LETTERS)
                                                                   .build();
-        this.pulsarProducer = getProducer(pulsarClient, storageTopic, capacity, producerOptions, hostName);
+        this.pulsarProducer = getProducer(
+            pulsarClient,
+            storageTopic,
+            capacity,
+            producerOptions,
+            hostName,
+            produceRegion
+        );
         if (telemetryOptions != null) {
             telemetryOptions.recordTelemetry(this.pulsarProducer);
         }
     }
 
-    public static String getProducerName(String topicName, String hostName) {
-        return String.format("%s.%s", topicName, hostName);
+    public static String getProducerName(String topicName, String hostName, RegionName produceRegion) {
+        return String.format("%s.%s.%s", topicName, produceRegion.value(), hostName);
     }
 
     public static int getMaxPendingMessages(int topicMaxQps) {
@@ -101,9 +110,10 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         PulsarStorageTopic topic,
         TopicCapacityPolicy capacity,
         ProducerOptions options,
-        String hostname
+        String hostname,
+        RegionName produceRegion
     ) throws PulsarClientException {
-        Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname);
+        Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname, produceRegion);
         return pulsarClient.newProducer().loadConf(producerConfig).create();
     }
 
@@ -116,7 +126,8 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         PulsarStorageTopic topic,
         TopicCapacityPolicy capacity,
         ProducerOptions options,
-        String hostName
+        String hostName,
+        RegionName produceRegion
     ) {
 
         // System Configured::
@@ -127,7 +138,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         // batchingMaxPublishDelay
 
         // Fixed::
-        // name = topic + hostname
+        // name = topic + produceRegion + hostname
         // topic = topic name
         // access mode -- shared.
         //
@@ -141,7 +152,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
 
         Map<String, Object> producerConfig = options.asMap();
         producerConfig.put("topicName", topic.getName());
-        producerConfig.put("producerName", getProducerName(topic.getName(), hostName));
+        producerConfig.put("producerName", getProducerName(topic.getName(), hostName, produceRegion));
         producerConfig.put("accessMode", ProducerAccessMode.Shared);
 
         int topicMaxQps = capacity.getQps();

@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.spi.mock;
 
 import com.flipkart.varadhi.entities.InternalQueueCategory;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.Offset;
 import com.flipkart.varadhi.entities.Project;
@@ -38,7 +39,8 @@ public class InMemoryMessagingTest {
 
         provider.getStorageTopicService().create(project, topic, policy);
 
-        Producer<? extends Offset> producer = provider.getProducerFactory().newProducer(topic, policy);
+        Producer<? extends Offset> producer = provider.getProducerFactory()
+                                                      .newProducer(topic, policy, RegionName.of("region"));
 
         Multimap<String, String> headers = ArrayListMultimap.create();
         headers.put(StdHeaders.get().msgId(), "msgId-1");

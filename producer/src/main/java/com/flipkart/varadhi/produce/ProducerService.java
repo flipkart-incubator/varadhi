@@ -26,25 +26,20 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Service responsible for producing messages to topics in Varadhi.
  * <p>
- * This service provides high-performance, thread-safe message production capabilities with:
- * <ul>
- *   <li>Efficient producer caching using Caffeine for optimal resource utilization</li>
- *   <li>Fully asynchronous message production with CompletableFuture</li>
- *   <li>Comprehensive metrics collection for monitoring and performance analysis</li>
- *   <li>Robust error handling with detailed error messages</li>
- * </ul>
- * <p>
- * The service maintains a cache of producers for storage topics to optimize performance
- * and resource utilization. Producers are created on-demand and cached for reuse based on
- * configurable TTL settings.
+ * Producers are cached by {@link ProduceKey} and expire after
+ * {@link ProducerOptions#getProducerCacheTtlSeconds()} with no access. A key that produce no
+ * longer uses, including the pre-failover producer, stays until that expiry. Nothing removes it
+ * when the route changes.
  */
 @Slf4j
 public final class ProducerService {
 
     /**
-     * Cache of producers for storage topics.
+     * Cache of producers for {@link ProduceKey}s.
      */
     private final LoadingCache<ProduceKey, Producer<? extends Offset>> producerCache;
+
+    private final ProducerFactory producerFactory;
 
     /**
      * The region this pod is deployed in (ingress / local region).
@@ -147,14 +142,15 @@ public final class ProducerService {
         this.projectCache = projectCache;
         this.orgCache = orgCache;
         this.rateLimiter = rateLimiter;
+        this.producerFactory = producerFactory;
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
-                                     .build(key -> loadProducerObject(producerFactory, key));
+                                     .build(this::loadProducerObject);
         this.metricsProvider = metricsRecorderProvider;
     }
 
-    private Producer<? extends Offset> loadProducerObject(ProducerFactory producerFactory, ProduceKey key) {
+    private Producer<? extends Offset> loadProducerObject(ProduceKey key) {
         var topicMaybe = topicCache.get(key.topicFqn().toFqn());
         if (topicMaybe.isEmpty()) {
             throw new ResourceNotFoundException(
@@ -166,7 +162,8 @@ public final class ProducerService {
 
         return producerFactory.newProducer(
             topic.getEntity().getSegmentedStorageTopic().getTopic(key.storageTopicId()),
-            topic.getEntity().getCapacity()
+            topic.getEntity().getCapacity(),
+            key.produceRegion()
         );
     }
 
@@ -271,24 +268,29 @@ public final class ProducerService {
     }
 
     /**
-     * Pre-warms the producer for {@code region} (ungated resolve). Used by topic-failover PREPARE.
+     * Pre-warms the producer PREPARE will need after failover: {@code region} plus this pod's
+     * ingress {@link ProduceConfig#getProduceIdx()}. Failover does not move the segment, so warming
+     * the target region's own index misses the key the first post-failover produce uses when the
+     * indexes differ.
      */
     public CompletableFuture<Producer<? extends Offset>> getProducerForRegion(VaradhiTopic topic, RegionName region) {
-        Optional<ProduceKey> key = TopicResolver.resolve(topic, region, false);
-        if (key.isEmpty()) {
+        Optional<ProduceConfig> ingress = topic.getProduceConfig(RegionName.of(localRegion));
+        if (ingress.isEmpty()) {
             return CompletableFuture.failedFuture(
                 new ResourceNotFoundException(
-                    "Topic(%s) has no produce configuration for region(%s).".formatted(topic.getName(), region.value())
+                    "Topic(%s) has no produce configuration for region(%s).".formatted(topic.getName(), localRegion)
                 )
             );
         }
-        return getProducer(key.get());
+        ProduceKey key = new ProduceKey(VaradhiTopicName.parse(topic.getName()), region, ingress.get().getProduceIdx());
+        return getProducer(key);
     }
 
     /**
      * Whether this pod already has a cached producer for the topic's active produce path in
-     * {@code localRegion}. Uses <em>ungated</em> resolve (same as PREPARE warm) so fencing does
-     * not hide an existing producer when deciding transition participation.
+     * {@code localRegion}. Ungated resolve so fencing does not hide an existing producer when
+     * deciding transition participation. PREPARE warm is a different key: target region plus
+     * this pod's ingress segment.
      */
     public boolean hasActiveProducer(VaradhiTopic topic) {
         return TopicResolver.resolve(topic, RegionName.of(localRegion), false)

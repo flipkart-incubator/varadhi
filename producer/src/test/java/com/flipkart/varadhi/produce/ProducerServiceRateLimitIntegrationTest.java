@@ -93,7 +93,7 @@ class ProducerServiceRateLimitIntegrationTest {
 
         service = new ProducerService(
             REGION,
-            (storageTopic, config) -> new DummyProducer(com.flipkart.varadhi.entities.JsonMapper.getMapper()),
+            (storageTopic, config, region) -> new DummyProducer(com.flipkart.varadhi.entities.JsonMapper.getMapper()),
             cache(ResourceType.ORG, List.of()),
             cache(ResourceType.PROJECT, List.of()),
             topicCache,
@@ -143,7 +143,7 @@ class ProducerServiceRateLimitIntegrationTest {
     void killSwitchDisabledLimiter_NeverThrottles() throws Exception {
         service = new ProducerService(
             REGION,
-            (storageTopic, config) -> new DummyProducer(com.flipkart.varadhi.entities.JsonMapper.getMapper()),
+            (storageTopic, config, region) -> new DummyProducer(com.flipkart.varadhi.entities.JsonMapper.getMapper()),
             cache(ResourceType.ORG, List.of()),
             cache(ResourceType.PROJECT, List.of()),
             topicCache,
@@ -177,7 +177,7 @@ class ProducerServiceRateLimitIntegrationTest {
         );
         return new ProducerService(
             REGION,
-            (storageTopic, config) -> new DummyProducer(com.flipkart.varadhi.entities.JsonMapper.getMapper()),
+            (storageTopic, config, region) -> new DummyProducer(com.flipkart.varadhi.entities.JsonMapper.getMapper()),
             cache(ResourceType.ORG, List.of()),
             cache(ResourceType.PROJECT, List.of()),
             topicCache,

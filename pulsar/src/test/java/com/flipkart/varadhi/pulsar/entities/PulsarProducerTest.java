@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.flipkart.varadhi.common.Constants;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.SimpleMessage;
 import com.flipkart.varadhi.entities.Message;
 import com.flipkart.varadhi.entities.StdHeaders;
@@ -70,7 +71,15 @@ public class PulsarProducerTest extends PulsarTestBase {
         ArgumentCaptor<Map<String, Object>> pConfigCaptor = ArgumentCaptor.forClass(Map.class);
         doReturn(producerBuilder).when(producerBuilder).loadConf(pConfigCaptor.capture());
 
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         Map<String, Object> pConfig = pConfigCaptor.getValue();
         validateProducerConfig(pConfig, topic, options, hostname);
     }
@@ -88,7 +97,15 @@ public class PulsarProducerTest extends PulsarTestBase {
         topic = PulsarStorageTopic.of(0, "one.two.three.four", 1);
         doReturn(topic.getName()).when(producer).getTopic();
 
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         Map<String, Object> pConfig = pConfigCaptor.getValue();
         validateProducerConfig(pConfig, topic, options, hostname);
     }
@@ -99,8 +116,12 @@ public class PulsarProducerTest extends PulsarTestBase {
         ProducerOptions options,
         String hostname
     ) {
+        // region embedded in producerName
         Assertions.assertEquals(topic.getName(), pConfig.get("topicName"));
-        Assertions.assertEquals(String.format("%s.%s", topic.getName(), hostname), pConfig.get("producerName"));
+        Assertions.assertEquals(
+            String.format("%s.%s.%s", topic.getName(), "region", hostname),
+            pConfig.get("producerName")
+        );
         Assertions.assertEquals(ProducerAccessMode.Shared, pConfig.get("accessMode"));
 
         Assertions.assertEquals(options.getSendTimeoutMs(), pConfig.get("sendTimeoutMs"));
@@ -139,7 +160,15 @@ public class PulsarProducerTest extends PulsarTestBase {
     @Test
     public void testMessageBuildOnSend() throws PulsarClientException {
         String payload = "somedata";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         pulsarProducer.produceAsync(message);
@@ -155,7 +184,15 @@ public class PulsarProducerTest extends PulsarTestBase {
         String payload = "somedata";
         String groupId1 = "groupId1";
         String groupId2 = "groupId2";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         message.getHeaders().put(StdHeaders.get().groupId(), groupId1);
@@ -184,7 +221,15 @@ public class PulsarProducerTest extends PulsarTestBase {
         // multi value properties
         String payload = "somedata";
         String groupId1 = "groupId1";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         doReturn(CompletableFuture.completedFuture(new MessageIdImpl(1, 1, 1))).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         message.getHeaders().put(StdHeaders.get().groupId(), groupId1);
@@ -205,7 +250,15 @@ public class PulsarProducerTest extends PulsarTestBase {
     @Test
     public void testSendAsyncThrows() throws PulsarClientException {
         String payload = "somedata";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         doThrow(new RuntimeException("Some Internal Error.")).when(messageBuilder).sendAsync();
         Message message = getMessage(payload);
         RuntimeException ee = Assertions.assertThrows(
@@ -218,7 +271,15 @@ public class PulsarProducerTest extends PulsarTestBase {
     @Test
     public void testSendAsyncFailsExceptionally() throws PulsarClientException {
         String payload = "somedata";
-        pulsarProducer = new PulsarProducer(pulsarClient, topic, capacity, options, hostname, telemetryOptions);
+        pulsarProducer = new PulsarProducer(
+            pulsarClient,
+            topic,
+            capacity,
+            options,
+            hostname,
+            RegionName.of("region"),
+            telemetryOptions
+        );
         doReturn(CompletableFuture.failedFuture(new PulsarClientException.ProducerQueueIsFullError("Queue full.")))
                                                                                                                    .when(
                                                                                                                        messageBuilder
