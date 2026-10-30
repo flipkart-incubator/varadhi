@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 import com.flipkart.varadhi.core.ResourceReadCache;
 import com.flipkart.varadhi.common.Result;
@@ -14,6 +15,8 @@ import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.filters.Condition;
 import com.flipkart.varadhi.entities.filters.OrgFilters;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionStage;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionType;
 import com.flipkart.varadhi.core.config.ProducerOptions;
 import com.flipkart.varadhi.produce.ratelimit.ProduceRateLimiter;
 import com.flipkart.varadhi.produce.telemetry.ProducerMetrics;
@@ -66,8 +69,11 @@ public final class ProducerService {
     private final ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache;
 
     private final Map<String, ProducerMetrics> metrics = new ConcurrentHashMap<>();
+    private final Map<ProduceKey, ProduceStatsWindow> produceStats = new ConcurrentHashMap<>();
+    private final Map<String, TopicTransitionInfo> transitionInfo = new ConcurrentHashMap<>();
     private final Function<String, ProducerMetrics> metricsProvider;
     private final ProduceRateLimiter rateLimiter;
+    private final LongSupplier clockMillis;
 
     /**
      * Creates a new ProducerService with default options.
@@ -96,7 +102,8 @@ public final class ProducerService {
             topicCache,
             t -> ProducerMetrics.NOOP,
             ProducerOptions.defaultOptions(),
-            ProduceRateLimiter.disabled()
+            ProduceRateLimiter.disabled(),
+            System::currentTimeMillis
         );
     }
 
@@ -128,7 +135,8 @@ public final class ProducerService {
             topicCache,
             metricsRecorderProvider,
             producerOptions,
-            ProduceRateLimiter.disabled()
+            ProduceRateLimiter.disabled(),
+            System::currentTimeMillis
         );
     }
 
@@ -142,11 +150,36 @@ public final class ProducerService {
         ProducerOptions producerOptions,
         ProduceRateLimiter rateLimiter
     ) {
+        this(
+            localRegion,
+            producerFactory,
+            orgCache,
+            projectCache,
+            topicCache,
+            metricsRecorderProvider,
+            producerOptions,
+            rateLimiter,
+            System::currentTimeMillis
+        );
+    }
+
+    ProducerService(
+        String localRegion,
+        ProducerFactory producerFactory,
+        ResourceReadCache<OrgDetails> orgCache,
+        ResourceReadCache<Resource.EntityResource<Project>> projectCache,
+        ResourceReadCache<Resource.EntityResource<VaradhiTopic>> topicCache,
+        Function<String, ProducerMetrics> metricsRecorderProvider,
+        ProducerOptions producerOptions,
+        ProduceRateLimiter rateLimiter,
+        LongSupplier clockMillis
+    ) {
         this.localRegion = localRegion;
         this.topicCache = topicCache;
         this.projectCache = projectCache;
         this.orgCache = orgCache;
         this.rateLimiter = rateLimiter;
+        this.clockMillis = clockMillis;
         this.producerCache = Caffeine.newBuilder()
                                      .expireAfterAccess(producerOptions.getProducerCacheTtlSeconds(), TimeUnit.SECONDS)
                                      .recordStats()
@@ -246,7 +279,7 @@ public final class ProducerService {
 
         ProduceKey key = produceKey.get();
         StorageTopic storageTopic = topic.getSegmentedStorageTopic().getTopic(key.storageTopicId());
-        return getProducer(key).thenCompose(producer -> doProduce(producer, storageTopic.getName(), message));
+        return getProducer(key).thenCompose(producer -> doProduce(key, producer, storageTopic.getName(), message));
     }
 
     /**
@@ -308,6 +341,8 @@ public final class ProducerService {
         Optional<ProduceConfig> config = topic.getProduceConfig(deployed);
         Optional<ProduceKey> key = TopicResolver.resolve(topic, deployed, false);
         Optional<StorageTopic> storage = TopicResolver.resolveStorageTopic(topic, deployed, false);
+        boolean producerCached = key.map(this::hasProducer).orElse(false);
+        TopicTransitionInfo transition = transitionInfo.get(topicFqn);
         return new TopicProducerInfo(
             topic.getName(),
             localRegion,
@@ -316,8 +351,53 @@ public final class ProducerService {
             key.map(ProduceKey::storageTopicId).orElse(null),
             storage.map(StorageTopic::getName).orElse(null),
             config.map(c -> c.getState().isProduceAllowed()).orElse(false),
-            hasActiveProducer(topic)
+            producerCached,
+            producerCached ?
+                produceStats.computeIfAbsent(key.orElseThrow(), ignored -> new ProduceStatsWindow(clockMillis))
+                            .snapshot() :
+                null,
+            transition == null ? null : transition.transitionType(),
+            transition == null ? null : transition.transitionStage(),
+            transition == null ? null : transition.nodeStatus()
         );
+    }
+
+    public void transitionStarted(String topicFqn, TransitionType type, TransitionStage stage, boolean involved) {
+        transitionInfo.put(
+            topicFqn,
+            new TopicTransitionInfo(
+                type,
+                stage,
+                involved ? TransitionNodeStatus.IN_PROGRESS : TransitionNodeStatus.NOT_INVOLVED
+            )
+        );
+    }
+
+    public void transitionStage(String topicFqn, TransitionType type, TransitionStage stage) {
+        transitionInfo.compute(
+            topicFqn,
+            (ignored, current) -> new TopicTransitionInfo(
+                type,
+                stage,
+                current != null && current.nodeStatus() == TransitionNodeStatus.NOT_INVOLVED ?
+                    TransitionNodeStatus.NOT_INVOLVED :
+                    TransitionNodeStatus.IN_PROGRESS
+            )
+        );
+    }
+
+    public void transitionFailed(String topicFqn, TransitionType type, TransitionStage stage) {
+        transitionInfo.put(topicFqn, new TopicTransitionInfo(type, stage, TransitionNodeStatus.FAILED));
+    }
+
+    public void transitionErrored(String topicFqn, TransitionType type, TransitionStage stage) {
+        transitionInfo.put(topicFqn, new TopicTransitionInfo(type, stage, TransitionNodeStatus.ERRORED));
+    }
+
+    public void transitionCompleted(String topicFqn, TransitionStage stage) {
+        if (stage == TransitionStage.COMPLETED || stage == TransitionStage.ABORTED) {
+            transitionInfo.remove(topicFqn);
+        }
     }
 
     /**
@@ -333,6 +413,10 @@ public final class ProducerService {
         return producerCache.getIfPresent(
             new ProduceKey(VaradhiTopicName.parse(topicFQN), RegionName.of(region), storageTopicId)
         ) != null;
+    }
+
+    private boolean hasProducer(ProduceKey key) {
+        return producerCache.getIfPresent(key) != null;
     }
 
     /**
@@ -351,6 +435,7 @@ public final class ProducerService {
      * @return a future that completes with the result of the produce operation
      */
     private CompletableFuture<ProduceResult> doProduce(
+        ProduceKey key,
         Producer<? extends Offset> producer,
         String topicName,
         Message message
@@ -367,6 +452,11 @@ public final class ProducerService {
                 );
             }
             var result = ProduceResult.of(message.getMessageId(), Result.<Offset>of(offset, throwable));
+            if (result.isSuccess()) {
+                produceStats.computeIfAbsent(key, ignored -> new ProduceStatsWindow(clockMillis)).recordSuccess();
+            } else if (result.getProduceStatus() == ProduceStatus.Failed) {
+                produceStats.computeIfAbsent(key, ignored -> new ProduceStatsWindow(clockMillis)).recordFailure();
+            }
             result.setLatencyMs(latency);
             return result;
         });

@@ -1,5 +1,8 @@
 package com.flipkart.varadhi.entities;
 
+import com.flipkart.varadhi.entities.cluster.transition.TransitionStage;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionType;
+
 /**
  * This pod's resolved produce view for a topic.
  *
@@ -13,6 +16,10 @@ public record TopicProducerInfo(
     Integer storageTopicId,
     String storageTopicName,
     boolean produceAllowed,
-    boolean producerCached
+    boolean producerCached,
+    TopicProduceStats produceStats,
+    TransitionType transitionType,
+    TransitionStage transitionStage,
+    TransitionNodeStatus nodeStatus
 ) {
 }

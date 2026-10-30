@@ -161,6 +161,7 @@ class ProduceTransitionMsgHandlerTest {
         assertEquals(TransitionParticipation.INVOLVED, ack.participation());
         assertTrue(ack.isSuccess());
         verify(producerService).getProducerForRegion(any(VaradhiTopic.class), eq(TARGET_REGION));
+        verify(producerService).transitionStarted(FQN, TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, true);
     }
 
     @Test
@@ -220,6 +221,7 @@ class ProduceTransitionMsgHandlerTest {
             ack.errorMsg().contains("broker unreachable") || ack.errorMsg().contains("transition version wait failed"),
             () -> "unexpected errorMsg: " + ack.errorMsg()
         );
+        verify(producerService).transitionErrored(FQN, TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE);
     }
 
     @Test
@@ -247,6 +249,7 @@ class ProduceTransitionMsgHandlerTest {
         assertTrue(ack.isSuccess());
         verify(producerService, never()).getProducerForRegion(any(VaradhiTopic.class), any(RegionName.class));
         verify(producerService, never()).loadProducer(any(VaradhiTopicName.class), anyInt());
+        verify(producerService).transitionStarted(FQN, TransitionType.TOPIC_FAILOVER, TransitionStage.PREPARE, false);
     }
 
     @Test
@@ -426,6 +429,7 @@ class ProduceTransitionMsgHandlerTest {
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.COMPLETED, ack.stage());
         assertTrue(ack.isSuccess());
+        verify(producerService).transitionCompleted(FQN, TransitionStage.COMPLETED);
     }
 
     @Test
@@ -448,6 +452,7 @@ class ProduceTransitionMsgHandlerTest {
         TransitionAck ack = acker.acks.get(0);
         assertEquals(TransitionStage.ABORTED, ack.stage());
         assertTrue(ack.isSuccess());
+        verify(producerService).transitionCompleted(FQN, TransitionStage.ABORTED);
     }
 
     @Test

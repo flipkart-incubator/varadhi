@@ -67,6 +67,10 @@ class ProducerServiceProducerInfoTest {
         assertEquals("t", info.storageTopicName());
         assertTrue(info.produceAllowed());
         assertFalse(info.producerCached());
+        assertNull(info.produceStats());
+        assertNull(info.transitionType());
+        assertNull(info.transitionStage());
+        assertNull(info.nodeStatus());
     }
 
     @Test
