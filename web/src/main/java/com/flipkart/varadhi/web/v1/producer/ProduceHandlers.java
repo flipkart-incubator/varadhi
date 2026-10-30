@@ -98,7 +98,11 @@ public class ProduceHandlers implements RouteProvider {
                                .nonBlocking()
                                .metricsEnabled()
                                .authorize(ResourceAction.TOPIC_PRODUCE)
-                               .build(this::getHierarchies, this::produce)
+                               .build(this::getHierarchies, this::produce),
+                RouteDefinition.get("PRODUCER_INFO", API_NAME, "/topics/:topic/producer-info")
+                               .nonBlocking()
+                               .authorize(ResourceAction.TOPIC_GET)
+                               .build(this::getHierarchies, this::producerInfo)
             )
         ).get();
     }
@@ -134,6 +138,15 @@ public class ProduceHandlers implements RouteProvider {
      *
      * @param ctx The routing context containing the request and response information
      */
+    /**
+     * This pod's produce routing for the topic. Does not contact other producers.
+     */
+    public void producerInfo(RoutingContext ctx) {
+        String projectName = ctx.pathParam(PathParams.PATH_PARAM_PROJECT);
+        String topicName = ctx.pathParam(PathParams.PATH_PARAM_TOPIC);
+        ctx.endRequestWithResponse(producerService.getProducerInfo(VaradhiTopic.fqn(projectName, topicName)));
+    }
+
     public void produce(RoutingContext ctx) {
         String projectName = ctx.pathParam(PathParams.PATH_PARAM_PROJECT);
         String topicName = ctx.pathParam(PathParams.PATH_PARAM_TOPIC);
