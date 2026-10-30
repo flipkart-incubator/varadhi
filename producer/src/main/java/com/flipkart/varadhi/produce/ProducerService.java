@@ -297,6 +297,30 @@ public final class ProducerService {
     }
 
     /**
+     * Produce routing this pod would use for {@code topicFqn} in {@code localRegion}.
+     * Does not create a producer.
+     *
+     * @throws ResourceNotFoundException if the topic is not in the local topic cache
+     */
+    public TopicProducerInfo getProducerInfo(String topicFqn) {
+        VaradhiTopic topic = topicCache.getOrThrow(topicFqn).getEntity();
+        RegionName deployed = RegionName.of(localRegion);
+        Optional<ProduceConfig> config = topic.getProduceConfig(deployed);
+        Optional<ProduceKey> key = TopicResolver.resolve(topic, deployed, false);
+        Optional<StorageTopic> storage = TopicResolver.resolveStorageTopic(topic, deployed, false);
+        return new TopicProducerInfo(
+            topic.getName(),
+            localRegion,
+            config.map(ProduceConfig::getState).orElse(null),
+            key.map(resolved -> resolved.produceRegion().value()).orElse(null),
+            key.map(ProduceKey::storageTopicId).orElse(null),
+            storage.map(StorageTopic::getName).orElse(null),
+            config.map(c -> c.getState().isProduceAllowed()).orElse(false),
+            hasActiveProducer(topic)
+        );
+    }
+
+    /**
      * Pre-warms the producer for {@code storageTopicId} in this pod's local region.
      * Used by storage-migration PREPARE.
      */
