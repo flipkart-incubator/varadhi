@@ -115,6 +115,7 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     public void onTransition(TransitionEvent event) {
         metrics.stageReceived(event.transitionType(), event.stage());
         metrics.setTopicStage(event.topicFqn().toFqn(), event.stage());
+        producerService.transitionStage(event.topicFqn().toFqn(), event.transitionType(), event.stage());
         if (!event.awaitVersion()) {
             // Keep event-bus thread free; ack on transition executor.
             CompletableFuture.runAsync(() -> ackOk(event), transitionExecutor);
@@ -127,7 +128,11 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
                            .thenAccept(this::ackOk)
                            .exceptionally(t -> {
                                log.error("transition version wait failed for {} op={}", topicFqn, event.opId(), t);
-                               ackFail(event, "transition version wait failed: " + ThrowableUtils.rootMessage(t));
+                               ackFail(
+                                   event,
+                                   "transition version wait failed: " + ThrowableUtils.rootMessage(t),
+                                   com.flipkart.varadhi.entities.TransitionNodeStatus.ERRORED
+                               );
                                return null;
                            });
     }
@@ -171,6 +176,12 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
             TransitionParticipation.INVOLVED :
             TransitionParticipation.NOT_INVOLVED;
         recordParticipation(event, participation);
+        producerService.transitionStarted(
+            event.topicFqn().toFqn(),
+            event.transitionType(),
+            event.stage(),
+            participation == TransitionParticipation.INVOLVED
+        );
         if (participation == TransitionParticipation.NOT_INVOLVED) {
             log.debug(
                 "Transition: pod not involved for {} op={} type={}; skipping participant work",
@@ -229,6 +240,7 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     private void ackOk(TransitionEvent event) {
         TransitionParticipation participation = resolveParticipation(event);
         metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn().toFqn(), true);
+        producerService.transitionCompleted(event.topicFqn().toFqn(), event.stage());
         sendAck(
             TransitionAck.success(
                 event.opId(),
@@ -243,7 +255,20 @@ public final class ProduceTransitionMsgHandler implements TransitionEventListene
     }
 
     private void ackFail(TransitionEvent event, String errorMsg) {
+        ackFail(event, errorMsg, com.flipkart.varadhi.entities.TransitionNodeStatus.FAILED);
+    }
+
+    private void ackFail(
+        TransitionEvent event,
+        String errorMsg,
+        com.flipkart.varadhi.entities.TransitionNodeStatus nodeStatus
+    ) {
         TransitionParticipation participation = resolveParticipation(event);
+        if (nodeStatus == com.flipkart.varadhi.entities.TransitionNodeStatus.ERRORED) {
+            producerService.transitionErrored(event.topicFqn().toFqn(), event.transitionType(), event.stage());
+        } else {
+            producerService.transitionFailed(event.topicFqn().toFqn(), event.transitionType(), event.stage());
+        }
         metrics.stageAcked(event.transitionType(), event.stage(), event.topicFqn().toFqn(), false);
         sendAck(
             TransitionAck.failure(

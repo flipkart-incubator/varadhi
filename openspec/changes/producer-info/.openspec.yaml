@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-30
+goal: Expose this pod's resolved produce path and record what a full
+  internal-style getTopicProducerInfo still needs.
