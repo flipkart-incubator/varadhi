@@ -141,9 +141,7 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
     }
 
     public void retryTopicFailover(TopicFailoverOperation operation) {
-        throw new UnsupportedOperationException(
-            "Topic failover retry is not supported for op " + operation.getId()
-        );
+        throw new UnsupportedOperationException("Topic failover retry is not supported for op " + operation.getId());
     }
 
     private ProduceFailoverTransition requireActive(String topicFqn) {
