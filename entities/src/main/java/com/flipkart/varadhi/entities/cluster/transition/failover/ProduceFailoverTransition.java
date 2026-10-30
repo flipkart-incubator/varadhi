@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,8 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
     private TransitionStage currentStage;
     private long topicVersionToAwait;
     private long stageStartedAt;
+    @Setter
+    private boolean abortRequested;
     private final List<StageSnapshot> stageHistory;
 
     @JsonCreator
@@ -50,6 +53,7 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
         TransitionStage currentStage,
         long topicVersionToAwait,
         long stageStartedAt,
+        boolean abortRequested,
         List<StageSnapshot> stageHistory
     ) {
         super(topicFqn, version, MetaStoreEntityType.TRANSITION_OBJECT);
@@ -62,6 +66,7 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
         this.currentStage = currentStage;
         this.topicVersionToAwait = topicVersionToAwait;
         this.stageStartedAt = stageStartedAt;
+        this.abortRequested = abortRequested;
         this.stageHistory = stageHistory != null ? new ArrayList<>(stageHistory) : new ArrayList<>();
     }
 
@@ -83,6 +88,7 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
             TransitionStage.PENDING,
             0L,
             System.currentTimeMillis(),
+            false,
             new ArrayList<>()
         );
     }
@@ -107,13 +113,14 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
     @Override
     public String toString() {
         return String.format(
-            "ProduceFailoverTransition{topic=%s, kind=%s, opId=%s, %s->%s, stage=%s, vToAwait=%d}",
+            "ProduceFailoverTransition{topic=%s, kind=%s, opId=%s, %s->%s, stage=%s, abort=%s, vToAwait=%d}",
             topicFqn,
             transitionKind,
             operationId,
             sourceRegion,
             targetRegion,
             currentStage,
+            abortRequested,
             topicVersionToAwait
         );
     }

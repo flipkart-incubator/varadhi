@@ -2,6 +2,7 @@ package com.flipkart.varadhi.core.cluster.messages;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
@@ -78,6 +79,10 @@ public class ResponseMessage extends ClusterMessage {
     public <T> T getResponse(Class<T> clazz) {
         //TODO:: there is no enforcement on payload, i.e. payload  can be deserialized as request/data/response.
         return JsonMapper.jsonDeserialize(getPayload(), clazz);
+    }
+
+    public <T> T getResponse(TypeReference<T> type) {
+        return JsonMapper.jsonDeserialize(getPayload(), type);
     }
 
     private static Exception unwrap(Exception exception) {

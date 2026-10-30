@@ -1,11 +1,13 @@
 package com.flipkart.varadhi.core.cluster.messages;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
 import com.flipkart.varadhi.entities.JsonMapper;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -70,5 +72,15 @@ class ResponseMessageTest {
         ResponseMessage decoded = JsonMapper.jsonDeserialize(json, ResponseMessage.class);
         assertNull(decoded.getException());
         assertEquals("ok", decoded.getResponse(String.class));
+    }
+
+    @Test
+    void fromPayload_roundTripsList() {
+        ResponseMessage original = ResponseMessage.fromPayload(List.of("a", "b"), "req-6");
+        ResponseMessage decoded = JsonMapper.jsonDeserialize(JsonMapper.jsonSerialize(original), ResponseMessage.class);
+        List<String> restored = decoded.getResponse(new TypeReference<List<String>>() {
+        });
+        assertEquals(List.of("a", "b"), restored);
+        assertEquals(String.class, restored.get(0).getClass());
     }
 }

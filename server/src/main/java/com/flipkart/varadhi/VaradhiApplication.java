@@ -468,6 +468,7 @@ public class VaradhiApplication {
                              coreServices,
                              clusterManager,
                              config.controller.getOperationsConfig(),
+                             config.controller.getFailoverOperationsConfig(),
                              config.controller.getEventProcessorConfig(),
                              memberInfo.region()
                          );

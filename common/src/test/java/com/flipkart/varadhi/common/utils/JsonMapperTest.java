@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.common.utils;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -44,6 +46,18 @@ public class JsonMapperTest {
             () -> JsonMapper.jsonDeserialize(invalidJson, Vehicle.class)
         );
         assertTrue(exception.getMessage().contains("Could not resolve type id 'InvalidType'"));
+    }
+
+    @Test
+    public void testJsonDeserialize_TypeReferenceKeepsListElementType() {
+        List<String> original = List.of("a", "b");
+        List<String> restored = JsonMapper.jsonDeserialize(
+            JsonMapper.jsonSerialize(original),
+            new TypeReference<List<String>>() {
+            }
+        );
+        assertEquals(original, restored);
+        assertEquals(String.class, restored.get(0).getClass());
     }
 
     @Test
