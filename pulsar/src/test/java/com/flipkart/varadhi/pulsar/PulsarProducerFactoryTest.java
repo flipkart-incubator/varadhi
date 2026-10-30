@@ -9,6 +9,7 @@ import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.pulsar.entities.PulsarStorageTopic;
 import com.flipkart.varadhi.pulsar.producer.PulsarProducerFactory;
 import com.flipkart.varadhi.spi.services.Producer;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
@@ -36,7 +37,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
 
     @Test
     public void testGetProducer() throws PulsarClientException {
-        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
+        ProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
         Producer<? extends Offset> p = factory.newProducer(
             topic,
             Constants.DEFAULT_TOPIC_CAPACITY,
@@ -48,7 +49,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
 
     @Test
     public void testGetProducerThrowsPulsarException() throws PulsarClientException {
-        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
+        ProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
         doThrow(new PulsarClientException.NotFoundException("Topic not found")).when(builder).create();
         ProduceException pe = Assertions.assertThrows(
             ProduceException.class,
@@ -63,7 +64,7 @@ public class PulsarProducerFactoryTest extends PulsarTestBase {
 
     @Test
     public void testGetProducerThrowsUnhandledException() throws PulsarClientException {
-        PulsarProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
+        ProducerFactory factory = new PulsarProducerFactory(pClient, null, "localhost", null);
         doThrow(new RuntimeException("Random error check")).when(builder).create();
         RuntimeException re = Assertions.assertThrows(
             RuntimeException.class,

@@ -17,13 +17,4 @@ public interface ProducerFactory {
         TopicCapacityPolicy capacity,
         RegionName produceRegion
     ) throws MessagingException;
-
-    /**
-     * Creates a producer that is not scoped to a produce region. Used for the failed-message path,
-     * whose name must not look like a {@link RegionName}.
-     */
-    default Producer<? extends Offset> newProducer(StorageTopic storageTopic, TopicCapacityPolicy capacity)
-        throws MessagingException {
-        throw new UnsupportedOperationException("unregioned producer is not supported");
-    }
 }
