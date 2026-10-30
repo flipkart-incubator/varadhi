@@ -31,7 +31,8 @@ public class ConsumerVerticle extends AbstractVerticle {
         ConsumersManager consumersManager = new ConsumersManagerImpl(
             coreServices.getMessagingStackProvider().getProducerFactory(),
             coreServices.getMessagingStackProvider().getConsumerFactory(),
-            coreServices.getMeterRegistry()
+            coreServices.getMeterRegistry(),
+            memberInfo.region()
         );
         SubscriptionApi subscriptionApi = new ControllerRemoteClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, memberInfo);

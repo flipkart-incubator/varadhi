@@ -28,9 +28,6 @@ import static org.apache.commons.text.CharacterPredicates.LETTERS;
 
 @Slf4j
 public class PulsarProducer implements Producer<PulsarOffset> {
-    /** Name segment for a producer that is not scoped to a {@link RegionName} (failed-message path). */
-    public static final String FAILED_MSG_NAME_PART = "failed";
-
     private final RandomStringGenerator stringGenerator;
     private final org.apache.pulsar.client.api.Producer<byte[]> pulsarProducer;
 
@@ -43,18 +40,6 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         RegionName produceRegion,
         TelemetryOptions telemetryOptions
     ) throws PulsarClientException {
-        this(pulsarClient, storageTopic, capacity, producerOptions, hostName, produceRegion.value(), telemetryOptions);
-    }
-
-    PulsarProducer(
-        PulsarClient pulsarClient,
-        PulsarStorageTopic storageTopic,
-        TopicCapacityPolicy capacity,
-        ProducerOptions producerOptions,
-        String hostName,
-        String producerNamePart,
-        TelemetryOptions telemetryOptions
-    ) throws PulsarClientException {
         this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
                                                                   .filteredBy(DIGITS, LETTERS)
                                                                   .build();
@@ -64,15 +49,15 @@ public class PulsarProducer implements Producer<PulsarOffset> {
             capacity,
             producerOptions,
             hostName,
-            producerNamePart
+            produceRegion
         );
         if (telemetryOptions != null) {
             telemetryOptions.recordTelemetry(this.pulsarProducer);
         }
     }
 
-    public static String getProducerName(String topicName, String hostName, String produceRegion) {
-        return String.format("%s.%s.%s", topicName, produceRegion, hostName);
+    public static String getProducerName(String topicName, String hostName, RegionName produceRegion) {
+        return String.format("%s.%s.%s", topicName, produceRegion.value(), hostName);
     }
 
     public static int getMaxPendingMessages(int topicMaxQps) {
@@ -126,7 +111,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions options,
         String hostname,
-        String produceRegion
+        RegionName produceRegion
     ) throws PulsarClientException {
         Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname, produceRegion);
         return pulsarClient.newProducer().loadConf(producerConfig).create();
@@ -142,7 +127,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions options,
         String hostName,
-        String produceRegion
+        RegionName produceRegion
     ) {
 
         // System Configured::
