@@ -29,10 +29,12 @@ public class ConsumerVerticle extends AbstractVerticle {
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
         //TODO:: decide who manages consumerInfo -- ConsumersManagerImpl or ConsumerApiMgr, mostly later.
         ConsumersManager consumersManager = new ConsumersManagerImpl(
-            coreServices.getMessagingStackProvider().getProducerFactory(),
+            new StorageTopicProducerService(
+                coreServices.getMessagingStackProvider().getProducerFactory(),
+                memberInfo.region()
+            ),
             coreServices.getMessagingStackProvider().getConsumerFactory(),
-            coreServices.getMeterRegistry(),
-            memberInfo.region()
+            coreServices.getMeterRegistry()
         );
         SubscriptionApi subscriptionApi = new ControllerRemoteClient(messageExchange);
         ConsumerApiMgr consumerApiManager = new ConsumerApiMgr(consumersManager, memberInfo);
