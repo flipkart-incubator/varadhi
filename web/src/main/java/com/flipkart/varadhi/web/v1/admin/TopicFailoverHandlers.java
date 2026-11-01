@@ -21,7 +21,6 @@ import com.flipkart.varadhi.web.routes.RouteDefinition;
 import com.flipkart.varadhi.web.routes.RouteProvider;
 import com.flipkart.varadhi.web.routes.SubRoutes;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import lombok.experimental.ExtensionMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -138,36 +137,31 @@ public class TopicFailoverHandlers implements RouteProvider {
         RegionName source = body.sourceRegion() != null ? body.sourceRegion() : deployedRegion;
         RegionName target = body.targetRegion();
         VaradhiTopicName topicFqn = getVaradhiTopicName(ctx);
-        // Topic and region reads hit the metastore; keep them off the event loop.
-        Future<Void> checked = ctx.vertx().executeBlocking(() -> {
-            validateFailoverRegions(topicService.get(topicFqn.toFqn()), source, target);
-            return (Void)null;
-        });
-        checked.onComplete(ar -> {
-            if (ar.failed()) {
-                ctx.fail(ar.cause());
-                return;
-            }
-            TopicFailoverRequest resolved = new TopicFailoverRequest(
-                source,
-                target,
-                body.waitForReplicationLagToClear(),
-                body.lagDrainTimeoutMs(),
-                body.onLagTimeout()
-            );
-            controllerClient.createTopicFailover(topicFqn, resolved, ctx.getIdentityOrDefault())
-                            .whenComplete((op, error) -> ctx.vertx().runOnContext(v -> {
-                                if (error != null) {
-                                    ctx.fail(
-                                        error instanceof java.util.concurrent.CompletionException ?
-                                            error.getCause() :
-                                            error
-                                    );
-                                } else {
-                                    ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), op);
-                                }
-                            }));
-        });
+        try {
+            VaradhiTopic topic = topicService.get(topicFqn.toFqn());
+            validateFailoverRegions(topic, source, target);
+        } catch (Exception error) {
+            ctx.fail(error);
+            return;
+        }
+
+        TopicFailoverRequest resolved = new TopicFailoverRequest(
+            source,
+            target,
+            body.waitForReplicationLagToClear(),
+            body.lagDrainTimeoutMs(),
+            body.onLagTimeout()
+        );
+        controllerClient.createTopicFailover(topicFqn, resolved, ctx.getIdentityOrDefault())
+                        .whenComplete((op, error) -> ctx.vertx().runOnContext(v -> {
+                            if (error != null) {
+                                ctx.fail(
+                                    error instanceof java.util.concurrent.CompletionException ? error.getCause() : error
+                                );
+                            } else {
+                                ctx.endRequestWithResponse(HttpResponseStatus.ACCEPTED.code(), op);
+                            }
+                        }));
     }
 
     public void status(RoutingContext ctx) {
