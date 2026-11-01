@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.controller.config.EventProcessorConfig;
-import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
+import com.flipkart.varadhi.controller.transition.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.CoreServices;
 import com.flipkart.varadhi.core.cluster.MembershipListener;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
@@ -15,7 +15,7 @@ import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.MemberInfo;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
@@ -175,6 +175,7 @@ public class ControllerVerticle extends AbstractVerticle {
             new StageAwaiter(),
             new TopicFailoverConfig(
                 operationsConfig.getTopicFailoverStageAwaitMs(),
+                operationsConfig.getTopicFailoverFenceHoldMs(),
                 operationsConfig.getTopicFailoverFenceHoldMs()
             ),
             deployedRegion

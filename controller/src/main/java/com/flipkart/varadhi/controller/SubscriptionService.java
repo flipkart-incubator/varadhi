@@ -15,7 +15,7 @@ import com.flipkart.varadhi.core.cluster.ConsumerNode;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerApi;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.controller.SubscriptionApi;
-import com.flipkart.varadhi.core.cluster.failover.TransitionBusAddress;
+import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.subscription.allocation.ShardAssignments;
@@ -37,6 +37,9 @@ import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
 import com.flipkart.varadhi.entities.cluster.failover.*;
 import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionMaster;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionEvent;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionType;
 import com.flipkart.varadhi.spi.db.SubscriptionStore;
 import com.flipkart.varadhi.spi.db.TopicStore;
 import com.flipkart.varadhi.spi.db.TransitionStore;
@@ -114,7 +117,7 @@ public class SubscriptionService implements SubscriptionApi {
                 transition.getOperationId(),
                 VaradhiTopicName.parse(topicFqn),
                 TransitionType.TOPIC_FAILOVER,
-                TransitionStage.ABORTED,
+                com.flipkart.varadhi.entities.cluster.transition.TransitionStage.ABORTED,
                 false,
                 0L,
                 null
@@ -338,13 +341,7 @@ public class SubscriptionService implements SubscriptionApi {
             );
             // Atomic create is the lock-free uniqueness guard; a concurrent request fails here.
             transitionStore.create(TransitionMaster.forFailover(op.getId(), topicFqn, source, target));
-            log.info(
-                "Created topic failover op {} for {} ({}->{})",
-                op.getId(),
-                topicFqn,
-                source,
-                target
-            );
+            log.info("Created topic failover op {} for {} ({}->{})", op.getId(), topicFqn, source, target);
             operationMgr.createAndEnqueueTopicFailover(op, newFailoverExecutor());
             return op;
         });
@@ -374,7 +371,7 @@ public class SubscriptionService implements SubscriptionApi {
             VaradhiTopic topic = topicStore.get(topicFqn);
             RegionName source = transition.getSourceRegion();
             // Point of no return: MIGRATE already committed failOverRegion on ingress.
-            if (transition.getCurrentStage() == TransitionStage.MIGRATE) {
+            if (transition.getCurrentStage() == TransitionStage.SWITCH) {
                 boolean committed = topic.getProduceConfig(source)
                                          .filter(c -> c.getState() == TopicState.Producing)
                                          .flatMap(ProduceConfig::getFailOverRegion)
@@ -398,7 +395,7 @@ public class SubscriptionService implements SubscriptionApi {
                     transition.getOperationId(),
                     VaradhiTopicName.parse(topicFqn),
                     TransitionType.TOPIC_FAILOVER,
-                    TransitionStage.ABORTED,
+                    com.flipkart.varadhi.entities.cluster.transition.TransitionStage.ABORTED,
                     false,
                     0L,
                     null
@@ -420,7 +417,11 @@ public class SubscriptionService implements SubscriptionApi {
                 topicStore.update(
                     topic.with(
                         source,
-                        new ProduceConfig(TopicState.Producing, cfg.getProduceIdx(), cfg.getFailOverRegion().orElse(null))
+                        new ProduceConfig(
+                            TopicState.Producing,
+                            cfg.getProduceIdx(),
+                            cfg.getFailOverRegion().orElse(null)
+                        )
                     )
                 );
             }
@@ -492,8 +493,7 @@ public class SubscriptionService implements SubscriptionApi {
                 "Topic " + topic.getName() + " is not configured for targetRegion " + target.value() + "."
             );
         }
-        if (topic.getSegmentedStorageTopic() == null
-            || topic.getSegmentedStorageTopic().getStorageTopics() == null
+        if (topic.getSegmentedStorageTopic() == null || topic.getSegmentedStorageTopic().getStorageTopics() == null
             || topic.getSegmentedStorageTopic().getStorageTopics().length == 0) {
             throw new IllegalArgumentException("Topic " + topic.getName() + " has no storage topic.");
         }

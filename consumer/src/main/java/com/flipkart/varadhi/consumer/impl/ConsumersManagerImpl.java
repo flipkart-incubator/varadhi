@@ -28,11 +28,18 @@ public class ConsumersManagerImpl implements ConsumersManager {
     public ConsumersManagerImpl(
         ProducerFactory producerFactory,
         ConsumerFactory consumerFactory,
-        MeterRegistry meterRegistry
+        MeterRegistry meterRegistry,
+        RegionName deployedRegion
     ) {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.executor = new EventExecutor(this.scheduler, CustomThread::new, new LinkedBlockingQueue<>());
-        this.env = new ConsumerEnvironment(producerFactory, consumerFactory, HttpClient.newHttpClient(), meterRegistry);
+        this.env = new ConsumerEnvironment(
+            producerFactory,
+            consumerFactory,
+            HttpClient.newHttpClient(),
+            meterRegistry,
+            deployedRegion
+        );
     }
 
 

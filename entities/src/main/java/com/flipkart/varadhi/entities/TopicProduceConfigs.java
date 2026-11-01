@@ -17,8 +17,7 @@ public final class TopicProduceConfigs {
     public static Optional<RegionName> findProducingRegion(VaradhiTopic topic, RegionName deployedRegion) {
         Objects.requireNonNull(topic, "topic must not be null");
         Objects.requireNonNull(deployedRegion, "deployedRegion must not be null");
-        return topic.getProduceConfig(deployedRegion)
-                    .map(config -> config.getFailOverRegion().orElse(deployedRegion));
+        return topic.getProduceConfig(deployedRegion).map(config -> config.getFailOverRegion().orElse(deployedRegion));
     }
 
     /**

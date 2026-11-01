@@ -9,7 +9,6 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ExecutionException;
 
 /**
  * API handler registration for message exchange between nodes. This is a subset of similar methods from
@@ -68,15 +67,8 @@ public class MessageRouter {
                        .thenAccept(response -> message.reply(JsonMapper.jsonSerialize(response), deliveryOptions))
                        .exceptionally(t -> {
                            log.error("request handler completed exceptionally: {}", t.getMessage());
-                           //TODO::exception exchange is not working always. ser(de) is failing for some exception.
-                           Exception failure;
-                           if (t instanceof ExecutionException) {
-                               failure = (ExecutionException)t.getCause();
-                           } else if (t instanceof Exception) {
-                               failure = (Exception)t;
-                           } else {
-                               failure = new VaradhiException(t);
-                           }
+                           // ResponseMessage unwraps CompletionException / ExecutionException and restores the type.
+                           Exception failure = t instanceof Exception e ? e : new VaradhiException(t);
                            ResponseMessage response = msg.getResponseMessage(failure);
                            message.reply(JsonMapper.jsonSerialize(response), deliveryOptions);
                            return null;

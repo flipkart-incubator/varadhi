@@ -96,7 +96,12 @@ class SubscriptionServiceFailoverTest {
             null,
             SegmentedStorageTopic.of(new DummyStorageTopic(FQN)),
             false,
-            java.util.Map.of(SOURCE, com.flipkart.varadhi.entities.ProduceConfig.producing(), TARGET, com.flipkart.varadhi.entities.ProduceConfig.blocked())
+            java.util.Map.of(
+                SOURCE,
+                com.flipkart.varadhi.entities.ProduceConfig.producing(),
+                TARGET,
+                com.flipkart.varadhi.entities.ProduceConfig.blocked()
+            )
         );
     }
 

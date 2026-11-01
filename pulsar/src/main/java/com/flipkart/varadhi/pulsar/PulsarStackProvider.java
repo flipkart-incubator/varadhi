@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PulsarStackProvider implements MessagingStackProvider {
     private PulsarTopicService topicService;
     private PulsarTopicFactory topicFactory;
-    private PulsarProducerFactory producerFactory;
+    private ProducerFactory producerFactory;
     private PulsarSubscriptionFactory subscriptionFactory;
     private PulsarSubscriptionService subscriptionService;
     private PulsarConsumerFactory consumerFactory;

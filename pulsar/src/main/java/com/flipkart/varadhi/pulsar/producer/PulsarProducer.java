@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.flipkart.varadhi.entities.Message;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.StdHeaders;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.pulsar.config.ProducerOptions;
@@ -36,7 +37,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions producerOptions,
         String hostName,
-        String produceRegion,
+        RegionName produceRegion,
         TelemetryOptions telemetryOptions
     ) throws PulsarClientException {
         this.stringGenerator = new RandomStringGenerator.Builder().withinRange('0', 'z')
@@ -55,8 +56,8 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         }
     }
 
-    public static String getProducerName(String topicName, String hostName, String produceRegion) {
-        return String.format("%s.%s.%s", topicName, produceRegion, hostName);
+    public static String getProducerName(String topicName, String hostName, RegionName produceRegion) {
+        return String.format("%s.%s.%s", topicName, produceRegion.value(), hostName);
     }
 
     public static int getMaxPendingMessages(int topicMaxQps) {
@@ -110,7 +111,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions options,
         String hostname,
-        String produceRegion
+        RegionName produceRegion
     ) throws PulsarClientException {
         Map<String, Object> producerConfig = getProducerConfig(topic, capacity, options, hostname, produceRegion);
         return pulsarClient.newProducer().loadConf(producerConfig).create();
@@ -126,7 +127,7 @@ public class PulsarProducer implements Producer<PulsarOffset> {
         TopicCapacityPolicy capacity,
         ProducerOptions options,
         String hostName,
-        String produceRegion
+        RegionName produceRegion
     ) {
 
         // System Configured::

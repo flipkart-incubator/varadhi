@@ -1,14 +1,14 @@
 package com.flipkart.varadhi.controller;
 
-import com.flipkart.varadhi.controller.failover.TopicTransitionMetrics;
+import com.flipkart.varadhi.controller.transition.TopicTransitionMetrics;
 import com.flipkart.varadhi.core.cluster.failover.ActiveFailovers;
-import com.flipkart.varadhi.core.cluster.failover.FailoverApiRequest;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
+import com.flipkart.varadhi.core.cluster.transition.failover.TopicFailoverRequestWrapper;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
 import com.flipkart.varadhi.core.subscription.SubscriptionOpRequest;
 import com.flipkart.varadhi.core.subscription.UnsidelineOpRequest;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TopicFailoverRequest;
 import lombok.extern.slf4j.Slf4j;
 
@@ -81,24 +81,27 @@ public class ControllerHandler {
     }
 
     public CompletableFuture<ResponseMessage> createFailover(ClusterMessage message) {
-        FailoverApiRequest request = message.getRequest(FailoverApiRequest.class);
+        TopicFailoverRequestWrapper request = message.getRequest(TopicFailoverRequestWrapper.class);
         TopicFailoverRequest failoverRequest = new TopicFailoverRequest(
-            request.sourceRegion(),
-            request.targetRegion(),
-            request.waitForReplicationLagToClear()
+            request.request().sourceRegion(),
+            request.request().targetRegion(),
+            request.request().waitForReplicationLagToClear()
         );
-        return subscriptionService.createTopicFailover(request.topicFqn(), failoverRequest, request.requestedBy())
-                                  .thenApply(message::getResponseMessage);
+        return subscriptionService.createTopicFailover(
+            request.topicFqn().toFqn(),
+            failoverRequest,
+            request.requestedBy()
+        ).thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> getFailover(ClusterMessage message) {
-        FailoverApiRequest request = message.getRequest(FailoverApiRequest.class);
-        return subscriptionService.getTopicFailover(request.topicFqn()).thenApply(message::getResponseMessage);
+        TopicFailoverRequestWrapper request = message.getRequest(TopicFailoverRequestWrapper.class);
+        return subscriptionService.getTopicFailover(request.topicFqn().toFqn()).thenApply(message::getResponseMessage);
     }
 
     public CompletableFuture<ResponseMessage> abortFailover(ClusterMessage message) {
-        FailoverApiRequest request = message.getRequest(FailoverApiRequest.class);
-        return subscriptionService.abortTopicFailover(request.topicFqn(), request.requestedBy())
+        TopicFailoverRequestWrapper request = message.getRequest(TopicFailoverRequestWrapper.class);
+        return subscriptionService.abortTopicFailover(request.topicFqn().toFqn(), request.requestedBy())
                                   .thenApply(message::getResponseMessage);
     }
 

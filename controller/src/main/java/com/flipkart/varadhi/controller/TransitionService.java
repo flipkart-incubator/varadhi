@@ -3,9 +3,9 @@ package com.flipkart.varadhi.controller;
 import com.flipkart.varadhi.core.cluster.MessageExchange;
 import com.flipkart.varadhi.core.cluster.controller.TransitionAckApi;
 import com.flipkart.varadhi.core.cluster.controller.TransitionPublisher;
-import com.flipkart.varadhi.core.cluster.failover.TransitionEventBroadcaster;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionEvent;
+import com.flipkart.varadhi.core.cluster.transition.TransitionEventBroadcaster;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;

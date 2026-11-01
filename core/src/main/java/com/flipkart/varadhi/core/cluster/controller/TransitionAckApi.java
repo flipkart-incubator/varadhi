@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.core.cluster.controller;
 
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
 
 import java.util.concurrent.CompletableFuture;
 

@@ -1,6 +1,6 @@
 package com.flipkart.varadhi.controller.impl.failover;
 
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -43,26 +43,19 @@ public class StageAwaiter {
     /**
      * Registers a barrier for {@code (opId, stage)} over {@code expectedHosts} and arms a timeout.
      * An empty expected set completes immediately. Replaces any prior barrier for the same opId.
-     * When {@code requiredTopicVersion > 0}, success acks must carry {@code observedTopicVersion}
-     * at least that high.
      */
-    public CompletableFuture<Void> expect(
+    public CompletableFuture<Void> expect(String opId, Enum<?> stage, Set<String> expectedHosts, long timeoutMs) {
+        com.flipkart.varadhi.entities.cluster.transition.TransitionStage wireStage = wireStage(stage);
+        return expectWire(opId, wireStage, expectedHosts, timeoutMs);
+    }
+
+    private CompletableFuture<Void> expectWire(
         String opId,
-        TransitionStage stage,
+        com.flipkart.varadhi.entities.cluster.transition.TransitionStage stage,
         Set<String> expectedHosts,
         long timeoutMs
     ) {
-        return expect(opId, stage, expectedHosts, timeoutMs, 0L);
-    }
-
-    public CompletableFuture<Void> expect(
-        String opId,
-        TransitionStage stage,
-        Set<String> expectedHosts,
-        long timeoutMs,
-        long requiredTopicVersion
-    ) {
-        Barrier barrier = new Barrier(opId, stage, ConcurrentHashMap.newKeySet(), requiredTopicVersion);
+        Barrier barrier = new Barrier(opId, stage, ConcurrentHashMap.newKeySet());
         barrier.expected.addAll(expectedHosts);
         barriers.put(opId, barrier);
 
@@ -81,6 +74,17 @@ public class StageAwaiter {
             TimeUnit.MILLISECONDS
         );
         return barrier.done;
+    }
+
+    private static com.flipkart.varadhi.entities.cluster.transition.TransitionStage wireStage(Enum<?> stage) {
+        if (stage instanceof TransitionStage failoverStage) {
+            return switch (failoverStage) {
+                case DRAIN -> com.flipkart.varadhi.entities.cluster.transition.TransitionStage.FENCE;
+                case SWITCH -> com.flipkart.varadhi.entities.cluster.transition.TransitionStage.MIGRATE;
+                default -> com.flipkart.varadhi.entities.cluster.transition.TransitionStage.valueOf(stage.name());
+            };
+        }
+        return (com.flipkart.varadhi.entities.cluster.transition.TransitionStage)stage;
     }
 
     public void recordAck(TransitionAck ack) {
@@ -115,25 +119,27 @@ public class StageAwaiter {
 
     private static final class Barrier {
         private final String opId;
-        private final TransitionStage stage;
+        private final com.flipkart.varadhi.entities.cluster.transition.TransitionStage stage;
         private final Set<String> expected;
-        private final long requiredTopicVersion;
         private final Set<String> ackedOk = ConcurrentHashMap.newKeySet();
         private final CompletableFuture<Void> done = new CompletableFuture<>();
         private volatile ScheduledFuture<?> timeout;
 
-        private Barrier(String opId, TransitionStage stage, Set<String> expected, long requiredTopicVersion) {
+        private Barrier(
+            String opId,
+            com.flipkart.varadhi.entities.cluster.transition.TransitionStage stage,
+            Set<String> expected
+        ) {
             this.opId = opId;
             this.stage = stage;
             this.expected = expected;
-            this.requiredTopicVersion = requiredTopicVersion;
         }
 
         private synchronized void record(TransitionAck ack) {
             if (done.isDone()) {
                 return;
             }
-            if (ack.stage() != stage) {
+            if (!ack.stage().name().equals(stage.name())) {
                 log.debug(
                     "Stale failover ack for op={} host={}: expected stage {} got {}; ignoring.",
                     opId,
@@ -150,20 +156,6 @@ public class StageAwaiter {
                     )
                 );
                 return;
-            }
-            if (requiredTopicVersion > 0L) {
-                Long observed = ack.observedTopicVersion();
-                if (observed == null || observed < requiredTopicVersion) {
-                    log.debug(
-                        "Failover ack for op={} host={} stage={} observedVersion={} < required {}; ignoring.",
-                        opId,
-                        ack.hostname(),
-                        stage,
-                        observed,
-                        requiredTopicVersion
-                    );
-                    return;
-                }
             }
             ackedOk.add(ack.hostname());
             if (ackedOk.containsAll(expected)) {

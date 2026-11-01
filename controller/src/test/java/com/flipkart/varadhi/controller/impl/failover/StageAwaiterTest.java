@@ -1,10 +1,10 @@
 package com.flipkart.varadhi.controller.impl.failover;
 
 import com.flipkart.varadhi.entities.VaradhiTopicName;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionParticipation;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionParticipation;
 import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionType;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionType;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -57,7 +57,7 @@ class StageAwaiterTest {
                 TransitionType.TOPIC_FAILOVER,
                 TransitionParticipation.INVOLVED,
                 "h1",
-                TransitionStage.PREPARE,
+                com.flipkart.varadhi.entities.cluster.transition.TransitionStage.PREPARE,
                 "boom"
             )
         );
@@ -117,7 +117,7 @@ class StageAwaiterTest {
             TransitionType.TOPIC_FAILOVER,
             TransitionParticipation.INVOLVED,
             hostname,
-            stage
+            com.flipkart.varadhi.entities.cluster.transition.TransitionStage.valueOf(stage.name())
         );
     }
 }

@@ -2,10 +2,18 @@ package com.flipkart.varadhi.core.cluster.messages;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.flipkart.varadhi.common.exceptions.DuplicateResourceException;
+import com.flipkart.varadhi.common.exceptions.InvalidOperationForResourceException;
 import com.flipkart.varadhi.common.exceptions.ResourceNotFoundException;
+import com.flipkart.varadhi.common.exceptions.ServerNotAvailableException;
 import com.flipkart.varadhi.common.exceptions.VaradhiException;
+import com.flipkart.varadhi.common.utils.ThrowableUtils;
 import com.flipkart.varadhi.entities.JsonMapper;
 import lombok.Getter;
+
+import java.util.Map;
+import java.util.function.Function;
 
 @Getter
 public class ResponseMessage extends ClusterMessage {
@@ -16,12 +24,30 @@ public class ResponseMessage extends ClusterMessage {
     @JsonIgnore
     private final Exception exception;
 
+    private static final Map<String, Function<String, Exception>> EXCEPTION_BY_TYPE = Map.of(
+        DuplicateResourceException.class.getName(),
+        DuplicateResourceException::new,
+        ServerNotAvailableException.class.getName(),
+        ServerNotAvailableException::new,
+        IllegalArgumentException.class.getName(),
+        IllegalArgumentException::new,
+        ResourceNotFoundException.class.getName(),
+        ResourceNotFoundException::new,
+        InvalidOperationForResourceException.class.getName(),
+        InvalidOperationForResourceException::new,
+        UnsupportedOperationException.class.getName(),
+        UnsupportedOperationException::new,
+        VaradhiException.class.getName(),
+        VaradhiException::new
+    );
+
     ResponseMessage(String payload, Exception exception, String requestId) {
         super(payload);
         this.requestId = requestId;
-        this.exception = exception;
-        this.failureType = exception != null ? exception.getClass().getName() : null;
-        this.failureMessage = exception != null ? exception.getMessage() : null;
+        Exception root = unwrap(exception);
+        this.exception = root;
+        this.failureType = root != null ? root.getClass().getName() : null;
+        this.failureMessage = root != null ? root.getMessage() : null;
     }
 
     @JsonCreator
@@ -55,15 +81,32 @@ public class ResponseMessage extends ClusterMessage {
         return JsonMapper.jsonDeserialize(getPayload(), clazz);
     }
 
+    public <T> T getResponse(TypeReference<T> type) {
+        return JsonMapper.jsonDeserialize(getPayload(), type);
+    }
+
+    private static Exception unwrap(Exception exception) {
+        if (exception == null) {
+            return null;
+        }
+        Throwable current = exception;
+        Throwable next;
+        while ((next = ThrowableUtils.unwrap(current)) != current) {
+            current = next;
+        }
+        if (current instanceof Exception e) {
+            return e;
+        }
+        return new VaradhiException(current);
+    }
+
     private static Exception reconstructException(String failureType, String failureMessage) {
         if (failureType == null) {
             return null;
         }
-        if (ResourceNotFoundException.class.getName().equals(failureType)) {
-            return new ResourceNotFoundException(failureMessage);
-        }
-        if (VaradhiException.class.getName().equals(failureType)) {
-            return new VaradhiException(failureMessage);
+        Function<String, Exception> factory = EXCEPTION_BY_TYPE.get(failureType);
+        if (factory != null) {
+            return factory.apply(failureMessage);
         }
         return new VaradhiException(failureMessage != null ? failureMessage : failureType);
     }
