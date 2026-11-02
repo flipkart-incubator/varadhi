@@ -1,10 +1,12 @@
 package com.flipkart.varadhi.controller.impl.failover;
 
+import com.flipkart.varadhi.entities.cluster.transition.StageSnapshot;
 import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
 import com.flipkart.varadhi.entities.cluster.transition.TransitionStage;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +48,21 @@ public class StageAwaiter {
      */
     public CompletableFuture<Void> expect(String opId, Enum<?> stage, Set<String> expectedHosts, long timeoutMs) {
         return expectWire(opId, wireStage(stage), expectedHosts, timeoutMs);
+    }
+
+    public Map<String, StageSnapshot.HostAck> getHostAcks(String opId) {
+        Barrier barrier = barriers.get(opId);
+        if (barrier == null) {
+            return Map.of();
+        }
+        java.util.Map<String, StageSnapshot.HostAck> acks = new java.util.HashMap<>();
+        for (String host : barrier.expected) {
+            acks.put(
+                host,
+                barrier.ackedOk.contains(host) ? StageSnapshot.HostAck.ACKED : StageSnapshot.HostAck.UNACKED
+            );
+        }
+        return acks;
     }
 
     private static TransitionStage wireStage(Enum<?> stage) {

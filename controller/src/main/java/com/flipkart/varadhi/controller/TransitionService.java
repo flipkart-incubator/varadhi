@@ -98,12 +98,17 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
             TopicFailoverOperation op = TopicFailoverOperation.of(fqn, requestedBy);
             operationMgr.createTopicFailoverOp(op);
             try {
+                if (request.lagDrainTimeoutMs() != null && request.lagDrainTimeoutMs() <= 0) {
+                    throw new IllegalArgumentException("lagDrainTimeoutMs must be positive");
+                }
                 ProduceFailoverTransition transition = ProduceFailoverTransition.forFailover(
                     op.getId(),
                     fqn,
                     source,
                     target,
-                    request.waitForReplicationLagToClear()
+                    request.waitForReplicationLagToClear(),
+                    request.lagDrainTimeoutMs(),
+                    normalizeLagTimeoutPolicy(request.onLagTimeout())
                 );
                 transitionStore.create(transition);
                 if (orchestrator != null) {
@@ -169,6 +174,17 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
 
     private ProduceFailoverTransition requireActive(String topicFqn) {
         return transitionStore.get(topicFqn);
+    }
+
+    private static String normalizeLagTimeoutPolicy(String policy) {
+        if (policy == null || policy.isBlank()) {
+            return "ABORT";
+        }
+        String normalized = policy.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!normalized.equals("ABORT") && !normalized.equals("FAILOVER")) {
+            throw new IllegalArgumentException("onLagTimeout must be ABORT or FAILOVER");
+        }
+        return normalized;
     }
 
     private void cleanupFailedTopicFailover(TopicFailoverOperation op) {

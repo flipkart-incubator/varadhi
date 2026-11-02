@@ -75,16 +75,23 @@ public final class TopicFailoverOrchestrator {
     }
 
     private void rollbackFenceIfNeeded(ProduceFailoverTransition transition) {
-        if (transition.getCurrentStage() != com.flipkart.varadhi.entities.cluster.transition.TransitionStage.DRAIN) {
-            return;
-        }
         VaradhiTopic topic = topicStore.get(transition.getTopicFqn());
         boolean sourceProducing = topic.getProduceConfig(transition.getSourceRegion())
-                                      .map(config -> config.getState() == TopicState.Producing)
-                                      .orElse(false);
+                                       .map(config -> config.getState() == TopicState.Producing)
+                                       .orElse(false);
         boolean targetBlocked = topic.getProduceConfig(transition.getTargetRegion())
                                      .map(config -> config.getState() == TopicState.Blocked)
                                      .orElse(false);
+        boolean sourceFenced = topic.getProduceConfig(transition.getSourceRegion())
+                                    .map(config -> config.getState() == TopicState.Fenced)
+                                    .orElse(false);
+        boolean targetFenced = topic.getProduceConfig(transition.getTargetRegion())
+                                    .map(config -> config.getState() == TopicState.Fenced)
+                                    .orElse(false);
+        if (transition.getCurrentStage() != com.flipkart.varadhi.entities.cluster.transition.TransitionStage.DRAIN
+            && !(sourceFenced && targetFenced)) {
+            return;
+        }
         if (sourceProducing && targetBlocked) {
             return;
         }
@@ -94,10 +101,7 @@ public final class TopicFailoverOrchestrator {
             topic.with(
                 transition.getSourceRegion(),
                 new ProduceConfig(TopicState.Producing, source.getProduceIdx(), null)
-            ).with(
-                transition.getTargetRegion(),
-                new ProduceConfig(TopicState.Blocked, target.getProduceIdx(), null)
-            )
+            ).with(transition.getTargetRegion(), new ProduceConfig(TopicState.Blocked, target.getProduceIdx(), null))
         );
     }
 }
