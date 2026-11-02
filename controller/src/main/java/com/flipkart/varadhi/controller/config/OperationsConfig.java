@@ -9,6 +9,4 @@ public class OperationsConfig {
     private int retryIntervalInSeconds = 10;
     private int retryMinBackoffInSeconds = 10;
     private int retryMaxBackOffInSeconds = 60;
-    private long topicFailoverStageAwaitMs = 60_000;
-    private long topicFailoverDrainTimeoutMs = 300_000;
 }

@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * Per-stage history entry on durable {@code TopicFailoverOperation}: when the stage started/ended,
- * which hosts acked (when populated), and the outcome. Survives past {@code TransitionMaster}
+ * which hosts acked (when populated), and the outcome. Survives past transition-operation
  * deletion so COMPLETE/ABORT still leave an audit trail.
  */
 @Getter

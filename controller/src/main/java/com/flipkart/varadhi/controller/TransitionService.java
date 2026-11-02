@@ -74,6 +74,9 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
 
     @Override
     public CompletableFuture<Void> ack(TransitionAck ack) {
+        if (orchestrator != null) {
+            orchestrator.recordAck(ack);
+        }
         return CompletableFuture.completedFuture(null);
     }
 

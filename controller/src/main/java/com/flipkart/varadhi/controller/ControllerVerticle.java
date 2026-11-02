@@ -87,7 +87,9 @@ public class ControllerVerticle extends AbstractVerticle {
         OperationMgr operationMgr = new OperationMgr(
             operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
-            createRetryPolicy(operationsConfig.getMaxRetryAllowed())
+            createRetryPolicy(operationsConfig),
+            failoverOperationsConfig.getMaxConcurrentOps(),
+            createRetryPolicy(failoverOperationsConfig)
         );
         SubscriptionService subscriptionService = createSubscriptionService(messageExchange, operationMgr);
         TopicFailoverOrchestrator orchestrator = new TopicFailoverOrchestrator(
@@ -96,9 +98,7 @@ public class ControllerVerticle extends AbstractVerticle {
             metaStoreProvider.getMetaStore().topics(),
             messagingStackProvider.getStorageTopicService(),
             messageExchange,
-            clusterManager,
-            operationsConfig.getTopicFailoverStageAwaitMs(),
-            operationsConfig.getTopicFailoverDrainTimeoutMs()
+            clusterManager
         );
         TransitionService transitionService = new TransitionService(
             messageExchange,
@@ -179,12 +179,12 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Creates a retry policy with the given max-retry ceiling and shared backoff settings.
      */
-    private RetryPolicy createRetryPolicy(int maxRetryAllowed) {
+    private RetryPolicy createRetryPolicy(OperationsConfig config) {
         return new RetryPolicy(
-            maxRetryAllowed,
-            operationsConfig.getRetryIntervalInSeconds(),
-            operationsConfig.getRetryMinBackoffInSeconds(),
-            operationsConfig.getRetryMaxBackOffInSeconds()
+            config.getMaxRetryAllowed(),
+            config.getRetryIntervalInSeconds(),
+            config.getRetryMinBackoffInSeconds(),
+            config.getRetryMaxBackOffInSeconds()
         );
     }
 

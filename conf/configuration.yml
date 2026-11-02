@@ -106,18 +106,15 @@ tracesEnabled: true
 operationsConfig:
   maxConcurrentOps: 2
   maxRetryAllowed: 3
-  topicFailoverMaxRetryAllowed: 0
   retryIntervalInSeconds: 10
   retryMinBackoffInSeconds: 10
   retryMaxBackOffInSeconds: 60
 
 failoverOperationsConfig:
-  maxConcurrentOps: 2
-  maxRetryAllowed: 3
-  topicFailoverMaxRetryAllowed: 0
+  maxConcurrentOps: 1
+  maxRetryAllowed: 0
   retryIntervalInSeconds: 10
   retryMinBackoffInSeconds: 10
-  retryMaxBackOffInSeconds: 60
   retryMaxBackOffInSeconds: 60
 
 disabledAPIs: [ ]
