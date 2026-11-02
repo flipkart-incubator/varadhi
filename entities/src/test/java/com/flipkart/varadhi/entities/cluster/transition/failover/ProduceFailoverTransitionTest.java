@@ -66,6 +66,7 @@ class ProduceFailoverTransitionTest {
 
     @Test
     void requestAbortIsIdempotentFlag() {
+        assertTrue(TransitionStage.DRAIN.isAbortable());
         ProduceFailoverTransition t = ProduceFailoverTransition.forFailover(
             "op-1",
             "proj.topic",

@@ -179,7 +179,7 @@ public class TransitionService implements TransitionPublisher, TransitionAckApi,
         ProduceFailoverTransition transition = transitionStore.get(topicFqn);
         log.warn("Cleaning up failed topic failover op {} for {} (error={})", op.getId(), topicFqn, op.getErrorMsg());
         if (orchestrator != null) {
-            orchestrator.abortBarrier(op.getId(), op.getErrorMsg());
+            orchestrator.abort(transition, op.getErrorMsg());
         }
         messageExchange.publish(
             TransitionBusAddress.ROUTE_TOPIC_TRANSITION,

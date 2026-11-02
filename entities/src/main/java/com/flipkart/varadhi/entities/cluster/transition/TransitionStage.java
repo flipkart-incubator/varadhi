@@ -28,7 +28,7 @@ public enum TransitionStage {
 
     /** Abort is honored through {@link #FENCE}. {@link #MIGRATE} has started the route commit and cannot abort. */
     public boolean isAbortable() {
-        return this == PENDING || this == PREPARE || this == FENCE;
+        return this == PENDING || this == PREPARE || this == FENCE || this == DRAIN;
     }
 
     /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */
