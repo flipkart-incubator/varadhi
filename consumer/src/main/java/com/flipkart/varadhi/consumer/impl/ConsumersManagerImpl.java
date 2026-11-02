@@ -7,6 +7,7 @@ import com.flipkart.varadhi.consumer.concurrent.EventExecutor;
 import com.flipkart.varadhi.entities.*;
 import com.flipkart.varadhi.entities.cluster.ConsumerState;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
+import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,13 +26,20 @@ public class ConsumersManagerImpl implements ConsumersManager {
     private final Map<ShardId, ConsumerHolder> consumers = new ConcurrentHashMap<>();
 
     public ConsumersManagerImpl(
-        StorageTopicProducerService producerService,
+        ProducerFactory producerFactory,
         ConsumerFactory consumerFactory,
-        MeterRegistry meterRegistry
+        MeterRegistry meterRegistry,
+        RegionName deployedRegion
     ) {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.executor = new EventExecutor(this.scheduler, CustomThread::new, new LinkedBlockingQueue<>());
-        this.env = new ConsumerEnvironment(producerService, consumerFactory, HttpClient.newHttpClient(), meterRegistry);
+        this.env = new ConsumerEnvironment(
+            producerFactory,
+            consumerFactory,
+            HttpClient.newHttpClient(),
+            meterRegistry,
+            deployedRegion
+        );
     }
 
 
