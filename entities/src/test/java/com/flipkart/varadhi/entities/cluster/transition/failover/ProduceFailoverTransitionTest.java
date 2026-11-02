@@ -12,6 +12,8 @@ import static com.flipkart.varadhi.entities.cluster.transition.StageSnapshot.Hos
 import static com.flipkart.varadhi.entities.cluster.transition.StageSnapshot.HostAck.UNACKED;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProduceFailoverTransitionTest {
 
@@ -60,5 +62,21 @@ class ProduceFailoverTransitionTest {
         hosts.put("host-b", ACKED);
 
         assertEquals(Map.of("host-a", ACKED), t.getStageHistory().get(0).hosts());
+    }
+
+    @Test
+    void requestAbortIsIdempotentFlag() {
+        ProduceFailoverTransition t = ProduceFailoverTransition.forFailover(
+            "op-1",
+            "proj.topic",
+            RegionName.of("r1"),
+            RegionName.of("r2"),
+            false
+        );
+        assertFalse(t.isAbortRequested());
+        t.setAbortRequested(true);
+        assertTrue(t.isAbortRequested());
+        t.setAbortRequested(true);
+        assertTrue(t.isAbortRequested());
     }
 }

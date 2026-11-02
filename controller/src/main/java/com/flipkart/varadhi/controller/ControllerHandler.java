@@ -1,6 +1,7 @@
 package com.flipkart.varadhi.controller;
 
 import com.flipkart.varadhi.controller.transition.TopicTransitionMetrics;
+import com.flipkart.varadhi.core.cluster.transition.failover.TopicFailoverRequestWrapper;
 import com.flipkart.varadhi.core.cluster.messages.ClusterMessage;
 import com.flipkart.varadhi.core.cluster.messages.ResponseMessage;
 import com.flipkart.varadhi.core.subscription.ShardOpResponse;
@@ -77,15 +78,36 @@ public class ControllerHandler {
         });
     }
 
+    public CompletableFuture<ResponseMessage> createFailover(ClusterMessage message) {
+        TopicFailoverRequestWrapper request = message.getRequest(TopicFailoverRequestWrapper.class);
+        return transitionService.createTopicFailover(request.topicFqn(), request.request(), request.requestedBy())
+                                .thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> getFailover(ClusterMessage message) {
+        TopicFailoverRequestWrapper request = message.getRequest(TopicFailoverRequestWrapper.class);
+        return transitionService.getTopicFailover(request.topicFqn()).thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> abortFailover(ClusterMessage message) {
+        TopicFailoverRequestWrapper request = message.getRequest(TopicFailoverRequestWrapper.class);
+        return transitionService.abortTopicFailover(request.topicFqn(), request.requestedBy())
+                                .thenApply(message::getResponseMessage);
+    }
+
+    public CompletableFuture<ResponseMessage> listFailovers(ClusterMessage message) {
+        return transitionService.getActiveFailovers().thenApply(message::getResponseMessage);
+    }
+
     public void ack(ClusterMessage message) {
         TransitionAck ack = message.getData(TransitionAck.class);
         transitionMetrics.ackReceived(ack.transitionType(), ack.stage());
-        transitionService.ack(ack)
-                         .thenRun(() -> transitionMetrics.ackProcessed(ack.transitionType(), ack.stage()))
-                         .exceptionally(throwable -> {
-                             transitionMetrics.ackDeliveryFailed(ack.transitionType(), ack.stage());
-                             log.error("Topic-transition ack processing failed for ack={}", ack, throwable);
-                             return null;
-                         });
+        try {
+            transitionService.ack(ack);
+            transitionMetrics.ackProcessed(ack.transitionType(), ack.stage());
+        } catch (Exception e) {
+            transitionMetrics.ackDeliveryFailed(ack.transitionType(), ack.stage());
+            log.error("Topic-transition ack processing failed for ack={}", ack, e);
+        }
     }
 }

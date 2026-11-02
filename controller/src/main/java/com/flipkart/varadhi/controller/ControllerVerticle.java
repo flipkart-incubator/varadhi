@@ -17,8 +17,10 @@ import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
+import com.flipkart.varadhi.spi.services.MessagingStackProvider;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactoryImpl;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.AbstractVerticle;
@@ -39,10 +41,12 @@ public class ControllerVerticle extends AbstractVerticle {
 
     private final VaradhiClusterManager clusterManager;
     private final MetaStoreProvider metaStoreProvider;
+    private final MessagingStackProvider messagingStackProvider;
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
+    private final OperationsConfig failoverOperationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
-    private final RegionName region;
+    private final RegionName deployedRegion;
 
     private ResourceEventProcessor entityEventProcessor;
 
@@ -53,15 +57,18 @@ public class ControllerVerticle extends AbstractVerticle {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         OperationsConfig opsConfig,
+        OperationsConfig failoverOpsConfig,
         EventProcessorConfig eventProcessorConfig,
-        RegionName region
+        RegionName deployedRegion
     ) {
         this.operationsConfig = opsConfig;
+        this.failoverOperationsConfig = failoverOpsConfig;
         this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
+        this.messagingStackProvider = coreServices.getMessagingStackProvider();
         this.meterRegistry = coreServices.getMeterRegistry();
-        this.region = region;
+        this.deployedRegion = deployedRegion;
     }
 
     /**
@@ -76,8 +83,18 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-        SubscriptionService subscriptionService = createSubscriptionService(messageExchange);
-        TransitionService transitionService = new TransitionService(messageExchange);
+        OperationMgr operationMgr = new OperationMgr(
+            operationsConfig.getMaxConcurrentOps(),
+            metaStoreProvider.getOpStore(),
+            createRetryPolicy(operationsConfig.getMaxRetryAllowed())
+        );
+        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, operationMgr);
+        TransitionService transitionService = new TransitionService(
+            messageExchange,
+            operationMgr,
+            metaStoreProvider.getTransitionStore(),
+            deployedRegion
+        );
         ControllerHandler apiHandler = new ControllerHandler(
             subscriptionService,
             transitionService,
@@ -85,22 +102,17 @@ public class ControllerVerticle extends AbstractVerticle {
         );
 
         // Assume leadership and initialize event system
-        onLeaderElected(subscriptionService, apiHandler, messageRouter).compose(v -> initializeEventSystem())
-                                                                       .onComplete(ar -> {
-                                                                           if (ar.succeeded()) {
-                                                                               log.info(
-                                                                                   "Controller started successfully in region {}",
-                                                                                   region
-                                                                               );
-                                                                               startPromise.complete();
-                                                                           } else {
-                                                                               log.error(
-                                                                                   "Failed to start controller: {}",
-                                                                                   ar.cause().getMessage()
-                                                                               );
-                                                                               startPromise.fail(ar.cause());
-                                                                           }
-                                                                       });
+        onLeaderElected(subscriptionService, transitionService, apiHandler, messageRouter).compose(
+            v -> initializeEventSystem()
+        ).onComplete(ar -> {
+            if (ar.succeeded()) {
+                log.info("Controller started successfully in region {}", deployedRegion);
+                startPromise.complete();
+            } else {
+                log.error("Failed to start controller: {}", ar.cause().getMessage());
+                startPromise.fail(ar.cause());
+            }
+        });
     }
 
     /**
@@ -137,24 +149,13 @@ public class ControllerVerticle extends AbstractVerticle {
      * @param messageExchange the message exchange for internode communication
      * @return the configured SubscriptionService
      */
-    private SubscriptionService createSubscriptionService(MessageExchange messageExchange) {
-        // Create consumer client factory
+    private SubscriptionService createSubscriptionService(MessageExchange messageExchange, OperationMgr operationMgr) {
         ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
-
-        // Create operation manager with retry policy
-        OperationMgr operationMgr = new OperationMgr(
-            operationsConfig.getMaxConcurrentOps(),
-            metaStoreProvider.getOpStore(),
-            createRetryPolicy()
-        );
-
-        // Create assignment manager
         AssignmentManager assigner = new AssignmentManager(
             new LeastAssignedStrategy(),
             metaStoreProvider.getAssignmentStore(),
             meterRegistry
         );
-
         return new SubscriptionService(
             operationMgr,
             assigner,
@@ -164,13 +165,11 @@ public class ControllerVerticle extends AbstractVerticle {
     }
 
     /**
-     * Creates a retry policy based on the controller configuration.
-     *
-     * @return the configured RetryPolicy
+     * Creates a retry policy with the given max-retry ceiling and shared backoff settings.
      */
-    private RetryPolicy createRetryPolicy() {
+    private RetryPolicy createRetryPolicy(int maxRetryAllowed) {
         return new RetryPolicy(
-            operationsConfig.getMaxRetryAllowed(),
+            maxRetryAllowed,
             operationsConfig.getRetryIntervalInSeconds(),
             operationsConfig.getRetryMinBackoffInSeconds(),
             operationsConfig.getRetryMaxBackOffInSeconds()
@@ -181,13 +180,14 @@ public class ControllerVerticle extends AbstractVerticle {
      * Assumes leadership for controller operations by setting up API handlers,
      * registering membership listeners, and restoring controller state.
      *
-     * @param subscriptionService the subscription coordinator
-     * @param handler             the controller bus handler
-     * @param messageRouter       the message router for handling API requests
+     * @param subscriptionService the controller API manager
+     * @param handler          the controller API handler
+     * @param messageRouter    the message router for handling API requests
      * @return a Future that completes when leadership is established
      */
     private Future<Void> onLeaderElected(
         SubscriptionService subscriptionService,
+        TransitionService transitionService,
         ControllerHandler handler,
         MessageRouter messageRouter
     ) {
@@ -195,16 +195,21 @@ public class ControllerVerticle extends AbstractVerticle {
         // TODO: Handling membership changes during controller bootstrap.
         setupMembershipListener(subscriptionService);
 
-        // Get all cluster members and initialize consumer nodes
+        // Register API handlers immediately so they are available before consumer-node init
+        setupApiHandlers(messageRouter, handler);
+
+        // Get all cluster members and initialize consumer nodes asynchronously
         return clusterManager.getAllMembers()
                              .compose(allMembers -> initializeConsumerNodes(allMembers, subscriptionService))
                              .compose(consumerIds -> {
-                                 // Set up API handlers and restore controller state
-                                 setupApiHandlers(messageRouter, handler);
-                                 restoreControllerState(subscriptionService, consumerIds);
+                                 restoreControllerState(subscriptionService, transitionService, consumerIds);
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
+                                 log.error(
+                                     "Failed to initialize consumer nodes during leader election: {}",
+                                     e.getMessage()
+                                 );
                                  abortLeadership();
                              });
     }
@@ -213,7 +218,7 @@ public class ControllerVerticle extends AbstractVerticle {
      * Initializes consumer nodes from the list of cluster members.
      *
      * @param allMembers       the list of all cluster members
-     * @param subscriptionService the subscription coordinator
+     * @param subscriptionService the controller API manager
      * @return a Future that completes with the list of initialized consumer IDs
      */
     private Future<List<String>> initializeConsumerNodes(
@@ -257,25 +262,41 @@ public class ControllerVerticle extends AbstractVerticle {
      * Restores the controller state by removing unavailable consumers and
      * requeuing in-progress operations.
      *
-     * @param subscriptionService the subscription coordinator
-     * @param consumerIds         the list of active consumer IDs
+     * @param subscriptionService the controller API manager
+     * @param consumerIds      the list of active consumer IDs
      */
-    private void restoreControllerState(SubscriptionService subscriptionService, List<String> consumerIds) {
+    private void restoreControllerState(
+        SubscriptionService subscriptionService,
+        TransitionService transitionService,
+        List<String> consumerIds
+    ) {
         // Remove unavailable consumers
         removeUnavailableConsumers(subscriptionService, consumerIds);
 
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
+        requeueInProgressFailovers(transitionService);
+
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
         // This should include strategies for recovering from failures without requiring controller restart
+    }
+
+    private void requeueInProgressFailovers(TransitionService transitionService) {
+        List<TopicFailoverOperation> pendingFailovers = transitionService.getPendingTopicFailoverOps();
+        if (pendingFailovers.isEmpty()) {
+            return;
+        }
+        pendingFailovers.stream()
+                        .sorted(Comparator.comparing(TopicFailoverOperation::getCreatedAt))
+                        .forEach(transitionService::retryTopicFailover);
     }
 
     /**
      * Removes consumers that are no longer available in the cluster.
      *
-     * @param subscriptionService the subscription coordinator
-     * @param consumerIds         the list of active consumer IDs
+     * @param subscriptionService the controller API manager
+     * @param consumerIds      the list of active consumer IDs
      */
     private void removeUnavailableConsumers(SubscriptionService subscriptionService, List<String> consumerIds) {
         Set<String> activeConsumerSet = Set.copyOf(consumerIds);
@@ -289,8 +310,8 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Gets the list of consumer IDs that are no longer available in the cluster.
      *
-     * @param subscriptionService the subscription coordinator
-     * @param activeConsumers     the set of active consumer IDs
+     * @param subscriptionService the controller API manager
+     * @param activeConsumers  the set of active consumer IDs
      * @return the list of unavailable consumer IDs
      */
     private List<String> getUnavailableConsumers(SubscriptionService subscriptionService, Set<String> activeConsumers) {
@@ -310,7 +331,7 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Requeues in-progress operations to ensure they are completed.
      *
-     * @param subscriptionService the subscription coordinator
+     * @param subscriptionService the controller API manager
      */
     private void requeueInProgressOperations(SubscriptionService subscriptionService) {
         List<SubscriptionOperation> pendingOps = subscriptionService.getPendingSubOps();
@@ -351,9 +372,19 @@ public class ControllerVerticle extends AbstractVerticle {
         messageRouter.requestHandler(ROUTE_CONTROLLER, "unsideline", handler::unsideline);
         messageRouter.requestHandler(ROUTE_CONTROLLER, "getShards", handler::getShards);
 
+        // Topic failover lifecycle (web -> controller)
+        messageRouter.requestHandler(
+            ROUTE_CONTROLLER,
+            TransitionBusAddress.CREATE_FAILOVER_API,
+            handler::createFailover
+        );
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.GET_FAILOVER_API, handler::getFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.ABORT_FAILOVER_API, handler::abortFailover);
+        messageRouter.requestHandler(ROUTE_CONTROLLER, TransitionBusAddress.LIST_FAILOVERS_API, handler::listFailovers);
+
         // Register send handlers for pod → controller updates
         messageRouter.sendHandler(ROUTE_CONTROLLER, "update", handler::update);
-        messageRouter.sendHandler(ROUTE_CONTROLLER, TransitionBusAddress.TRANSITION_EVENT_ACK_API, handler::ack);
+        messageRouter.sendHandler(ROUTE_CONTROLLER, TransitionBusAddress.STAGE_ACK_API, handler::ack);
 
         log.info("Controller API handlers registered successfully");
     }
@@ -361,7 +392,7 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Sets up a membership listener to handle consumer node joins and leaves.
      *
-     * @param subscriptionService the subscription coordinator
+     * @param subscriptionService the controller API manager
      */
     private void setupMembershipListener(SubscriptionService subscriptionService) {
         clusterManager.addMembershipListener(new MembershipListener() {

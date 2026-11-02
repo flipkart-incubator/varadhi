@@ -6,6 +6,7 @@ import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.core.ResourceReadCacheRegistry;
 import com.flipkart.varadhi.core.cluster.controller.ControllerApi;
 import com.flipkart.varadhi.core.config.MetricsOptions;
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.ResourceType;
 import com.flipkart.varadhi.entities.TopicCapacityPolicy;
 import com.flipkart.varadhi.entities.VaradhiTopic;
@@ -117,6 +118,7 @@ public class WebServerVerticle extends AbstractVerticle {
     private final VaradhiClusterManager clusterManager;
     private final MessagingStackProvider messagingStackProvider;
     private final MetaStore metaStore;
+    private final com.flipkart.varadhi.spi.db.TransitionStore transitionStore;
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private final VerticleConfig verticleConfig;
@@ -151,6 +153,7 @@ public class WebServerVerticle extends AbstractVerticle {
         this.clusterManager = clusterManager;
         this.messagingStackProvider = services.getMessagingStackProvider();
         this.metaStore = services.getMetaStoreProvider().getMetaStore();
+        this.transitionStore = services.getMetaStoreProvider().getTransitionStore();
         this.meterRegistry = services.getMeterRegistry();
         this.tracer = services.getTracer("varadhi");
         this.verticleConfig = VerticleConfig.fromConfig(configuration);
@@ -272,6 +275,7 @@ public class WebServerVerticle extends AbstractVerticle {
 
         // Initialize controller client and related services
         ControllerApi controllerClient = new ControllerRemoteClient(messageExchange);
+        serviceRegistry.registerIfAbsent(ControllerApi.class, () -> controllerClient);
         ShardProvisioner shardProvisioner = new ShardProvisioner(
             messagingStackProvider.getStorageSubscriptionService(),
             messagingStackProvider.getStorageTopicService()
@@ -509,6 +513,16 @@ public class WebServerVerticle extends AbstractVerticle {
                 varadhiTopicFactory,
                 serviceRegistry.get(VaradhiTopicService.class),
                 cacheRegistry.getCache(ResourceType.PROJECT)
+            ).get()
+        );
+
+        routes.addAll(
+            new TopicFailoverHandlers(
+                serviceRegistry.get(ControllerApi.class),
+                cacheRegistry.getCache(ResourceType.PROJECT),
+                serviceRegistry.get(VaradhiTopicService.class),
+                serviceRegistry.get(RegionService.class),
+                RegionName.of(verticleConfig.deployedRegion())
             ).get()
         );
 

@@ -3,6 +3,7 @@ package com.flipkart.varadhi.entities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -40,6 +41,14 @@ public class JsonMapper {
     public static <T> T jsonDeserialize(String data, Class<T> clazz) {
         try {
             return mapper.readValue(data, clazz);
+        } catch (JsonProcessingException e) {
+            throw new JsonParseException(e);
+        }
+    }
+
+    public static <T> T jsonDeserialize(String data, TypeReference<T> type) {
+        try {
+            return mapper.readValue(data, type);
         } catch (JsonProcessingException e) {
             throw new JsonParseException(e);
         }
