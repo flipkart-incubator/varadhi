@@ -9,8 +9,7 @@ import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.controller.impl.failover.StageAwaiter;
-import com.flipkart.varadhi.controller.impl.failover.TopicFailoverConfig;
+import com.flipkart.varadhi.controller.impl.failover.TopicFailoverOrchestrator;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
@@ -19,7 +18,7 @@ import com.flipkart.varadhi.core.cluster.transition.TransitionBusAddress;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.cluster.Assignment;
 import com.flipkart.varadhi.entities.cluster.SubscriptionOperation;
-import com.flipkart.varadhi.entities.cluster.TopicFailoverOperation;
+import com.flipkart.varadhi.entities.cluster.transition.failover.TopicFailoverOperation;
 import com.flipkart.varadhi.controller.events.ResourceEventProcessor;
 import com.flipkart.varadhi.spi.db.MetaStoreProvider;
 import com.flipkart.varadhi.spi.services.MessagingStackProvider;
@@ -46,6 +45,7 @@ public class ControllerVerticle extends AbstractVerticle {
     private final MessagingStackProvider messagingStackProvider;
     private final MeterRegistry meterRegistry;
     private final OperationsConfig operationsConfig;
+    private final OperationsConfig failoverOperationsConfig;
     private final EventProcessorConfig eventProcessorConfig;
     private final RegionName deployedRegion;
 
@@ -58,10 +58,12 @@ public class ControllerVerticle extends AbstractVerticle {
         CoreServices coreServices,
         VaradhiClusterManager clusterManager,
         OperationsConfig opsConfig,
+        OperationsConfig failoverOpsConfig,
         EventProcessorConfig eventProcessorConfig,
         RegionName deployedRegion
     ) {
         this.operationsConfig = opsConfig;
+        this.failoverOperationsConfig = failoverOpsConfig;
         this.eventProcessorConfig = eventProcessorConfig;
         this.clusterManager = clusterManager;
         this.metaStoreProvider = coreServices.getMetaStoreProvider();
@@ -82,8 +84,29 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-        SubscriptionService subscriptionService = createSubscriptionService(messageExchange);
-        TransitionService transitionService = new TransitionService(messageExchange);
+        OperationMgr operationMgr = new OperationMgr(
+            operationsConfig.getMaxConcurrentOps(),
+            metaStoreProvider.getOpStore(),
+            createRetryPolicy(operationsConfig.getMaxRetryAllowed())
+        );
+        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, operationMgr);
+        TopicFailoverOrchestrator orchestrator = new TopicFailoverOrchestrator(
+            operationMgr,
+            metaStoreProvider.getTransitionStore(),
+            metaStoreProvider.getMetaStore().topics(),
+            messagingStackProvider.getStorageTopicService(),
+            messageExchange,
+            clusterManager,
+            operationsConfig.getTopicFailoverStageAwaitMs(),
+            operationsConfig.getTopicFailoverDrainTimeoutMs()
+        );
+        TransitionService transitionService = new TransitionService(
+            messageExchange,
+            operationMgr,
+            metaStoreProvider.getTransitionStore(),
+            deployedRegion,
+            orchestrator
+        );
         ControllerHandler apiHandler = new ControllerHandler(
             subscriptionService,
             transitionService,
@@ -91,21 +114,17 @@ public class ControllerVerticle extends AbstractVerticle {
         );
 
         // Assume leadership and initialize event system
-        onLeaderElected(subscriptionService, apiHandler, messageRouter).compose(v -> initializeEventSystem())
-                                                                       .onComplete(ar -> {
-                                                                           if (ar.succeeded()) {
-                                                                               log.info(
-                                                                                   "Controller started successfully"
-                                                                               );
-                                                                               startPromise.complete();
-                                                                           } else {
-                                                                               log.error(
-                                                                                   "Failed to start controller: {}",
-                                                                                   ar.cause().getMessage()
-                                                                               );
-                                                                               startPromise.fail(ar.cause());
-                                                                           }
-                                                                       });
+        onLeaderElected(subscriptionService, transitionService, apiHandler, messageRouter).compose(
+            v -> initializeEventSystem()
+        ).onComplete(ar -> {
+            if (ar.succeeded()) {
+                log.info("Controller started successfully in region {}", deployedRegion);
+                startPromise.complete();
+            } else {
+                log.error("Failed to start controller: {}", ar.cause().getMessage());
+                startPromise.fail(ar.cause());
+            }
+        });
     }
 
     /**
@@ -142,43 +161,18 @@ public class ControllerVerticle extends AbstractVerticle {
      * @param messageExchange the message exchange for internode communication
      * @return the configured SubscriptionService
      */
-    private SubscriptionService createSubscriptionService(MessageExchange messageExchange) {
-        // Create consumer client factory
+    private SubscriptionService createSubscriptionService(MessageExchange messageExchange, OperationMgr operationMgr) {
         ConsumerClientFactory consumerClientFactory = new ConsumerClientFactoryImpl(messageExchange);
-
-        // Create operation manager with retry policy
-        OperationMgr operationMgr = new OperationMgr(
-            operationsConfig.getMaxConcurrentOps(),
-            metaStoreProvider.getOpStore(),
-            createRetryPolicy(operationsConfig.getMaxRetryAllowed()),
-            createRetryPolicy(operationsConfig.getTopicFailoverMaxRetryAllowed())
-        );
-
-        // Create assignment manager
         AssignmentManager assigner = new AssignmentManager(
             new LeastAssignedStrategy(),
             metaStoreProvider.getAssignmentStore(),
             meterRegistry
         );
-
         return new SubscriptionService(
             operationMgr,
             assigner,
             metaStoreProvider.getMetaStore().subscriptions(),
-            consumerClientFactory,
-            metaStoreProvider.getTransitionStore(),
-            metaStoreProvider.getMetaStore().topics(),
-            metaStoreProvider.getMetaStore().regions(),
-            messagingStackProvider.getStorageTopicService(),
-            clusterManager,
-            messageExchange,
-            new StageAwaiter(),
-            new TopicFailoverConfig(
-                operationsConfig.getTopicFailoverStageAwaitMs(),
-                operationsConfig.getTopicFailoverFenceHoldMs(),
-                operationsConfig.getTopicFailoverFenceHoldMs()
-            ),
-            deployedRegion
+            consumerClientFactory
         );
     }
 
@@ -205,6 +199,7 @@ public class ControllerVerticle extends AbstractVerticle {
      */
     private Future<Void> onLeaderElected(
         SubscriptionService subscriptionService,
+        TransitionService transitionService,
         ControllerHandler handler,
         MessageRouter messageRouter
     ) {
@@ -219,7 +214,7 @@ public class ControllerVerticle extends AbstractVerticle {
         return clusterManager.getAllMembers()
                              .compose(allMembers -> initializeConsumerNodes(allMembers, subscriptionService))
                              .compose(consumerIds -> {
-                                 restoreControllerState(subscriptionService, consumerIds);
+                                 restoreControllerState(subscriptionService, transitionService, consumerIds);
                                  return Future.<Void>succeededFuture();
                              })
                              .onFailure(e -> {
@@ -282,34 +277,31 @@ public class ControllerVerticle extends AbstractVerticle {
      * @param subscriptionService the controller API manager
      * @param consumerIds      the list of active consumer IDs
      */
-    private void restoreControllerState(SubscriptionService subscriptionService, List<String> consumerIds) {
+    private void restoreControllerState(
+        SubscriptionService subscriptionService,
+        TransitionService transitionService,
+        List<String> consumerIds
+    ) {
         // Remove unavailable consumers
         removeUnavailableConsumers(subscriptionService, consumerIds);
 
         // Requeue in-progress operations
         requeueInProgressOperations(subscriptionService);
 
-        // Resume in-flight topic failovers from their TransitionMaster stage
-        requeueInProgressFailovers(subscriptionService);
+        requeueInProgressFailovers(transitionService);
 
         // TODO - Implementation needed: Add handling for failed operations with proper recovery mechanisms
         // This should include strategies for recovering from failures without requiring controller restart
     }
 
-    /**
-     * Resumes topic-failover operations that were in flight when the previous leader stopped. Each
-     * executor is idempotent and re-enters from {@code TransitionMaster.currentStage}.
-     */
-    private void requeueInProgressFailovers(SubscriptionService subscriptionService) {
-        List<TopicFailoverOperation> pendingFailovers = subscriptionService.getPendingTopicFailoverOps();
+    private void requeueInProgressFailovers(TransitionService transitionService) {
+        List<TopicFailoverOperation> pendingFailovers = transitionService.getPendingTopicFailoverOps();
         if (pendingFailovers.isEmpty()) {
-            log.info("No pending topic failovers to resume");
             return;
         }
         pendingFailovers.stream()
-                        .sorted(Comparator.comparing(TopicFailoverOperation::getStartTime))
-                        .forEach(subscriptionService::retryTopicFailover);
-        log.info("Resumed {} pending topic failover(s)", pendingFailovers.size());
+                        .sorted(Comparator.comparing(TopicFailoverOperation::getCreatedAt))
+                        .forEach(transitionService::retryTopicFailover);
     }
 
     /**

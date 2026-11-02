@@ -1,7 +1,7 @@
 package com.flipkart.varadhi.controller.impl.failover;
 
 import com.flipkart.varadhi.entities.cluster.transition.TransitionAck;
-import com.flipkart.varadhi.entities.cluster.failover.TransitionStage;
+import com.flipkart.varadhi.entities.cluster.transition.TransitionStage;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,8 +45,15 @@ public class StageAwaiter {
      * An empty expected set completes immediately. Replaces any prior barrier for the same opId.
      */
     public CompletableFuture<Void> expect(String opId, Enum<?> stage, Set<String> expectedHosts, long timeoutMs) {
-        com.flipkart.varadhi.entities.cluster.transition.TransitionStage wireStage = wireStage(stage);
-        return expectWire(opId, wireStage, expectedHosts, timeoutMs);
+        return expectWire(opId, wireStage(stage), expectedHosts, timeoutMs);
+    }
+
+    private static TransitionStage wireStage(Enum<?> stage) {
+        return switch ((TransitionStage)stage) {
+            case DRAIN -> TransitionStage.FENCE;
+            case SWITCH -> TransitionStage.MIGRATE;
+            default -> (TransitionStage)stage;
+        };
     }
 
     private CompletableFuture<Void> expectWire(
@@ -74,17 +81,6 @@ public class StageAwaiter {
             TimeUnit.MILLISECONDS
         );
         return barrier.done;
-    }
-
-    private static com.flipkart.varadhi.entities.cluster.transition.TransitionStage wireStage(Enum<?> stage) {
-        if (stage instanceof TransitionStage failoverStage) {
-            return switch (failoverStage) {
-                case DRAIN -> com.flipkart.varadhi.entities.cluster.transition.TransitionStage.FENCE;
-                case SWITCH -> com.flipkart.varadhi.entities.cluster.transition.TransitionStage.MIGRATE;
-                default -> com.flipkart.varadhi.entities.cluster.transition.TransitionStage.valueOf(stage.name());
-            };
-        }
-        return (com.flipkart.varadhi.entities.cluster.transition.TransitionStage)stage;
     }
 
     public void recordAck(TransitionAck ack) {
