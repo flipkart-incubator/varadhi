@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.consumer;
 
+import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.spi.services.ConsumerFactory;
 import com.flipkart.varadhi.spi.services.ProducerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -15,4 +16,5 @@ public class ConsumerEnvironment {
     private final ConsumerFactory consumerFactory;
     private final HttpClient httpClient;
     private final MeterRegistry meterRegistry;
+    private final RegionName deployedRegion;
 }
