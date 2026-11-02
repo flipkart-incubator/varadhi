@@ -28,4 +28,4 @@ Parity: the internal `varadhi` repo blocks produce during the SWITCH state (`Top
 - **server:** ProducerService wiring passes the scheduler/options (verify; options already flow in)
 - **web:** none (503 mapping and `ProduceHandlers` unchanged)
 
-Depends on: `produce-cross-region` (introduces `Fenced` resolution), failover stages that set `Fenced`.
+Independent of other open changes: `TopicState.Fenced`, `TopicResolver` and `ProduceStatus.Fenced` are already on `master`.
