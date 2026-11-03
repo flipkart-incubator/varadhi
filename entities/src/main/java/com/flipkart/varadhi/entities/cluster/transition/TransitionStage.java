@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.entities.cluster.transition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Cluster-wide stage of a topic transition (e.g. topic failover, storage-topic migration).
  * The controller drives a {@code ProduceFailoverTransition} through these stages and waits on a
@@ -20,7 +22,17 @@ package com.flipkart.varadhi.entities.cluster.transition;
  * </ul>
  */
 public enum TransitionStage {
-    PENDING, PREPARE, FENCE, MIGRATE, DRAIN, SWITCH, COMPLETED, ABORTED;
+    PENDING, PREPARE, FENCE, MIGRATE, COMPLETED, ABORTED;
+
+    /** Maps legacy persisted/wire names from pre-MIGRATE failover stages. */
+    @JsonCreator
+    public static TransitionStage fromJson(String value) {
+        return switch (value) {
+            case "DRAIN" -> FENCE;
+            case "SWITCH" -> MIGRATE;
+            default -> valueOf(value);
+        };
+    }
 
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
@@ -28,7 +40,7 @@ public enum TransitionStage {
 
     /** Abort is honored through {@link #FENCE}. {@link #MIGRATE} has started the route commit and cannot abort. */
     public boolean isAbortable() {
-        return this == PENDING || this == PREPARE || this == FENCE || this == DRAIN;
+        return this == PENDING || this == PREPARE || this == FENCE;
     }
 
     /** Stages where the pod must observe {@code topicVersionToAwait} before acking. */

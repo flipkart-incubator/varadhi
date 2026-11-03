@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,7 +17,6 @@ public class StageSnapshot {
 
     private final TransitionStage stage;
     private final long startedAt;
-    private final List<String> ackedHosts;
     private final Map<String, HostAck> hostAcks;
     @Setter
     private long endedAt;
@@ -41,37 +38,14 @@ public class StageSnapshot {
     public StageSnapshot(
         @JsonProperty ("stage") TransitionStage stage,
         @JsonProperty ("startedAt") long startedAt,
-        @JsonProperty ("ackedHosts") List<String> ackedHosts,
+        @JsonProperty ("hostAcks") Map<String, HostAck> hostAcks,
         @JsonProperty ("endedAt") long endedAt,
         @JsonProperty ("outcome") Outcome outcome,
         @JsonProperty ("errorMsg") String errorMsg
     ) {
         this.stage = stage;
         this.startedAt = startedAt;
-        this.ackedHosts = ackedHosts != null ? ackedHosts : new ArrayList<>();
-        this.hostAcks = this.ackedHosts.stream()
-                                       .collect(java.util.stream.Collectors.toMap(host -> host, host -> HostAck.ACKED));
-        this.endedAt = endedAt;
-        this.outcome = outcome;
-        this.errorMsg = errorMsg;
-    }
-
-    public StageSnapshot(
-        TransitionStage stage,
-        long startedAt,
-        Map<String, HostAck> hosts,
-        long endedAt,
-        Outcome outcome,
-        String errorMsg
-    ) {
-        this.stage = stage;
-        this.startedAt = startedAt;
-        this.ackedHosts = hosts.entrySet()
-                               .stream()
-                               .filter(entry -> entry.getValue() == HostAck.ACKED)
-                               .map(Map.Entry::getKey)
-                               .toList();
-        this.hostAcks = Map.copyOf(hosts);
+        this.hostAcks = hostAcks != null ? Map.copyOf(hostAcks) : Map.of();
         this.endedAt = endedAt;
         this.outcome = outcome;
         this.errorMsg = errorMsg;
@@ -104,6 +78,6 @@ public class StageSnapshot {
     }
 
     public static StageSnapshot started(TransitionStage stage) {
-        return new StageSnapshot(stage, System.currentTimeMillis(), new ArrayList<>(), 0, Outcome.IN_PROGRESS, null);
+        return new StageSnapshot(stage, System.currentTimeMillis(), Map.of(), 0, Outcome.IN_PROGRESS, null);
     }
 }

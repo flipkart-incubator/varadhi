@@ -46,8 +46,36 @@ public class StageAwaiter {
      * Registers a barrier for {@code (opId, stage)} over {@code expectedHosts} and arms a timeout.
      * An empty expected set completes immediately. Replaces any prior barrier for the same opId.
      */
-    public CompletableFuture<Void> expect(String opId, Enum<?> stage, Set<String> expectedHosts, long timeoutMs) {
-        return expectWire(opId, wireStage(stage), expectedHosts, timeoutMs);
+    public CompletableFuture<Void> expect(
+        String opId,
+        TransitionStage stage,
+        Set<String> expectedHosts,
+        long timeoutMs
+    ) {
+        Barrier barrier = new Barrier(opId, stage, ConcurrentHashMap.newKeySet());
+        barrier.expected.addAll(expectedHosts);
+        barriers.put(opId, barrier);
+
+        if (barrier.expected.isEmpty()) {
+            log.info(
+                "Failover stage {} for op {} has no expected hosts; completing barrier immediately.",
+                stage,
+                opId
+            );
+            barrier.done.complete(null);
+            return barrier.done;
+        }
+        barrier.timeout = scheduler.schedule(
+            () -> barrier.fail(
+                new FailoverAbortedException(
+                    "stage " + stage + " timed out after " + timeoutMs + "ms; missing acks from " + barrier
+                                                                                                               .missing()
+                )
+            ),
+            timeoutMs,
+            TimeUnit.MILLISECONDS
+        );
+        return barrier.done;
     }
 
     public Map<String, StageSnapshot.HostAck> getHostAcks(String opId) {
@@ -63,41 +91,6 @@ public class StageAwaiter {
             );
         }
         return acks;
-    }
-
-    private static TransitionStage wireStage(Enum<?> stage) {
-        return switch ((TransitionStage)stage) {
-            case DRAIN -> TransitionStage.FENCE;
-            case SWITCH -> TransitionStage.MIGRATE;
-            default -> (TransitionStage)stage;
-        };
-    }
-
-    private CompletableFuture<Void> expectWire(
-        String opId,
-        com.flipkart.varadhi.entities.cluster.transition.TransitionStage stage,
-        Set<String> expectedHosts,
-        long timeoutMs
-    ) {
-        Barrier barrier = new Barrier(opId, stage, ConcurrentHashMap.newKeySet());
-        barrier.expected.addAll(expectedHosts);
-        barriers.put(opId, barrier);
-
-        if (barrier.expected.isEmpty()) {
-            log.info("Failover stage {} for op {} has no expected hosts; completing barrier immediately.", stage, opId);
-            barrier.done.complete(null);
-            return barrier.done;
-        }
-        barrier.timeout = scheduler.schedule(
-            () -> barrier.fail(
-                new FailoverAbortedException(
-                    "stage " + stage + " timed out after " + timeoutMs + "ms; missing acks from " + barrier.missing()
-                )
-            ),
-            timeoutMs,
-            TimeUnit.MILLISECONDS
-        );
-        return barrier.done;
     }
 
     public void recordAck(TransitionAck ack) {

@@ -25,48 +25,18 @@ public class OperationMgr {
     private final Map<String, RetryOpTask> retryOpTasks;
     private final Map<String, Deque<OpTask>> opTasks;
     private final RetryPolicy retryPolicy;
-    private final ExecutorService topicFailoverExecutor;
-    private final RetryPolicy topicFailoverRetryPolicy;
-    private volatile Consumer<TopicFailoverOperation> topicFailoverTerminalFailureHandler;
 
     public OperationMgr(int maxConcurrentOps, OpStore opStore, RetryPolicy retryPolicy) {
-        this(maxConcurrentOps, opStore, retryPolicy, maxConcurrentOps, retryPolicy);
-    }
-
-    public OperationMgr(
-        int maxConcurrentOps,
-        OpStore opStore,
-        RetryPolicy retryPolicy,
-        int topicFailoverMaxConcurrentOps,
-        RetryPolicy topicFailoverRetryPolicy
-    ) {
         this.opStore = opStore;
         this.opTasks = new ConcurrentHashMap<>();
         this.retryOpTasks = new ConcurrentHashMap<>();
         this.retryPolicy = retryPolicy;
-        this.topicFailoverRetryPolicy = topicFailoverRetryPolicy;
         //TODO::ExecutorService should emit the metrics.
         this.executor = Executors.newFixedThreadPool(
             maxConcurrentOps,
             new ThreadFactoryBuilder().setNameFormat("OpMgr-%d").build()
         );
-        this.topicFailoverExecutor = Executors.newFixedThreadPool(
-            topicFailoverMaxConcurrentOps,
-            new ThreadFactoryBuilder().setNameFormat("TopicFailoverOpMgr-%d").build()
-        );
         this.delayedScheduler = Executors.newSingleThreadScheduledExecutor();
-    }
-
-    /** Invoked when a topic-failover op has failed and will not be retried. */
-    public void setTopicFailoverTerminalFailureHandler(Consumer<TopicFailoverOperation> handler) {
-        this.topicFailoverTerminalFailureHandler = handler;
-    }
-
-    private void notifyTopicFailoverTerminalFailure(TopicFailoverOperation operation) {
-        Consumer<TopicFailoverOperation> handler = topicFailoverTerminalFailureHandler;
-        if (handler != null) {
-            handler.accept(operation);
-        }
     }
 
     /**
@@ -246,8 +216,8 @@ public class OperationMgr {
             opExecutor,
             o -> opStore.updateTopicFailoverOp((TopicFailoverOperation)o),
             op,
-            topicFailoverRetryPolicy,
-            topicFailoverExecutor
+            retryPolicy,
+            executor
         );
         enqueueOpTask(opTask);
     }
@@ -441,9 +411,6 @@ public class OperationMgr {
                 }
             } else {
                 log.error("Operation {} has failed but further retry is not allowed.", operation);
-                if (operation instanceof TopicFailoverOperation topicFailoverOperation) {
-                    notifyTopicFailoverTerminalFailure(topicFailoverOperation);
-                }
             }
         }
 

@@ -2,10 +2,18 @@ package com.flipkart.varadhi.entities.cluster.transition;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransitionStageTest {
+
+    @Test
+    void fromJson_mapsLegacyStageNames() {
+        assertEquals(TransitionStage.FENCE, TransitionStage.fromJson("DRAIN"));
+        assertEquals(TransitionStage.MIGRATE, TransitionStage.fromJson("SWITCH"));
+        assertEquals(TransitionStage.PREPARE, TransitionStage.fromJson("PREPARE"));
+    }
 
     @Test
     void isTerminal_onlyCompletedAndAborted() {

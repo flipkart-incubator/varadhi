@@ -9,7 +9,6 @@ import com.flipkart.varadhi.core.cluster.MessageRouter;
 import com.flipkart.varadhi.core.cluster.VaradhiClusterManager;
 import com.flipkart.varadhi.controller.config.OperationsConfig;
 import com.flipkart.varadhi.controller.impl.LeastAssignedStrategy;
-import com.flipkart.varadhi.controller.impl.failover.TopicFailoverOrchestrator;
 import com.flipkart.varadhi.core.cluster.consumer.ConsumerClientFactory;
 import com.flipkart.varadhi.core.cluster.ComponentKind;
 import com.flipkart.varadhi.core.cluster.ConsumerNode;
@@ -49,8 +48,6 @@ public class ControllerVerticle extends AbstractVerticle {
     private final EventProcessorConfig eventProcessorConfig;
     private final RegionName deployedRegion;
 
-    private ResourceEventProcessor entityEventProcessor;
-
     /**
      * Creates a new ControllerVerticle with the specified configuration and services.
      */
@@ -72,6 +69,8 @@ public class ControllerVerticle extends AbstractVerticle {
         this.deployedRegion = deployedRegion;
     }
 
+    private ResourceEventProcessor entityEventProcessor;
+
     /**
      * {@inheritDoc}
      * <p>
@@ -84,28 +83,25 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-        OperationMgr operationMgr = new OperationMgr(
+        OperationMgr subscriptionOperationMgr = new OperationMgr(
             operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
-            createRetryPolicy(operationsConfig),
+            createRetryPolicy(operationsConfig)
+        );
+        OperationMgr failoverOperationMgr = new OperationMgr(
             failoverOperationsConfig.getMaxConcurrentOps(),
+            metaStoreProvider.getOpStore(),
             createRetryPolicy(failoverOperationsConfig)
         );
-        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, operationMgr);
-        TopicFailoverOrchestrator orchestrator = new TopicFailoverOrchestrator(
-            operationMgr,
+        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, subscriptionOperationMgr);
+        TransitionService transitionService = new TransitionService(
+            messageExchange,
+            failoverOperationMgr,
             metaStoreProvider.getTransitionStore(),
             metaStoreProvider.getMetaStore().topics(),
             messagingStackProvider.getStorageTopicService(),
-            messageExchange,
-            clusterManager
-        );
-        TransitionService transitionService = new TransitionService(
-            messageExchange,
-            operationMgr,
-            metaStoreProvider.getTransitionStore(),
-            deployedRegion,
-            orchestrator
+            clusterManager,
+            deployedRegion
         );
         ControllerHandler apiHandler = new ControllerHandler(
             subscriptionService,

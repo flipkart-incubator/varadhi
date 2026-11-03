@@ -65,7 +65,7 @@ class ControllerRemoteClientTest {
         TopicFailoverOperation got = client.createTopicFailover(TOPIC_FQN, body, USER).join();
 
         assertEquals(op.getName(), got.getName());
-        assertEquals(TOPIC, got.getTopicFqn());
+        assertEquals(TOPIC_FQN, got.getTopicFqn());
         TopicFailoverRequestWrapper sent = captureRequest(TransitionBusAddress.CREATE_FAILOVER_API);
         assertEquals(TOPIC_FQN, sent.topicFqn());
         assertEquals(body, sent.request());
