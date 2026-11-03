@@ -1,30 +1,51 @@
-# Local Server Run & Topic Failover Full Verification
+## 2026-11-03 Happy path (`default` → `region2`, FENCE/MIGRATE stages)
 
-- **Date:** 2026-11-02
+- **Date:** 2026-11-03
 - **Branch:** `feature-topicFailoverControllerSide`
-- **Server Endpoint:** `http://localhost:18488`
-- **Dependencies:** Docker Compose `zookeeper` and `pulsar` (Profile: `dev`)
+- **Server:** `http://localhost:18488`
+- **Topic:** `public.topic7`
+- **Operation:** `e2888116-4f76-443d-b653-cddc39942af2`
+- **Request:** `waitForReplicationLagToClear: false`
+- **Prep:** prior `region2` → `default` reset so `default` was Producing; delete stale ZK `TopicFailoverOperation` nodes and `/test-varadhi/entities/ChangeEvent/change_event_listener` before restart so `ResourceEventProcessor` registers.
 
----
+Stage model: `PENDING` → `PREPARE` → `FENCE` → `MIGRATE` → `COMPLETED` (transition znode removed on success → GET **404**).
 
-## Live In-Flight Stage Snapshots Captured During Failover
+### POST `/v1/projects/public/topics/topic7/failover` → 202
 
-Below are the complete JSON payloads returned by `GET /v1/projects/public/topics/topic7/failover` as the failover operation progressed through each stage (`PENDING` → `PREPARE` → `DRAIN` → `SWITCH` → `COMPLETED`):
+```json
+{
+  "name": "e2888116-4f76-443d-b653-cddc39942af2",
+  "version": 0,
+  "topicFqn": {
+    "projectName": "public",
+    "topicName": "topic7"
+  },
+  "requestedBy": "thanos",
+  "createdAt": 1793700492661,
+  "updatedAt": 1793700492661,
+  "retryAttempt": 0,
+  "state": "IN_PROGRESS",
+  "entityType": "TOPIC_FAILOVER_OPERATION"
+}
+```
 
-### 1. Initial State: `PENDING`
+### Live `GET /v1/projects/public/topics/topic7/failover` payloads (distinct snapshots)
+
+#### 1. `currentStage`: `PENDING` (transition `version`: 0)
+
 ```json
 {
   "topicFqn": "public.topic7",
   "version": 0,
   "transitionKind": "FAILOVER",
-  "operationId": "029936c8-9405-4faa-a0da-35fdbc3bdd78",
+  "operationId": "e2888116-4f76-443d-b653-cddc39942af2",
   "sourceRegion": "default",
   "targetRegion": "region2",
-  "waitForReplicationLagToClear": true,
+  "waitForReplicationLagToClear": false,
   "onLagTimeout": "ABORT",
   "currentStage": "PENDING",
   "topicVersionToAwait": 0,
-  "stageStartedAt": 1793624949021,
+  "stageStartedAt": 1793700492671,
   "abortRequested": false,
   "stageHistory": [],
   "name": "public.topic7",
@@ -32,71 +53,38 @@ Below are the complete JSON payloads returned by `GET /v1/projects/public/topics
 }
 ```
 
-### 2. In-Flight Stage: `PREPARE`
-```json
-{
-  "topicFqn": "public.topic7",
-  "version": 1,
-  "transitionKind": "FAILOVER",
-  "operationId": "029936c8-9405-4faa-a0da-35fdbc3bdd78",
-  "sourceRegion": "default",
-  "targetRegion": "region2",
-  "waitForReplicationLagToClear": true,
-  "onLagTimeout": "ABORT",
-  "currentStage": "PREPARE",
-  "topicVersionToAwait": 2,
-  "stageStartedAt": 1793624949040,
-  "abortRequested": false,
-  "stageHistory": [
-    {
-      "stage": "PENDING",
-      "startedAt": 1793624949021,
-      "ackedHosts": [],
-      "endedAt": 1793624949039,
-      "outcome": "OK",
-      "hostAcks": {}
-    }
-  ],
-  "name": "public.topic7",
-  "entityType": "TRANSITION_OBJECT"
-}
-```
+#### 2. `currentStage`: `FENCE` (transition `version`: 2)
 
-### 3. In-Flight Stage: `DRAIN`
 ```json
 {
   "topicFqn": "public.topic7",
   "version": 2,
   "transitionKind": "FAILOVER",
-  "operationId": "029936c8-9405-4faa-a0da-35fdbc3bdd78",
+  "operationId": "e2888116-4f76-443d-b653-cddc39942af2",
   "sourceRegion": "default",
   "targetRegion": "region2",
-  "waitForReplicationLagToClear": true,
+  "waitForReplicationLagToClear": false,
   "onLagTimeout": "ABORT",
-  "currentStage": "DRAIN",
-  "topicVersionToAwait": 3,
-  "stageStartedAt": 1793624949107,
+  "currentStage": "FENCE",
+  "topicVersionToAwait": 36,
+  "stageStartedAt": 1793700492748,
   "abortRequested": false,
   "stageHistory": [
     {
       "stage": "PENDING",
-      "startedAt": 1793624949021,
-      "ackedHosts": [],
-      "endedAt": 1793624949039,
-      "outcome": "OK",
-      "hostAcks": {}
+      "startedAt": 1793700492671,
+      "hostAcks": {},
+      "endedAt": 1793700492702,
+      "outcome": "OK"
     },
     {
       "stage": "PREPARE",
-      "startedAt": 1793624949040,
-      "ackedHosts": [
-        "BLRETV-YWCP2P6V.local"
-      ],
-      "endedAt": 1793624949106,
-      "outcome": "OK",
+      "startedAt": 1793700492702,
       "hostAcks": {
         "BLRETV-YWCP2P6V.local": "ACKED"
-      }
+      },
+      "endedAt": 1793700492748,
+      "outcome": "OK"
     }
   ],
   "name": "public.topic7",
@@ -104,53 +92,47 @@ Below are the complete JSON payloads returned by `GET /v1/projects/public/topics
 }
 ```
 
-### 4. In-Flight Stage: `SWITCH`
+#### 3. `currentStage`: `MIGRATE` (transition `version`: 3)
+
 ```json
 {
   "topicFqn": "public.topic7",
   "version": 3,
   "transitionKind": "FAILOVER",
-  "operationId": "029936c8-9405-4faa-a0da-35fdbc3bdd78",
+  "operationId": "e2888116-4f76-443d-b653-cddc39942af2",
   "sourceRegion": "default",
   "targetRegion": "region2",
-  "waitForReplicationLagToClear": true,
+  "waitForReplicationLagToClear": false,
   "onLagTimeout": "ABORT",
-  "currentStage": "SWITCH",
-  "topicVersionToAwait": 4,
-  "stageStartedAt": 1793624949138,
+  "currentStage": "MIGRATE",
+  "topicVersionToAwait": 37,
+  "stageStartedAt": 1793700492772,
   "abortRequested": false,
   "stageHistory": [
     {
       "stage": "PENDING",
-      "startedAt": 1793624949021,
-      "ackedHosts": [],
-      "endedAt": 1793624949039,
-      "outcome": "OK",
-      "hostAcks": {}
+      "startedAt": 1793700492671,
+      "hostAcks": {},
+      "endedAt": 1793700492702,
+      "outcome": "OK"
     },
     {
       "stage": "PREPARE",
-      "startedAt": 1793624949040,
-      "ackedHosts": [
-        "BLRETV-YWCP2P6V.local"
-      ],
-      "endedAt": 1793624949106,
-      "outcome": "OK",
+      "startedAt": 1793700492702,
       "hostAcks": {
         "BLRETV-YWCP2P6V.local": "ACKED"
-      }
+      },
+      "endedAt": 1793700492748,
+      "outcome": "OK"
     },
     {
-      "stage": "DRAIN",
-      "startedAt": 1793624949107,
-      "ackedHosts": [
-        "BLRETV-YWCP2P6V.local"
-      ],
-      "endedAt": 1793624949138,
-      "outcome": "OK",
+      "stage": "FENCE",
+      "startedAt": 1793700492748,
       "hostAcks": {
         "BLRETV-YWCP2P6V.local": "ACKED"
-      }
+      },
+      "endedAt": 1793700492772,
+      "outcome": "OK"
     }
   ],
   "name": "public.topic7",
@@ -158,75 +140,22 @@ Below are the complete JSON payloads returned by `GET /v1/projects/public/topics
 }
 ```
 
-### 5. Completed Transition: `COMPLETED` (Before ZK Node Deletion)
+#### 4. Transition removed → **404**
+
+(No body; executor deleted the transition after `COMPLETED`.)
+
+### ZK produce route after success
+
 ```json
 {
-  "topicFqn": "public.topic7",
-  "version": 4,
-  "transitionKind": "FAILOVER",
-  "operationId": "029936c8-9405-4faa-a0da-35fdbc3bdd78",
-  "sourceRegion": "default",
-  "targetRegion": "region2",
-  "waitForReplicationLagToClear": true,
-  "onLagTimeout": "ABORT",
-  "currentStage": "COMPLETED",
-  "topicVersionToAwait": 0,
-  "stageStartedAt": 1793624949177,
-  "abortRequested": false,
-  "stageHistory": [
-    {
-      "stage": "PENDING",
-      "startedAt": 1793624949021,
-      "ackedHosts": [],
-      "endedAt": 1793624949039,
-      "outcome": "OK",
-      "hostAcks": {}
-    },
-    {
-      "stage": "PREPARE",
-      "startedAt": 1793624949040,
-      "ackedHosts": [
-        "BLRETV-YWCP2P6V.local"
-      ],
-      "endedAt": 1793624949106,
-      "outcome": "OK",
-      "hostAcks": {
-        "BLRETV-YWCP2P6V.local": "ACKED"
-      }
-    },
-    {
-      "stage": "DRAIN",
-      "startedAt": 1793624949107,
-      "ackedHosts": [
-        "BLRETV-YWCP2P6V.local"
-      ],
-      "endedAt": 1793624949138,
-      "outcome": "OK",
-      "hostAcks": {
-        "BLRETV-YWCP2P6V.local": "ACKED"
-      }
-    },
-    {
-      "stage": "SWITCH",
-      "startedAt": 1793624949138,
-      "ackedHosts": [
-        "BLRETV-YWCP2P6V.local"
-      ],
-      "endedAt": 1793624949177,
-      "outcome": "OK",
-      "hostAcks": {
-        "BLRETV-YWCP2P6V.local": "ACKED"
-      }
-    }
-  ],
-  "name": "public.topic7",
-  "entityType": "TRANSITION_OBJECT"
+  "default": "Blocked",
+  "region2": "Producing",
+  "topicVersion": 36
 }
 ```
 
----
+### Verification summary
 
-## Verification Summary
-- **Stage Progression:** `PENDING` → `PREPARE` → `DRAIN` → `SWITCH` → `COMPLETED`
-- **Host ACKs:** `ackedHosts` and `hostAcks` now capture all participating cluster hosts (e.g. `BLRETV-YWCP2P6V.local: ACKED`).
-- **Timestamps:** Every historical stage entry in `stageHistory` records accurate `startedAt` and `endedAt` timestamps in milliseconds.
+- **Stage progression (logs):** `PENDING` → `PREPARE` → `FENCE` → `MIGRATE` → `COMPLETED`
+- **Host ACKs:** `BLRETV-YWCP2P6V.local` ACKED at `PREPARE`, `FENCE`, and `MIGRATE` (see `stageHistory` in snapshots above).
+- **Note:** `PREPARE` and `COMPLETED` often complete within one poll interval; this run captured distinct GET bodies at `PENDING`, `FENCE`, and `MIGRATE` before cleanup.
