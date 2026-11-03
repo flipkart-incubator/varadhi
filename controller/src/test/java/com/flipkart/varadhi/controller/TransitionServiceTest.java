@@ -52,7 +52,15 @@ class TransitionServiceTest {
         });
         operationMgr = new OperationMgr(2, opStore, new RetryPolicy(0, 1, 1, 1));
         messageExchange = mock(MessageExchange.class);
-        service = new TransitionService(messageExchange, operationMgr, transitions, RegionName.of("r1"));
+        service = new TransitionService(
+            messageExchange,
+            operationMgr,
+            transitions,
+            null,
+            null,
+            null,
+            RegionName.of("r1")
+        );
     }
 
     @Test

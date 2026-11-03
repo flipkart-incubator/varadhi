@@ -18,8 +18,13 @@ import com.flipkart.varadhi.entities.RegionName;
 public record TopicFailoverRequest(
     RegionName sourceRegion,
     RegionName targetRegion,
-    boolean waitForReplicationLagToClear,
+    Boolean waitForReplicationLagToClear,
     Long lagDrainTimeoutMs,
     String onLagTimeout
 ) {
+    public TopicFailoverRequest {
+        waitForReplicationLagToClear = waitForReplicationLagToClear == null ?
+            Boolean.TRUE :
+            waitForReplicationLagToClear;
+    }
 }

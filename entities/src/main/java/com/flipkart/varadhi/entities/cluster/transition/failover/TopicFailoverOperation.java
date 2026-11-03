@@ -1,11 +1,14 @@
 package com.flipkart.varadhi.entities.cluster.transition.failover;
 
-import com.flipkart.varadhi.entities.cluster.Operation.State;
-import com.flipkart.varadhi.entities.cluster.OrderedOperation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
+import com.flipkart.varadhi.entities.VaradhiTopicName;
+import com.flipkart.varadhi.entities.cluster.OrderedOperation;
+import com.flipkart.varadhi.entities.cluster.Operation.State;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -25,9 +28,10 @@ import static com.flipkart.varadhi.entities.cluster.Operation.State.IN_PROGRESS;
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
+@JsonIgnoreProperties (ignoreUnknown = true)
 public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOperation {
 
-    private final String topicFqn;
+    private final VaradhiTopicName topicFqn;
     private final String requestedBy;
     private final long createdAt;
     private final int retryAttempt;
@@ -37,15 +41,15 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
 
     @JsonCreator
     TopicFailoverOperation(
-        String name,
-        int version,
-        String topicFqn,
-        String requestedBy,
-        long createdAt,
-        long updatedAt,
-        int retryAttempt,
-        State state,
-        String errorMsg
+        @JsonProperty ("name") String name,
+        @JsonProperty ("version") int version,
+        @JsonProperty ("topicFqn") VaradhiTopicName topicFqn,
+        @JsonProperty ("requestedBy") String requestedBy,
+        @JsonProperty ("createdAt") long createdAt,
+        @JsonProperty ("updatedAt") long updatedAt,
+        @JsonProperty ("retryAttempt") int retryAttempt,
+        @JsonProperty ("state") State state,
+        @JsonProperty ("errorMsg") String errorMsg
     ) {
         super(name, version, MetaStoreEntityType.TOPIC_FAILOVER_OPERATION);
         this.topicFqn = topicFqn;
@@ -57,7 +61,7 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
         this.errorMsg = errorMsg;
     }
 
-    public static TopicFailoverOperation of(String topicFqn, String requestedBy) {
+    public static TopicFailoverOperation of(VaradhiTopicName topicFqn, String requestedBy) {
         long now = System.currentTimeMillis();
         return new TopicFailoverOperation(
             UUID.randomUUID().toString(),
@@ -70,6 +74,10 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
             IN_PROGRESS,
             null
         );
+    }
+
+    public static TopicFailoverOperation of(String topicFqn, String requestedBy) {
+        return of(VaradhiTopicName.parse(topicFqn), requestedBy);
     }
 
     /**
@@ -95,6 +103,10 @@ public class TopicFailoverOperation extends MetaStoreEntity implements OrderedOp
     @Override
     public String getOrderingKey() {
         return orderingKeyFor(topicFqn);
+    }
+
+    public static String orderingKeyFor(VaradhiTopicName topicFqn) {
+        return orderingKeyFor(topicFqn != null ? topicFqn.toFqn() : "");
     }
 
     public static String orderingKeyFor(String topicFqn) {

@@ -48,8 +48,6 @@ public class ControllerVerticle extends AbstractVerticle {
     private final EventProcessorConfig eventProcessorConfig;
     private final RegionName deployedRegion;
 
-    private ResourceEventProcessor entityEventProcessor;
-
     /**
      * Creates a new ControllerVerticle with the specified configuration and services.
      */
@@ -71,6 +69,8 @@ public class ControllerVerticle extends AbstractVerticle {
         this.deployedRegion = deployedRegion;
     }
 
+    private ResourceEventProcessor entityEventProcessor;
+
     /**
      * {@inheritDoc}
      * <p>
@@ -83,16 +83,24 @@ public class ControllerVerticle extends AbstractVerticle {
         MessageRouter messageRouter = clusterManager.getRouter(vertx);
         MessageExchange messageExchange = clusterManager.getExchange(vertx);
 
-        OperationMgr operationMgr = new OperationMgr(
+        OperationMgr subscriptionOperationMgr = new OperationMgr(
             operationsConfig.getMaxConcurrentOps(),
             metaStoreProvider.getOpStore(),
-            createRetryPolicy(operationsConfig.getMaxRetryAllowed())
+            createRetryPolicy(operationsConfig)
         );
-        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, operationMgr);
+        OperationMgr failoverOperationMgr = new OperationMgr(
+            failoverOperationsConfig.getMaxConcurrentOps(),
+            metaStoreProvider.getOpStore(),
+            createRetryPolicy(failoverOperationsConfig)
+        );
+        SubscriptionService subscriptionService = createSubscriptionService(messageExchange, subscriptionOperationMgr);
         TransitionService transitionService = new TransitionService(
             messageExchange,
-            operationMgr,
+            failoverOperationMgr,
             metaStoreProvider.getTransitionStore(),
+            metaStoreProvider.getMetaStore().topics(),
+            messagingStackProvider.getStorageTopicService(),
+            clusterManager,
             deployedRegion
         );
         ControllerHandler apiHandler = new ControllerHandler(
@@ -167,12 +175,12 @@ public class ControllerVerticle extends AbstractVerticle {
     /**
      * Creates a retry policy with the given max-retry ceiling and shared backoff settings.
      */
-    private RetryPolicy createRetryPolicy(int maxRetryAllowed) {
+    private RetryPolicy createRetryPolicy(OperationsConfig config) {
         return new RetryPolicy(
-            maxRetryAllowed,
-            operationsConfig.getRetryIntervalInSeconds(),
-            operationsConfig.getRetryMinBackoffInSeconds(),
-            operationsConfig.getRetryMaxBackOffInSeconds()
+            config.getMaxRetryAllowed(),
+            config.getRetryIntervalInSeconds(),
+            config.getRetryMinBackoffInSeconds(),
+            config.getRetryMaxBackOffInSeconds()
         );
     }
 

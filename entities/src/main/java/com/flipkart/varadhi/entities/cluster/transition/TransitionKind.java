@@ -1,8 +1,8 @@
 package com.flipkart.varadhi.entities.cluster.transition;
 
 /**
- * The kind of transition a {@code ProduceFailoverTransition} represents. Kept generic so the same
- * master-state machinery can be reused for future transitions; for {@link #FAILOVER} the only
+ * The kind of transition represented by a transition operation. Kept generic so the same
+ * transition-state machinery can be reused for future transitions; for {@link #FAILOVER} the only
  * functional effect is flipping the per-region produce gate.
  */
 public enum TransitionKind {

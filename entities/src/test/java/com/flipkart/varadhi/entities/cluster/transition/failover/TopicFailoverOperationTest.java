@@ -1,5 +1,6 @@
 package com.flipkart.varadhi.entities.cluster.transition.failover;
 
+import com.flipkart.varadhi.entities.VaradhiTopicName;
 import com.flipkart.varadhi.entities.cluster.Operation;
 import com.flipkart.varadhi.entities.JsonMapper;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ class TopicFailoverOperationTest {
     @Test
     void of_retry_andReloadPreserveAudit() {
         TopicFailoverOperation op = TopicFailoverOperation.of("proj.topic", "user");
+        assertEquals(VaradhiTopicName.parse("proj.topic"), op.getTopicFqn());
         assertEquals("user", op.getRequestedBy());
         assertEquals(Operation.State.IN_PROGRESS, op.getState());
 

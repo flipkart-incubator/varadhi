@@ -11,7 +11,7 @@ The system MUST accept a region-local failover create, durably record the attemp
 
 #### Scenario: Create returns 202
 - **WHEN** an authorized caller POSTs a valid failover request
-- **THEN** the response is HTTP 202 with durable identifiers and a transition master exists for the topic
+- **THEN** the response is HTTP 202 with durable identifiers and a transition operation exists for the topic
 
 #### Scenario: Concurrent create rejected
 - **WHEN** a failover is already active for the same topic

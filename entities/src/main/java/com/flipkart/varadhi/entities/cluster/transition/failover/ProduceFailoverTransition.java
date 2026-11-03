@@ -4,6 +4,7 @@ import com.flipkart.varadhi.entities.cluster.transition.StageSnapshot;
 import com.flipkart.varadhi.entities.cluster.transition.TransitionKind;
 import com.flipkart.varadhi.entities.cluster.transition.TransitionStage;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.flipkart.varadhi.entities.MetaStoreEntity;
 import com.flipkart.varadhi.entities.RegionName;
 import com.flipkart.varadhi.entities.MetaStoreEntityType;
@@ -25,6 +26,7 @@ import java.util.Map;
  */
 @Getter
 @EqualsAndHashCode (callSuper = true)
+@JsonIgnoreProperties (ignoreUnknown = true)
 public class ProduceFailoverTransition extends MetaStoreEntity {
 
     private final TransitionKind transitionKind;
@@ -33,6 +35,8 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
     private final RegionName sourceRegion;
     private final RegionName targetRegion;
     private final boolean waitForReplicationLagToClear;
+    private final Long lagDrainTimeoutMs;
+    private final String onLagTimeout;
 
     private TransitionStage currentStage;
     private long topicVersionToAwait;
@@ -50,6 +54,8 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
         RegionName sourceRegion,
         RegionName targetRegion,
         boolean waitForReplicationLagToClear,
+        Long lagDrainTimeoutMs,
+        String onLagTimeout,
         TransitionStage currentStage,
         long topicVersionToAwait,
         long stageStartedAt,
@@ -63,6 +69,8 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
         this.sourceRegion = sourceRegion;
         this.targetRegion = targetRegion;
         this.waitForReplicationLagToClear = waitForReplicationLagToClear;
+        this.lagDrainTimeoutMs = lagDrainTimeoutMs;
+        this.onLagTimeout = onLagTimeout;
         this.currentStage = currentStage;
         this.topicVersionToAwait = topicVersionToAwait;
         this.stageStartedAt = stageStartedAt;
@@ -77,6 +85,18 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
         RegionName targetRegion,
         boolean waitForReplicationLagToClear
     ) {
+        return forFailover(operationId, topicFqn, sourceRegion, targetRegion, waitForReplicationLagToClear, null, null);
+    }
+
+    public static ProduceFailoverTransition forFailover(
+        String operationId,
+        String topicFqn,
+        RegionName sourceRegion,
+        RegionName targetRegion,
+        boolean waitForReplicationLagToClear,
+        Long lagDrainTimeoutMs,
+        String onLagTimeout
+    ) {
         return new ProduceFailoverTransition(
             topicFqn,
             0,
@@ -85,6 +105,8 @@ public class ProduceFailoverTransition extends MetaStoreEntity {
             sourceRegion,
             targetRegion,
             waitForReplicationLagToClear,
+            lagDrainTimeoutMs,
+            onLagTimeout,
             TransitionStage.PENDING,
             0L,
             System.currentTimeMillis(),

@@ -8,7 +8,7 @@ Operators need a region-local HTTP surface to start, observe, and abort a topic 
 
 - POST/GET/POST-abort topic failover routes with `TOPIC_UPDATE` / `TOPIC_GET`, **202** on create/abort.
 - Web → controller bus RPCs: create / get / abort / list active.
-- `createTopicFailoverOp` persists TransitionMaster + TopicFailoverOperation only (**no executor enqueue**).
+- `createTopicFailoverOp` persists the transition operation + TopicFailoverOperation only (**no executor enqueue**).
 - Request body may carry `waitForReplicationLagToClear` (oncall parity); lag knobs honesty deferred to `topic-failover-rest-api`.
 - **Out of scope:** preflight, history, produce-config, `/v1/failovers` HTTP, Retry-After, knob persistence/honor, `TopicFailoverOpExecutor`.
 

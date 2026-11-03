@@ -1,5 +1,7 @@
 package com.flipkart.varadhi.entities.cluster.transition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Cluster-wide stage of a topic transition (e.g. topic failover, storage-topic migration).
  * The controller drives a {@code ProduceFailoverTransition} through these stages and waits on a
@@ -21,6 +23,16 @@ package com.flipkart.varadhi.entities.cluster.transition;
  */
 public enum TransitionStage {
     PENDING, PREPARE, FENCE, MIGRATE, COMPLETED, ABORTED;
+
+    /** Maps legacy persisted/wire names from pre-MIGRATE failover stages. */
+    @JsonCreator
+    public static TransitionStage fromJson(String value) {
+        return switch (value) {
+            case "DRAIN" -> FENCE;
+            case "SWITCH" -> MIGRATE;
+            default -> valueOf(value);
+        };
+    }
 
     public boolean isTerminal() {
         return this == COMPLETED || this == ABORTED;
