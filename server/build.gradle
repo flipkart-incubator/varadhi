@@ -5,6 +5,10 @@ plugins {
     id "jacoco-report-aggregation"
 }
 
+configurations {
+    bytemanAgent
+}
+
 dependencies {
 
     implementation(project(":entities"))
@@ -58,6 +62,17 @@ dependencies {
 
     testE2ERuntime("org.jacoco:org.jacoco.agent:$jacoco_version:runtime")
 
+    // Testcontainers multi-pod cluster (opt-in via -Pvaradhi.cluster.tests=true)
+    testClusterImplementation(libs.testcontainers)
+    testClusterImplementation(libs.testcontainers.junit.jupiter)
+    testClusterImplementation(libs.awaitility)
+    testClusterImplementation(libs.jersey.client)
+    testClusterImplementation(libs.jersey.media.json.jackson)
+    testClusterImplementation(libs.testcontainers.toxiproxy)
+    testClusterImplementation(libs.byteman.submit)
+    // Agent jar is copied into Varadhi pods when withByteman(true).
+    bytemanAgent(libs.byteman.agent)
+
     // jacoco aggregation dependency -- explicit inclusion.
     jacocoAggregation project(":pulsar")
 }
@@ -77,9 +92,19 @@ compileTestE2EJava {
     dependsOn tasks.named('copyTestConfig')
 }
 
+compileTestClusterJava {
+    dependsOn tasks.named('copyTestConfig')
+}
+
 testE2E {
     useJUnitPlatform()
     jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}
+
+testCluster {
+    useJUnitPlatform()
+    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+    systemProperty 'varadhi.byteman.jar', configurations.bytemanAgent.singleFile.absolutePath
 }
 
 application {
